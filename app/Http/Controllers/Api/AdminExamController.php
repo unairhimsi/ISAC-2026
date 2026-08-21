@@ -22,11 +22,19 @@ class AdminExamController extends Controller
         $this->authorize($request);
 
         $stages = Stage::query()
+            ->whereHas('competition', fn ($query) => $query->where('type', Competition::TYPE_OLIMPIADE))
             ->has('exams')
-            ->when($request->filled('competition_id'), fn ($query) => $query->where('competition_id', $request->string('competition_id')))
-            ->orderBy('competition_id')
             ->orderBy('order')
-            ->get(['id', 'competition_id', 'name', 'order']);
+            ->get(['id', 'competition_id', 'name', 'description', 'order', 'start_date', 'end_date'])
+            ->map(fn (Stage $stage) => [
+                'id' => $stage->id,
+                'competitionId' => $stage->competition_id,
+                'name' => $stage->name,
+                'description' => $stage->description,
+                'order' => $stage->order,
+                'startDate' => $stage->start_date?->toISOString(),
+                'endDate' => $stage->end_date?->toISOString(),
+            ]);
 
         return $this->success('Tahap ujian berhasil diambil.', $stages);
     }
@@ -36,6 +44,7 @@ class AdminExamController extends Controller
         $this->authorize($request);
         $data = $request->validate(['stage_id' => ['required', 'uuid', 'exists:stages,id']]);
 
+        $this->ensureOlympiadExamStage($data['stage_id']);
         $exams = Exam::query()
             ->where('stage_id', $data['stage_id'])
             ->withCount('questions')
@@ -51,7 +60,8 @@ class AdminExamController extends Controller
         $this->authorize($request);
         $exam->loadCount('questions');
 
-        return $this->success('Detail bank soal berhasil diambil.', [
+        $this->ensureOlympiadExam($exam);
+        return $this->success('Detail ujian berhasil diambil.', [
             ...$this->examData($exam),
             'questions' => $exam->questions()->orderBy('order')->get()->map(fn (ExamQuestion $question) => $this->questionData($question)),
         ]);
@@ -61,6 +71,7 @@ class AdminExamController extends Controller
     {
         $this->authorize($request);
         $data = $request->validated();
+        $this->ensureOlympiadExam($exam);
         $question = $sanitizer->clean($data['question']);
 
         if (! $sanitizer->hasContent($question)) {
@@ -94,6 +105,23 @@ class AdminExamController extends Controller
         ]);
 
         return $this->success('Soal berhasil dibuat.', $this->questionData($created));
+    }
+
+    private function ensureOlympiadExamStage(string $stageId): void
+    {
+        $isOlympiadStage = Stage::query()
+            ->whereKey($stageId)
+            ->whereHas('competition', fn ($query) => $query->where('type', Competition::TYPE_OLIMPIADE))
+            ->exists();
+
+        abort_unless($isOlympiadStage, 404);
+    }
+
+    private function ensureOlympiadExam(Exam $exam): void
+    {
+        $exam->loadMissing('stage.competition');
+
+        abort_unless($exam->stage->competition->type === Competition::TYPE_OLIMPIADE, 404);
     }
 
     private function authorize(Request $request): void

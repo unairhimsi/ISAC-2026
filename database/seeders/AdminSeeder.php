@@ -11,7 +11,7 @@ class AdminSeeder extends Seeder
     {
         Admin::query()->updateOrCreate(['email' => 'admin@isac.com'], [
             'name' => 'Admin ISAC',
-            'password' => 'password',
+            'password' => 'isacop@dmin123',
             'role' => 'super_admin',
             'is_active' => true,
         ]);

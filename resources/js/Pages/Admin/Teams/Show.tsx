@@ -35,6 +35,7 @@ export default function AdminTeamShow({ teamId }: { teamId: string }) {
   const canEdit = role === 'super_admin' || role === 'admin_registration'
   const waitingReview = data?.team.status === 'WAITING_VERIFICATION'
 
+  const paymentAvailable = data?.registration?.paymentAvailable === true
   if (query.isLoading) return <AdminLoadingState label="Memuat detail tim..." />
   if (query.error || !data) return <AdminErrorState message={query.error?.message ?? 'Detail tim tidak ditemukan.'} retry={() => query.refetch()} />
 
@@ -99,7 +100,7 @@ export default function AdminTeamShow({ teamId }: { teamId: string }) {
             </CardContent>
           </Card>
 
-          {data.registration && (
+          {data.registration && paymentAvailable && (
             <Card className="border-border/60 bg-card/70 backdrop-blur-md">
               <CardHeader><CardTitle>Pembayaran</CardTitle></CardHeader>
               <CardContent className="space-y-3 text-sm">

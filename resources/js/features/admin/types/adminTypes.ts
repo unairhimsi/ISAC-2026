@@ -44,6 +44,40 @@ export type AdminBatch = {
   updatedAt: string | null
 }
 
+export type StageType = 'registration' | 'submission' | 'selection' | 'exam' | 'interview' | 'announcement' | 'final'
+
+export type AdminStage = {
+  id: string
+  competitionId: string
+  competition: Pick<AdminCompetition, 'id' | 'name' | 'type'>
+  name: string
+  type: StageType
+  description: string | null
+  order: number
+  startDate: string | null
+  endDate: string | null
+  isActive: boolean
+  criteria: Record<string, unknown> | null
+  examCount: number
+  submissionCount: number
+  teamCount: number
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export type StagePayload = {
+  competition_id: string
+  name: string
+  type: StageType
+  description?: string | null
+  order: number
+  start_date?: string | null
+  end_date?: string | null
+  is_active: boolean
+}
+
+export type UpdateStagePayload = Omit<StagePayload, 'competition_id'>
+
 export type AdminTeamRegistration = {
   id: string
   status: RegistrationStatus
@@ -53,6 +87,7 @@ export type AdminTeamRegistration = {
   submittedAt: string | null
   paymentRequiredAt: string | null
   paymentSubmittedAt: string | null
+  paymentAvailable: boolean
   competition: AdminCompetition
   batch: AdminBatch
 }
@@ -238,6 +273,9 @@ export type AdminCompetitionResponse = ApiResponse<AdminCompetition>
 export type AdminBatchesResponse = ApiResponse<AdminBatch[]>
 export type AdminBatchResponse = ApiResponse<AdminBatch>
 export type DeleteResponse = ApiResponse<null>
+export type AdminStagesResponse = ApiResponse<AdminStage[]>
+export type AdminStageResponse = ApiResponse<AdminStage>
+
 export type AdminPaymentsResponse = ApiResponse<LaravelPagination<AdminPayment>>
 export type AdminPaymentResponse = ApiResponse<AdminPayment>
 

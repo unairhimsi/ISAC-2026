@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '../api/adminApi'
-import type { AdminPaymentFilters, AdminTeamFilters, AdminTeamUpdatePayload, BatchPayload, CompetitionFilters, CompetitionPayload, TeamRevisionPayload } from '../types/adminTypes'
+import type { AdminPaymentFilters, AdminTeamFilters, AdminTeamUpdatePayload, BatchPayload, CompetitionFilters, CompetitionPayload, StagePayload, TeamRevisionPayload, UpdateStagePayload } from '../types/adminTypes'
 
 export const adminKeys = {
   all: ['admin'] as const,
   teams: (filters?: AdminTeamFilters) => [...adminKeys.all, 'teams', filters] as const,
   team: (teamId: string) => [...adminKeys.all, 'team', teamId] as const,
   competitions: (filters?: CompetitionFilters) => [...adminKeys.all, 'competitions', filters] as const,
+  stages: (competitionId?: string) => [...adminKeys.all, 'stages', competitionId] as const,
   batches: (competitionId?: string) => [...adminKeys.all, 'batches', competitionId] as const,
   payments: (filters?: AdminPaymentFilters) => [...adminKeys.all, 'payments', filters] as const,
   payment: (registrationId: string) => [...adminKeys.all, 'payment', registrationId] as const,
@@ -65,6 +66,25 @@ export function useCreateCompetition() {
 export function useUpdateCompetition() {
   const client = useQueryClient()
   return useMutation({ mutationFn: ({ id, payload }: { id: string; payload: CompetitionPayload }) => adminApi.updateCompetition(id, payload), onSuccess: () => client.invalidateQueries({ queryKey: [...adminKeys.all, 'competitions'] }) })
+}
+
+export function useAdminStages(competitionId?: string) {
+  return useQuery({ queryKey: adminKeys.stages(competitionId), queryFn: () => adminApi.stages(competitionId) })
+}
+
+export function useCreateStage() {
+  const client = useQueryClient()
+  return useMutation({ mutationFn: (payload: StagePayload) => adminApi.createStage(payload), onSuccess: () => client.invalidateQueries({ queryKey: [...adminKeys.all, 'stages'] }) })
+}
+
+export function useUpdateStage() {
+  const client = useQueryClient()
+  return useMutation({ mutationFn: ({ id, payload }: { id: string; payload: UpdateStagePayload }) => adminApi.updateStage(id, payload), onSuccess: () => client.invalidateQueries({ queryKey: [...adminKeys.all, 'stages'] }) })
+}
+
+export function useDeleteStage() {
+  const client = useQueryClient()
+  return useMutation({ mutationFn: (id: string) => adminApi.deleteStage(id), onSuccess: () => client.invalidateQueries({ queryKey: [...adminKeys.all, 'stages'] }) })
 }
 
 export function useDeleteCompetition() {

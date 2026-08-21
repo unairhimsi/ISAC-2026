@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AdminOperationController;
 use App\Http\Controllers\Api\AdminDashboardController;
 use App\Http\Controllers\Api\AdminExamController;
+use App\Http\Controllers\Api\AdminStageController;
 use App\Http\Controllers\Api\AdminRegistrationController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BatchController;
@@ -83,6 +84,14 @@ Route::prefix('admin')->middleware(['auth:admins', 'principal.admin'])->group(fu
     Route::post('/operations/{operation}/retry-spreadsheet', [AdminOperationController::class, 'retrySpreadsheet'])->whereUuid('operation');
     Route::get('/dashboard/summary', [AdminDashboardController::class, 'summary']);
     Route::get('/exam-stages', [AdminExamController::class, 'stages']);
+    Route::prefix('stages')->group(function (): void {
+        Route::get('/', [AdminStageController::class, 'index']);
+        Route::post('/', [AdminStageController::class, 'store']);
+        Route::get('/{stage}', [AdminStageController::class, 'show'])->whereUuid('stage');
+        Route::patch('/{stage}', [AdminStageController::class, 'update'])->whereUuid('stage');
+        Route::delete('/{stage}', [AdminStageController::class, 'destroy'])->whereUuid('stage');
+    });
+
     Route::get('/exams', [AdminExamController::class, 'exams']);
     Route::get('/exams/{exam}', [AdminExamController::class, 'show'])->whereUuid('exam');
     Route::post('/exams/{exam}/questions', [AdminExamController::class, 'storeQuestion'])->whereUuid('exam');
