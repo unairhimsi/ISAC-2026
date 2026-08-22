@@ -359,9 +359,6 @@ export default function DashboardIndex() {
         >
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <p className="text-sm font-semibold text-secondary">
-                Langkah berikutnya
-              </p>
 
               <h2
                 id="activity-heading"

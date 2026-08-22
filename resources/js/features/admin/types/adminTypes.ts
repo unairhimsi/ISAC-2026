@@ -92,10 +92,22 @@ export type AdminTeamRegistration = {
   batch: AdminBatch
 }
 
+export type AdminAuditNote = {
+  id: string
+  action: string
+  reason: string
+  requestId: string | null
+  adminName: string
+  createdAt: string | null
+}
+
 export type AdminTeamSummary = {
   team: TeamProfile
   members: MemberRecord[]
   registration: AdminTeamRegistration | null
+  auditLogs?: AdminAuditNote[]
+  verificationNote?: string | null
+  revisionStep?: string | null
 }
 
 export type LaravelPagination<T> = {
@@ -278,4 +290,58 @@ export type AdminStageResponse = ApiResponse<AdminStage>
 
 export type AdminPaymentsResponse = ApiResponse<LaravelPagination<AdminPayment>>
 export type AdminPaymentResponse = ApiResponse<AdminPayment>
+
+export type AdminOperationAction = 'VERIFY_TEAM' | 'VERIFY_PAYMENT' | 'ADVANCE_STAGE' | 'ANNOUNCE_RESULT'
+export type AdminOperationStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'PARTIAL' | 'FAILED'
+export type SpreadsheetStatus = 'PENDING' | 'PROCESSING' | 'SYNCED' | 'FAILED' | 'SKIPPED'
+
+export type AdminOperationItem = {
+  id: string
+  team: { id: string; code: string; name: string | null } | null
+  statusBefore: string | null
+  statusAfter: string | null
+  processingStatus: AdminOperationStatus | 'SKIPPED'
+  spreadsheetStatus: SpreadsheetStatus
+  lastError: string | null
+  event: { eventId: string; status: SpreadsheetStatus; emailStatus: string } | null
+}
+
+export type AdminOperation = {
+  id: string
+  action: AdminOperationAction
+  status: AdminOperationStatus
+  totalItems: number
+  processedItems: number
+  successCount: number
+  skippedCount: number
+  failedCount: number
+  announcement: { title: string | null; template: string | null }
+  targetStage: { id: string; name: string; order: number } | null
+  requestedBy: { id: string; name: string } | null
+  startedAt: string | null
+  completedAt: string | null
+  createdAt: string | null
+  items?: AdminOperationItem[]
+}
+
+export type AdminOperationsResponse = ApiResponse<LaravelPagination<AdminOperation>>
+export type AdminOperationResponse = ApiResponse<AdminOperation>
+
+export type AdminOperationFilters = {
+  page?: number
+  per_page?: number
+}
+
+export type CreateAdminOperationPayload = {
+  action: AdminOperationAction
+  team_ids: string[]
+  target_stage_id?: string | null
+  sync_spreadsheet?: boolean
+  announcement?: {
+    title?: string | null
+    template?: string | null
+    message?: string | null
+    send_notification?: boolean
+  }
+}
 

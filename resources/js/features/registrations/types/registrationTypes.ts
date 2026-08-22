@@ -55,7 +55,7 @@ export type TeamProfile = {
 export type MemberRecord = {
   id: string; name: string; role: MemberRole; email: string
   major: string | null; faculty: string | null; studentId: string
-  photoFileId: string | null; sortOrder: number
+  photoFileId: string | null; photoUrl?: string | null; photo?: { id: string; fileId: string; url: string; purpose?: string } | null; sortOrder: number
 }
 export type MemberFormValues = {
   id?: string; name: string; role: MemberRole; email: string

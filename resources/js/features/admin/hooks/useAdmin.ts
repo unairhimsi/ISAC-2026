@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '../api/adminApi'
-import type { AdminPaymentFilters, AdminTeamFilters, AdminTeamUpdatePayload, BatchPayload, CompetitionFilters, CompetitionPayload, StagePayload, TeamRevisionPayload, UpdateStagePayload } from '../types/adminTypes'
+import type { AdminOperationFilters, AdminPaymentFilters, AdminTeamFilters, AdminTeamUpdatePayload, BatchPayload, CompetitionFilters, CompetitionPayload, CreateAdminOperationPayload, StagePayload, TeamRevisionPayload, UpdateStagePayload } from '../types/adminTypes'
 
 export const adminKeys = {
   all: ['admin'] as const,
@@ -11,6 +11,8 @@ export const adminKeys = {
   batches: (competitionId?: string) => [...adminKeys.all, 'batches', competitionId] as const,
   payments: (filters?: AdminPaymentFilters) => [...adminKeys.all, 'payments', filters] as const,
   payment: (registrationId: string) => [...adminKeys.all, 'payment', registrationId] as const,
+  operations: (filters?: AdminOperationFilters) => [...adminKeys.all, 'operations', filters] as const,
+  operation: (operationId: string) => [...adminKeys.all, 'operation', operationId] as const,
 }
 
 export function useAdminTeams(filters: AdminTeamFilters) {
@@ -160,5 +162,29 @@ export function useUpdateAdminTeam(teamId: string) {
       client.invalidateQueries({ queryKey: [...adminKeys.all, 'teams'] }),
       client.invalidateQueries({ queryKey: adminKeys.team(teamId) }),
     ]),
+  })
+}
+
+export function useAdminOperations(filters: AdminOperationFilters) {
+  return useQuery({ queryKey: adminKeys.operations(filters), queryFn: () => adminApi.operations(filters) })
+}
+
+export function useAdminOperation(operationId: string) {
+  return useQuery({ queryKey: adminKeys.operation(operationId), queryFn: () => adminApi.operation(operationId), enabled: Boolean(operationId) })
+}
+
+export function useCreateAdminOperation() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: CreateAdminOperationPayload) => adminApi.createOperation(payload),
+    onSuccess: () => client.invalidateQueries({ queryKey: [...adminKeys.all, 'operations'] }),
+  })
+}
+
+export function useRetryAdminOperationSpreadsheet(operationId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: () => adminApi.retryOperationSpreadsheet(operationId),
+    onSuccess: () => client.invalidateQueries({ queryKey: adminKeys.operation(operationId) }),
   })
 }

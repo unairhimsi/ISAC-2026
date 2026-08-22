@@ -152,7 +152,7 @@ const FormMember = ({
           control={form.control}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel className="text-xl">Foto Peserta (Opsional)</FieldLabel>
+              <FieldLabel className="text-xl">Foto Peserta</FieldLabel>
               <FileUpload
                 value={photo}
                 onChange={(value) => {

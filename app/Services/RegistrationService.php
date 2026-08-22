@@ -19,8 +19,12 @@ class RegistrationService
     public function selectCompetition(Team $team, array $data): Registration
     {
         return DB::transaction(function () use ($team, $data): Registration {
-            $existing = Registration::query()->where('team_id', $team->id)->lockForUpdate()->first();
+            $existing = Registration::withTrashed()->where('team_id', $team->id)->lockForUpdate()->first();
             if ($existing !== null) {
+                if ($existing->trashed()) {
+                    $existing->restore();
+                    $existing->refresh();
+                }
                 if ($existing->competition_id === $data['competition_id']) {
                     return $existing;
                 }
@@ -53,7 +57,9 @@ class RegistrationService
             $isOlympiad = $competition->type === Competition::TYPE_OLIMPIADE;
             // A Team owns exactly one Registration. Repeating the save is
             // idempotent and must never assign a different Batch or price.
-            $registration = Registration::query()->updateOrCreate(['team_id' => $team->id], [
+            // withTrashed is handled above; here we know no active registration exists.
+            $registration = Registration::create([
+                'team_id' => $team->id,
                 'competition_id' => $competition->id,
                 'batch_id' => $batch->id,
                 'status' => $isOlympiad ? RegistrationStatus::WAITING_PAYMENT : RegistrationStatus::VERIFIED,
@@ -61,9 +67,7 @@ class RegistrationService
                 'payment_verified_at' => $isOlympiad ? null : now(),
             ]);
 
-            if ($registration->wasRecentlyCreated) {
-                $batch->increment('current_registrations');
-            }
+            $batch->increment('current_registrations');
 
             return $registration;
         });

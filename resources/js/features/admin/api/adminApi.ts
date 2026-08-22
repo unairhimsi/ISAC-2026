@@ -4,6 +4,9 @@ import type {
   AdminBatchesResponse,
   AdminCompetitionResponse,
   AdminCompetitionsResponse,
+  AdminOperationFilters,
+  AdminOperationResponse,
+  AdminOperationsResponse,
   AdminPaymentFilters,
   AdminPaymentResponse,
   AdminPaymentsResponse,
@@ -18,6 +21,7 @@ import type {
   UpdateStagePayload,
   CompetitionFilters,
   CompetitionPayload,
+  CreateAdminOperationPayload,
   DeleteResponse,
   TeamRevisionPayload,
 } from '../types/adminTypes'
@@ -50,5 +54,10 @@ export const adminApi = {
   verifyPayment: (registrationId: string) => postJson<AdminPaymentResponse>(`/api/admin/registrations/${registrationId}/payment/verify`, undefined, { headers: requestHeaders() }),
   revisePayment: (registrationId: string, reason: string) => postJson<AdminPaymentResponse>(`/api/admin/registrations/${registrationId}/payment/revision`, { reason }, { headers: requestHeaders() }),
   rejectPayment: (registrationId: string, reason: string) => postJson<AdminPaymentResponse>(`/api/admin/registrations/${registrationId}/payment/reject`, { reason }, { headers: requestHeaders() }),
+
+  operations: (filters: AdminOperationFilters) => getJson<AdminOperationsResponse>(`/api/admin/operations${toSearchParams(filters)}`),
+  operation: (operationId: string) => getJson<AdminOperationResponse>(`/api/admin/operations/${operationId}`),
+  createOperation: (payload: CreateAdminOperationPayload) => postJson<AdminOperationResponse>('/api/admin/operations', payload, { headers: requestHeaders() }),
+  retryOperationSpreadsheet: (operationId: string) => postJson<{ queued: number }>(`/api/admin/operations/${operationId}/retry-spreadsheet`, undefined, { headers: requestHeaders() }),
 }
 

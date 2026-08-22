@@ -63,7 +63,7 @@ class AdminRegistrationService
 
     public function detail(Team $team): Team
     {
-        return $team->load('members', 'registration.competition', 'registration.batch', 'registration.paymentProofFile', 'currentStage');
+        return $team->load('members.photoFile', 'registration.competition', 'registration.batch', 'registration.paymentProofFile', 'currentStage');
     }
 
     /**
