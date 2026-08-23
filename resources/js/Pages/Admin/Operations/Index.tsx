@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react'
-import { ChevronLeft, ChevronRight, Eye } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, Play } from 'lucide-react'
 import { useState } from 'react'
 import { Seo } from '@/components/seo/Seo'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AdminPageHeader } from '@/features/admin/components/AdminPageHeader'
 import { AdminStatusBadge } from '@/features/admin/components/AdminStatusBadge'
+import { RunOperationDialog } from '@/features/admin/components/RunOperationDialog'
 import { AdminEmptyState, AdminErrorState, AdminLoadingState } from '@/features/admin/components/AdminStates'
 import { adminPageLayout } from '@/features/admin/components/AdminShell'
 import { useAdminOperations } from '@/features/admin/hooks/useAdmin'
@@ -31,6 +32,7 @@ function formatShortId(value: string) {
 
 export default function AdminOperationsIndex() {
   const [filters, setFilters] = useState<AdminOperationFilters>({ page: 1, per_page: 15 })
+  const [runOpen, setRunOpen] = useState(false)
   const operationsQuery = useAdminOperations(filters)
   const pagination = operationsQuery.data?.data
   const operations = pagination?.data ?? []
@@ -42,6 +44,14 @@ export default function AdminOperationsIndex() {
         title="Operasi & Spreadsheet"
         description="Pantau bulk operation (verifikasi, advance stage, pengumuman) dan status sinkronisasi ke Google Spreadsheet. Gunakan tombol Detail untuk melihat per-team spreadsheet_status dan retry jika gagal."
       />
+
+      <div className="mb-5 flex justify-end">
+        <Button onClick={() => setRunOpen(true)}>
+          <Play />Jalankan Operasi
+        </Button>
+      </div>
+
+      <RunOperationDialog open={runOpen} onOpenChange={setRunOpen} />
 
       {operationsQuery.isLoading ? (
         <AdminLoadingState label="Memuat riwayat operasi..." />

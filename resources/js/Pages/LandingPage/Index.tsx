@@ -3,7 +3,6 @@ import gsap from 'gsap'
 import { useGSAP } from '@gsap/react'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Seo } from '@/components/seo/Seo'
-import { createWebsiteJsonLd } from '@/lib/seo'
 import { AnimatedBackground } from '@/components/shared/AnimatedBackground'
 // import { SectionDecor } from '@/components/shared/SectionDecor'
 import { Hero } from "./sections/Hero";
@@ -54,7 +53,6 @@ const Index = () => {
         imageAlt='Logo ISAC 2026'
         keywords={['ISAC 2026', 'Olimpiade', 'Business Plan', 'Business IT Case']}
         author='ISAC 2026'
-        jsonLd={createWebsiteJsonLd()}
       />
 
       <LandingBackground />

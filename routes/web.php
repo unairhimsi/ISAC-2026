@@ -9,9 +9,28 @@ Route::get('/', function () {
     ]);
 })->name('landing.index');
 
+Route::get('/robots.txt', function () {
+    $appUrl = rtrim(config('app.url'), '/');
+    $lines = ['User-agent: *'];
+
+    if (config('seo.robots_allow')) {
+        $lines[] = 'Allow: /';
+        foreach (['/admin', '/dashboard', '/api', '/auth', '/registration', '/todos'] as $privatePath) {
+            $lines[] = "Disallow: {$privatePath}";
+        }
+        $lines[] = '';
+        $lines[] = "Sitemap: {$appUrl}/sitemap.xml";
+    } else {
+        $lines[] = 'Disallow: /';
+    }
+
+    return response(implode(PHP_EOL, $lines), 200)
+        ->header('Content-Type', 'text/plain; charset=UTF-8');
+})->name('robots');
+
 Route::get('/sitemap.xml', function () {
     $appUrl = rtrim(config('app.url'), '/');
-    $publicPaths = ['/'];
+    $publicPaths = ['/', '/auth/register'];
     $urls = collect($publicPaths)
         ->map(fn (string $path) => sprintf(
             '    <url><loc>%s%s</loc></url>',

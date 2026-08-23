@@ -25,13 +25,18 @@
     <meta property="og:image:alt" content="Logo ISAC 2026">
     <meta property="og:site_name" content="{{ $appName }}">
     <meta property="og:locale" content="id_ID">
-    <meta name="twitter:card" content="summary">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $appName }}">
     <meta name="twitter:description" content="{{ $defaultDescription }}">
     <meta name="twitter:image" content="{{ $defaultImage }}">
     <meta name="twitter:image:alt" content="Logo ISAC 2026">
+    @if (config('seo.google_site_verification'))
+        <meta name="google-site-verification" content="{{ config('seo.google_site_verification') }}">
+    @endif
     <link rel="icon" type="image/png" href="/logo.png">
     <link rel="apple-touch-icon" href="/logo.png">
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml">
+    @include('partials.seo-ld')
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     @viteReactRefresh
