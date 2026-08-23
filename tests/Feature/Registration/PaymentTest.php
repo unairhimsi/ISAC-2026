@@ -77,7 +77,7 @@ test('cannot bypass promo validation when submitting payment', function (): void
     $this->withToken($this->token)
         ->postJson('/api/registrations/me/payment', [
             'payment_proof_file_id' => $this->file->id,
-            'payment_method' => 'QRIS',
+            'payment_method' => 'BANK_TRANSFER',
             'promo_code' => 'INVALID',
         ])
         ->assertUnprocessable()
@@ -104,7 +104,7 @@ test('promo reduces and snapshots the submitted payment amount', function (): vo
     $this->withToken($this->token)
         ->postJson('/api/registrations/me/payment', [
             'payment_proof_file_id' => $this->file->id,
-            'payment_method' => 'QRIS',
+            'payment_method' => 'BANK_TRANSFER',
             'promo_code' => 'isaxop',
         ])
         ->assertOk();

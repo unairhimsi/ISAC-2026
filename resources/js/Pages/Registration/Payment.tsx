@@ -68,8 +68,7 @@ const Payment = () => {
             discountAmount={Number(payment.discountAmount)}
             promoApplied={payment.promoApplied}
             promoCode={payment.promoCode}
-            qrImageUrl={payment.qrImageUrl}
-            paymentMethods={payment.paymentMethods}
+            bankAccounts={payment.bankAccounts}
             instructions={payment.paymentInstructions}
             existingProof={payment.existingProof}
             isSubmitting={submitPayment.isPending}

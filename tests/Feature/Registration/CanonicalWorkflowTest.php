@@ -37,14 +37,14 @@ test('canonical olympiad workflow runs from selection through admin activation',
         'is_active' => true,
     ]);
 
-    $this->withToken($teamToken)->postJson('/api/registrations/me/selection', [
+    $this->withToken($teamToken)->putJson('/api/registrations/me/selection', [
         'competition_id' => $competition->id,
         'batch_id' => $batch->id,
     ])->assertOk()
         ->assertJsonPath('data.context.registration.status', RegistrationStatus::WAITING_PAYMENT->value)
         ->assertJsonPath('data.redirectTo', '/registration/team');
 
-    $this->withToken($teamToken)->patchJson('/api/registrations/me/team', [
+    $this->withToken($teamToken)->putJson('/api/registrations/me/team', [
         'name' => 'Canonical Team',
         'phone' => '081234567890',
         'institution_name' => 'SMA Canonical',
@@ -68,7 +68,7 @@ test('canonical olympiad workflow runs from selection through admin activation',
         ]],
     ])->assertOk()->assertJsonPath('data.redirectTo', '/registration/documents');
 
-    $this->withToken($teamToken)->patchJson('/api/registrations/me/documents', [
+    $this->withToken($teamToken)->putJson('/api/registrations/me/documents', [
         'document_url' => 'https://drive.google.com/drive/folders/canonical-documents',
         'twibbon_url' => 'https://drive.google.com/drive/folders/canonical-twibbon',
     ])->assertOk()->assertJsonPath('data.redirectTo', '/registration/payment');
@@ -81,7 +81,7 @@ test('canonical olympiad workflow runs from selection through admin activation',
     ]);
     $this->withToken($teamToken)->postJson('/api/registrations/me/payment', [
         'payment_proof_file_id' => $proof->id,
-        'payment_method' => 'QRIS',
+        'payment_method' => 'BANK_TRANSFER',
     ])->assertOk()
         ->assertJsonPath('data.context.registration.status', RegistrationStatus::WAITING_VERIFICATION->value)
         ->assertJsonPath('data.redirectTo', '/dashboard');

@@ -115,7 +115,7 @@ test('team detail only exposes payment access when its payment gate is active', 
 test('payment queue supports search status method competition and batch filters', function (): void {
     [$registration, $team] = createPaymentRegistration([
         'status' => RegistrationStatus::WAITING_VERIFICATION,
-        'payment_method' => 'QRIS',
+        'payment_method' => 'BANK_TRANSFER',
         'payment_submitted_at' => now(),
         'amount_paid' => 127500,
         'discount_percent' => 15,
@@ -132,7 +132,7 @@ test('payment queue supports search status method competition and batch filters'
     $admin = Admin::factory()->create(['role' => 'admin_payment', 'is_active' => true]);
 
     $this->withToken($admin->createToken('admin')->plainTextToken)
-        ->getJson('/api/admin/payments?search=Nusantara&status=WAITING_VERIFICATION&payment_method=QRIS&competition_id='.$registration->competition_id.'&batch_id='.$registration->batch_id)
+        ->getJson('/api/admin/payments?search=Nusantara&status=WAITING_VERIFICATION&payment_method=BANK_TRANSFER&competition_id='.$registration->competition_id.'&batch_id='.$registration->batch_id)
         ->assertOk()
         ->assertJsonCount(1, 'data.data')
         ->assertJsonPath('data.data.0.registrationId', $registration->id)
@@ -175,7 +175,7 @@ test('payment actions return the canonical resource and remain restricted by rol
 test('payment revision can be resubmitted through the existing team flow', function (): void {
     [$registration, $team] = createPaymentRegistration([
         'status' => RegistrationStatus::WAITING_VERIFICATION,
-        'payment_method' => 'QRIS',
+        'payment_method' => 'BANK_TRANSFER',
         'payment_submitted_at' => now()->subHour(),
         'amount_paid' => 150000,
         'team_completed_at' => now(),
@@ -207,7 +207,7 @@ test('payment revision can be resubmitted through the existing team flow', funct
     $this->withToken($team->createToken('team')->plainTextToken)
         ->postJson('/api/registrations/me/payment', [
             'payment_proof_file_id' => $newProof->id,
-            'payment_method' => 'QRIS',
+            'payment_method' => 'BANK_TRANSFER',
         ])
         ->assertOk()
         ->assertJsonPath('data.context.registration.status', RegistrationStatus::WAITING_VERIFICATION->value);

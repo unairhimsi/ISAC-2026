@@ -51,7 +51,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'faq-8',
     question: 'Metode pembayaran apa saja yang tersedia?',
     answer:
-      'Pembayaran bisa dilakukan melalui Transfer Bank atau QRIS. Setelah membayar, unggah bukti pembayaran (screenshot/foto) pada halaman Payment agar dapat diperiksa dan diverifikasi oleh panitia.',
+      'Pembayaran dilakukan melalui transfer bank ke rekening resmi panitia (BCA atau BNI). Setelah membayar, unggah bukti pembayaran pada halaman Payment agar dapat diperiksa dan diverifikasi oleh panitia.',
   },
   {
     id: 'faq-9',
