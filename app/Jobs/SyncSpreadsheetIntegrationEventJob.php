@@ -62,7 +62,14 @@ class SyncSpreadsheetIntegrationEventJob implements ShouldQueue
                 ]);
                 $fresh->item()?->update(['spreadsheet_status' => $status, 'last_error' => null]);
 
-                if ($status === SpreadsheetIntegrationEvent::STATUS_SYNCED && $fresh->email_status === 'PENDING') {
+                // EMAIL VIA APPS SCRIPT (bukan Brevo):
+                // Jika operation ANNOUNCE_RESULT via Spreadsheet App Script, email langsung dikirim
+                // oleh Apps Script saat batch-upsert. Laravel tidak perlu dispatch SendCompetitionAnnouncementJob.
+                // Status email di Sheet akan di-update oleh Apps Script menjadi SENT/FAILED secara langsung,
+                // sehingga di Laravel cukup biarkan PENDING dan sheet jadi source of truth untuk monitoring.
+                // Jika butuh fallback Brevo, set GOOGLE_SHEET_EMAIL_VIA_APPS_SCRIPT=false di .env
+                $viaAppsScript = (bool) config('services.google_sheet.email_via_apps_script', true);
+                if (! $viaAppsScript && $status === SpreadsheetIntegrationEvent::STATUS_SYNCED && $fresh->email_status === 'PENDING') {
                     SendCompetitionAnnouncementJob::dispatch($fresh->event_id)->afterCommit();
                 }
             });

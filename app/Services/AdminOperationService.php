@@ -440,6 +440,8 @@ class AdminOperationService
             'announcement' => $announcement,
             'requestedBy' => $operation->requestedBy->name,
             'requestedAt' => now()->toISOString(),
+            // Untuk routing email di Apps Script (true = ANNOUNCE_RESULT via Apps Script, false = auth tetap Brevo)
+            'emailStatus' => $notify ? 'PENDING' : 'NOT_REQUIRED',
         ];
     }
 

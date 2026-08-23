@@ -27,6 +27,7 @@ import { AdminErrorState, AdminLoadingState } from '@/features/admin/components/
 import { PaymentReviewDialog } from '@/features/admin/components/PaymentReviewDialog'
 import { useAdminPayment } from '@/features/admin/hooks/useAdmin'
 import { useAuthSession } from '@/features/auth/context/AuthProvider'
+import { formatInstitutionAddress, parseInstitutionAddress } from '@/features/registrations/utils/institutionAddress'
 import { cn } from '@/lib/utils'
 
 function display(value: string | null | undefined) {
@@ -82,22 +83,71 @@ export default function AdminPaymentShow({ registrationId }: { registrationId: s
       <div className="grid gap-6 xl:grid-cols-[1.3fr_.7fr]">
         {/* Left column */}
         <div className="space-y-6">
-          {/* Team identity */}
-          <Card className="border-border/60 bg-card/70 backdrop-blur-md">
-            <CardHeader className="flex-row items-center justify-between gap-3">
-              <CardTitle>Identitas Tim</CardTitle>
-              <AdminStatusBadge status={team.status} />
-            </CardHeader>
-            <CardContent className="grid gap-4 text-sm sm:grid-cols-2">
-              <div className="flex gap-3"><Mail className="mt-0.5 size-4 shrink-0 text-secondary" /><div><p className="text-xs text-muted-foreground">Email</p><p>{display(team.email)}</p></div></div>
-              <div className="flex gap-3"><Phone className="mt-0.5 size-4 shrink-0 text-secondary" /><div><p className="text-xs text-muted-foreground">Telepon</p><p>{display(team.phone)}</p></div></div>
-              <div className="flex gap-3"><Building2 className="mt-0.5 size-4 shrink-0 text-primary" /><div><p className="text-xs text-muted-foreground">Institusi</p><p>{display(team.institutionName)}</p></div></div>
-              <div className="flex gap-3"><MapPin className="mt-0.5 size-4 shrink-0 text-primary" /><div><p className="text-xs text-muted-foreground">Alamat</p><p>{display(team.institutionAddress)}</p></div></div>
-              {team.currentStage && (
-                <div className="flex gap-3 sm:col-span-2"><UserRound className="mt-0.5 size-4 shrink-0 text-accent" /><div><p className="text-xs text-muted-foreground">Tahapan saat ini</p><p>{team.currentStage.name}</p></div></div>
-              )}
-            </CardContent>
-          </Card>
+          {/* Team identity — fixed: parse JSON institution_address from register (province/city/address) */}
+          {(() => {
+            const parsedAddress = parseInstitutionAddress(team.institutionAddress)
+            const formattedAddress = formatInstitutionAddress(team.institutionAddress)
+            const isLegacyJsonEmpty = team.institutionAddress?.trim().startsWith('{') && !formattedAddress
+            return (
+              <Card className="overflow-hidden border-border/60 bg-card/70 backdrop-blur-md">
+                <CardHeader className="flex-row items-center justify-between gap-3 border-b border-border/50 bg-muted/10">
+                  <CardTitle className="flex items-center gap-2 text-base"><Building2 className="size-4 text-primary" />Identitas Tim</CardTitle>
+                  <AdminStatusBadge status={team.status} />
+                </CardHeader>
+                <CardContent className="grid gap-4 p-5 text-sm sm:grid-cols-2">
+                  <div className="flex gap-3 rounded-xl border border-border/40 bg-background/40 p-3"><Mail className="mt-0.5 size-4 shrink-0 text-secondary" /><div className="min-w-0 flex-1"><p className="text-xs text-muted-foreground">Email</p><p className="mt-0.5 break-words font-medium">{display(team.email)}</p></div></div>
+                  <div className="flex gap-3 rounded-xl border border-border/40 bg-background/40 p-3"><Phone className="mt-0.5 size-4 shrink-0 text-secondary" /><div className="min-w-0 flex-1"><p className="text-xs text-muted-foreground">Telepon</p><p className="mt-0.5 font-medium">{display(team.phone)}</p></div></div>
+                  <div className="flex gap-3 rounded-xl border border-border/40 bg-background/40 p-3 sm:col-span-2"><Building2 className="mt-0.5 size-4 shrink-0 text-primary" /><div className="min-w-0 flex-1"><p className="text-xs text-muted-foreground">Institusi</p><p className="mt-0.5 font-medium">{display(team.institutionName)}</p></div></div>
+
+                  {/* Alamat — parsed from JSON string (province/city/address) created di FormRegistrasiTeam via serializeInstitutionAddress */}
+                  <div className="flex gap-3 rounded-2xl border border-primary/15 bg-primary/[0.04] p-4 sm:col-span-2">
+                    <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium tracking-wide text-muted-foreground">Alamat Institusi</p>
+                      {formattedAddress ? (
+                        <>
+                          {parsedAddress.address ? (
+                            <p className="mt-1.5 text-sm leading-6 break-words font-medium text-foreground">{parsedAddress.address}</p>
+                          ) : (
+                            <p className="mt-1.5 text-sm leading-5 text-muted-foreground italic">Alamat jalan belum diisi</p>
+                          )}
+                          {(parsedAddress.city || parsedAddress.province) && (
+                            <div className="mt-2.5 flex flex-wrap gap-2">
+                              {parsedAddress.city && (
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                                  <MapPin className="size-3" />{parsedAddress.city}
+                                </span>
+                              )}
+                              {parsedAddress.province && (
+                                <span className="inline-flex items-center rounded-full border border-secondary/20 bg-secondary/10 px-3 py-1 text-xs font-medium">{parsedAddress.province}</span>
+                              )}
+                            </div>
+                          )}
+                          <p className="mt-2 text-xs leading-4 text-muted-foreground/80">{formattedAddress}</p>
+                        </>
+                      ) : team.institutionAddress ? (
+                        <>
+                          <p className="mt-1.5 break-words text-sm leading-6 font-medium">{team.institutionAddress}</p>
+                          {isLegacyJsonEmpty && (
+                            <p className="mt-2 rounded-lg border border-amber-400/20 bg-amber-400/10 px-2.5 py-1.5 text-xs leading-4 text-amber-700 dark:text-amber-300">Alamat tersimpan sebagai JSON tidak valid / kosong — perlu cek ulang data registrasi.</p>
+                          )}
+                          {!team.institutionAddress.trim().startsWith('{') && (
+                            <p className="mt-2 text-xs text-muted-foreground/70">Format lama (plain text) — otomatis ditampilkan apa adanya.</p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="mt-1.5 text-sm text-muted-foreground">—</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {team.currentStage && (
+                    <div className="flex gap-3 rounded-xl border border-accent/20 bg-accent/5 p-3 sm:col-span-2"><UserRound className="mt-0.5 size-4 shrink-0 text-accent" /><div><p className="text-xs text-muted-foreground">Tahapan saat ini</p><p className="mt-0.5 font-medium">{team.currentStage.name}</p></div></div>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })()}
 
           {/* Competition & Batch */}
           <Card className="border-border/60 bg-card/70 backdrop-blur-md">

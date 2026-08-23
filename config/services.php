@@ -56,6 +56,9 @@ return [
         'timeout' => (int) env('GOOGLE_SHEET_API_TIMEOUT', 15),
         'retries' => (int) env('GOOGLE_SHEET_API_RETRIES', 3),
         'enabled' => (bool) env('GOOGLE_SHEET_API_ENABLED', false),
+        // Operation announcement email via Apps Script (true) vs Laravel Brevo (false)
+        // Auth (OTP/verification) tetap via Brevo terpisah, tidak terpengaruh flag ini.
+        'email_via_apps_script' => (bool) env('GOOGLE_SHEET_EMAIL_VIA_APPS_SCRIPT', true),
     ],
 
 ];
