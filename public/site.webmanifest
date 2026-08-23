@@ -1,0 +1,38 @@
+{
+  "name": "ISAC 2026 — Symphony of System",
+  "short_name": "ISAC 2026",
+  "description": "Kompetisi informatika tahunan HIMSI Universitas Airlangga — Olimpiade, Business Plan & Business IT Case. 23 Agu – 31 Okt 2026.",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "theme_color": "#020617",
+  "background_color": "#020617",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/",
+  "lang": "id",
+  "orientation": "any"
+}

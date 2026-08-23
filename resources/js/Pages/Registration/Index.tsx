@@ -177,8 +177,8 @@ export default function RegistrationCompetition() {
 
 RegistrationCompetition.layout = (page: React.ReactNode) => (
   <RegistrationLayout
-    title="Registrasi"
-    description="Pilih kompetisi ISAC 2026 untuk memulai pendaftaran."
+    title="Pilih Kompetisi — Pendaftaran ISAC 2026"
+    description="Pilih cabang ISAC 2026: Olimpiade, Business Plan atau Business IT Case. Tema Symphony of System — kuota Early Bird/Reguler/Late tersedia, 23 Agu–31 Okt 2026 Surabaya."
   >
     {page}
   </RegistrationLayout>

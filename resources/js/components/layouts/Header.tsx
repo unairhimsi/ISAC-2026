@@ -118,8 +118,12 @@ const Header = () => {
             <Link href='/' className='flex items-center gap-2 p-2 bg-background/10 backdrop-blur-md rounded-full px-4 border-2 border-white/20 text-white hover:text-primary transition-colors'>
               <ArrowLeft className='w-5 h-5' /><span className='text-base font-medium'>Back</span>
             </Link>
-            <Link href='/' aria-label='Kembali ke beranda ISAC 2026'>
-              <Image src={IMAGES.logo} alt='Logo ISAC 2026' height={45} width={126} className='h-auto w-24' />
+            <Link href='/' aria-label='Kembali ke beranda ISAC 2026' className='flex items-center gap-2.5'>
+              <Image src={IMAGES.logo} alt='ISAC 2026 — HIMSI UNAIR' height={44} width={44} className='size-9 md:size-10 rounded-xl object-contain shadow-sm' />
+              <span className='hidden sm:flex flex-col leading-none'>
+                <span className='text-sm font-bold tracking-wide text-white'>ISAC 2026</span>
+                <span className='text-[10px] font-medium tracking-widest text-white/70'>SYMPHONY OF SYSTEM</span>
+              </span>
             </Link>
           </div>
         </div>
@@ -134,8 +138,12 @@ const Header = () => {
         <div className={'relative z-10 transition-colors duration-700 ' + (isScrolled || isMobileOpen ? 'rounded-[inherit] bg-card/40 backdrop-blur-md' : 'rounded-[inherit] bg-transparent')}>
           <div className='max-w-7xl mx-auto'>
             <div className='flex items-center justify-between px-4 md:px-6 py-3'>
-              <Link href='/' aria-label='Beranda ISAC 2026'>
-                <Image src={IMAGES.logo} alt='Logo ISAC 2026' height={45} width={126} className='h-auto w-24 md:w-[126px]' />
+              <Link href='/' aria-label='Beranda ISAC 2026' className='flex items-center gap-2.5'>
+                <Image src={IMAGES.logo} alt='ISAC 2026 — HIMSI UNAIR' height={44} width={44} className='size-9 md:size-10 rounded-xl object-contain shadow-sm' />
+                <span className='flex flex-col leading-none'>
+                  <span className='text-sm font-bold tracking-wide text-white'>ISAC 2026</span>
+                  <span className='text-[10px] font-medium tracking-widest text-white/70'>SYMPHONY OF SYSTEM</span>
+                </span>
               </Link>
               <aside className='hidden md:block'>
                 <ul className='flex items-center gap-2 lg:gap-3'>

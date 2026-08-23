@@ -184,7 +184,7 @@ const Biodata = () => {
 }
 
 Biodata.layout = (page: React.ReactNode) => (
-  <RegistrationLayout title="Registrasi - Biodata" description="Lengkapi biodata peserta untuk melanjutkan proses pendaftaran.">
+  <RegistrationLayout title="Biodata Peserta — Pendaftaran ISAC 2026" description="Lengkapi biodata ketua & anggota tim ISAC 2026 (NISN/NIM, jurusan, kontak darurat) — Olimpiade butuh 3 orang, Business Plan/IT Case 2–3 orang.">
     {page}
   </RegistrationLayout>
 )

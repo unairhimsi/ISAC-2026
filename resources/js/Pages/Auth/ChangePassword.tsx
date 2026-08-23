@@ -6,8 +6,8 @@ import { ChangePasswordForm } from '@/features/auth/components/ChangePasswordFor
 const ChangePassword = () => {
     return (
         <AuthShell
-            title="Ubah Password"
-            description="Buat password baru untuk akun Anda."
+            title="Ubah Password — ISAC 2026"
+            description="Buat password baru yang aman untuk akun ISAC 2026 Symphony of System, HIMSI UNAIR."
         >
             <ChangePasswordForm />
         </AuthShell>
@@ -16,8 +16,8 @@ const ChangePassword = () => {
 
 ChangePassword.layout = (page: React.ReactNode) => (
     <AuthLayout
-        title="Ubah Password"
-        description="Buat password baru untuk akun Anda."
+        title="Ubah Password — ISAC 2026"
+        description="Atur password baru untuk mengamankan akun ISAC 2026 Symphony of System, HIMSI UNAIR."
         noindex
     >
         {page}

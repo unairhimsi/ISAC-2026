@@ -6,8 +6,8 @@ import { RegisterForm } from '@/features/auth/components/RegisterForm';
 const Register = () => {
     return (
         <AuthShell
-            title="Register"
-            description="Daftar akun untuk mengakses sistem ISAC 2026."
+            title="Daftar Akun — ISAC 2026"
+            description="Buat akun ISAC 2026 Symphony of System untuk mendaftarkan tim Olimpiade, Business Plan atau Business IT Case — HIMSI Universitas Airlangga."
         >
             <RegisterForm />
         </AuthShell>
@@ -16,8 +16,8 @@ const Register = () => {
 
 Register.layout = (page: React.ReactNode) => (
     <AuthLayout
-        title="Register"
-        description="Daftar akun untuk mengakses sistem ISAC 2026."
+        title="Daftar Akun — ISAC 2026"
+        description="Buat akun ISAC 2026 Symphony of System untuk mendaftarkan tim Olimpiade, Business Plan atau Business IT Case — HIMSI UNAIR."
     >
         {page}
     </AuthLayout>

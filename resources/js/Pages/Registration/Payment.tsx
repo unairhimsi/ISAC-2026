@@ -87,7 +87,7 @@ const Payment = () => {
 }
 
 Payment.layout = (page: React.ReactNode) => (
-  <RegistrationLayout title="Registrasi - Payment" description="Selesaikan pembayaran untuk menyelesaikan proses pendaftaran.">
+  <RegistrationLayout title="Pembayaran — Pendaftaran ISAC 2026" description="Selesaikan pembayaran pendaftaran ISAC 2026 via transfer BCA/BNI atau QRIS. Cek promo code & unggah bukti transfer untuk verifikasi panitia.">
     {page}
   </RegistrationLayout>
 )

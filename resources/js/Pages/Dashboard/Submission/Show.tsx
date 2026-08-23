@@ -139,8 +139,8 @@ export default function SubmissionShell({
   return (
     <main className="error-portal-shell relative min-h-screen overflow-hidden px-4 pb-24 pt-28 sm:px-6 sm:pt-32">
       <Seo
-        title={`${data.stage.name} — Pengumpulan`}
-        description="Tahap pengumpulan karya ISAC 2026."
+        title={`${data.stage.name} — Pengumpulan Karya ISAC 2026`}
+        description={`Kelola pengumpulan karya ${data.stage.name} ISAC 2026 Symphony of System — unggah tautan, pantau status verifikasi & pembayaran tahap.`}
         canonical={`/dashboard/submission/${stageId}`}
         noindex
       />

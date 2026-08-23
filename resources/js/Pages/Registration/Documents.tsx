@@ -77,7 +77,7 @@ const Documents = () => {
 }
 
 Documents.layout = (page: React.ReactNode) => (
-  <RegistrationLayout title="Registrasi - Documents" description="Masukkan tautan dokumen yang diperlukan untuk melanjutkan proses pendaftaran.">
+  <RegistrationLayout title="Dokumen Pendaftaran — ISAC 2026" description="Unggah tautan Google Drive berisi berkas persyaratan & link twibbon ISAC 2026 Symphony of System sebelum lanjut ke pembayaran.">
     {page}
   </RegistrationLayout>
 )

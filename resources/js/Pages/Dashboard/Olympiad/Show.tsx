@@ -96,8 +96,8 @@ export default function OlympiadExamShell({
   }
 
   const examStatus = getExamStatus(
-    data.exam.startDate,
-    data.exam.endDate,
+    data.exam.startDate ?? '',
+    data.exam.endDate ?? '',
   )
 
   const status = examStatusCopy[examStatus]
@@ -106,8 +106,8 @@ export default function OlympiadExamShell({
   return (
     <main className="error-portal-shell relative min-h-screen overflow-hidden px-4 pb-24 pt-28 sm:px-6 sm:pt-32">
       <Seo
-        title={`${data.exam.title} — Olimpiade`}
-        description="Detail ujian Olimpiade ISAC 2026."
+        title={`${data.exam.title} — Olimpiade ISAC 2026`}
+        description={`Detail jadwal & ketentuan ujian ${data.exam.title} — Olimpiade ISAC 2026 Symphony of System. Periode ${data.exam.startDate ? new Date(data.exam.startDate).toLocaleDateString('id-ID') : 'terjadwal'}, durasi ${data.exam.duration} menit.`}
         canonical={`/dashboard/olimpiade/${examId}`}
         noindex
       />

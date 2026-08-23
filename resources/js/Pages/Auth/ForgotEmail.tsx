@@ -6,8 +6,8 @@ import { ForgotEmailForm } from '@/features/auth/components/ForgotEmailForm';
 const ForgotEmail = () => {
     return (
         <AuthShell
-            title="Lupa Password"
-            description="Masukkan email untuk menerima kode verifikasi."
+            title="Lupa Password — ISAC 2026"
+            description="Pulihkan akses akun ISAC 2026 Symphony of System dengan kode OTP ke email. HIMSI Universitas Airlangga — proses cepat & aman."
         >
             <ForgotEmailForm />
         </AuthShell>
@@ -16,8 +16,8 @@ const ForgotEmail = () => {
 
 ForgotEmail.layout = (page: React.ReactNode) => (
     <AuthLayout
-        title="Lupa Password"
-        description="Masukkan email untuk menerima kode verifikasi reset password."
+        title="Lupa Password — ISAC 2026"
+        description="Pulihkan akses akun ISAC 2026 Symphony of System dengan verifikasi OTP email. HIMSI UNAIR."
     >
         {page}
     </AuthLayout>

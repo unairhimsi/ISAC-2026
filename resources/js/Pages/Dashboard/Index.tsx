@@ -268,8 +268,8 @@ export default function DashboardIndex() {
   return (
     <main className="error-portal-shell relative min-h-screen overflow-hidden px-4 pb-24 pt-28 text-foreground sm:px-6 sm:pt-32">
       <Seo
-        title="Dashboard Team"
-        description="Aktivitas dan tahap kompetisi Team ISAC 2026."
+        title="Dashboard Peserta — ISAC 2026"
+        description="Pantau status tim, tahap kompetisi & jadwal ujian ISAC 2026 Symphony of System — HIMSI UNAIR. Akses submissions & informasi selanjutnya."
         canonical="/dashboard"
         noindex
       />

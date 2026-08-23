@@ -21,8 +21,8 @@ export default function TodosIndex({ title }: TodosIndexProps) {
     return (
         <>
             <Seo
-                title={title || 'Todo List'}
-                description="Kelola daftar tugas ISAC 2026 dengan tampilan React Inertia dan Laravel."
+                title={title || 'Todo — ISAC 2026'}
+                description="Kelola daftar tugas internal ISAC 2026 — sinkron dengan sistem HIMSI UNAIR. Mode demo only."
                 canonical="/todos"
                 type="website"
                 noindex
