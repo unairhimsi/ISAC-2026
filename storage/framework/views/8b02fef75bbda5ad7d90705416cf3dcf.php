@@ -5,7 +5,7 @@
     $title = $announcement['title'] ?? 'Pembaruan Kompetisi ISAC 2026';
     $message = $announcement['message'] ?? 'Terdapat pembaruan pada perjalanan kompetisi Team Anda.';
     $dashboardUrl = rtrim(config('app.url'), '/').'/dashboard';
-    $logoUrl = rtrim(config('app.url'), '/').'/logo.png';
+    $logoUrl = rtrim(config('app.url'), '/').'/android-chrome-192x192.png';
 ?>
 <!doctype html>
 <html lang="id">

@@ -417,6 +417,7 @@ class AdminOperationService
             'template' => $operation->announcement_template ?: strtolower($operation->action),
             'message' => data_get($operation->metadata, 'announcement_message') ?: $this->defaultAnnouncementMessage($operation, $team),
         ];
+        $notify = (bool) data_get($operation->metadata, 'send_notification', false);
 
         return [
             'eventId' => $eventId,
