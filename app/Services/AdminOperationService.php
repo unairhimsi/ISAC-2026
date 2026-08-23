@@ -296,11 +296,11 @@ class AdminOperationService
 
     private function verifyTeam(Admin $admin, Team $team, ?string $requestId): string
     {
-        if ($team->status === Team::STATUS_VERIFIED) {
-            return 'SKIPPED';
+        // Jangan di-SKIPPED — verifikasi sekarang diperlakukan sebagai pengumuman.
+        // Jika sudah VERIFIED, tetap kirim email pengumuman (COMPLETED) tanpa ubah DB.
+        if ($team->status !== Team::STATUS_VERIFIED) {
+            $this->registrationService->verifyTeam($admin, $team, $requestId);
         }
-
-        $this->registrationService->verifyTeam($admin, $team, $requestId);
 
         return 'COMPLETED';
     }
@@ -310,11 +310,10 @@ class AdminOperationService
         if ($registration === null) {
             throw ValidationException::withMessages(['payment' => ['Registration Team tidak ditemukan.']]);
         }
-        if ($registration->status === RegistrationStatus::VERIFIED) {
-            return 'SKIPPED';
+        // Sama: jangan SKIPPED, tetap kirim pengumuman walau sudah VERIFIED
+        if ($registration->status !== RegistrationStatus::VERIFIED) {
+            $this->registrationService->verifyPayment($admin, $registration, $requestId);
         }
-
-        $this->registrationService->verifyPayment($admin, $registration, $requestId);
 
         return 'COMPLETED';
     }
@@ -328,9 +327,7 @@ class AdminOperationService
         $teamSkipped = $team->status === Team::STATUS_VERIFIED;
         $paymentSkipped = $registration->status === RegistrationStatus::VERIFIED;
 
-        if ($teamSkipped && $paymentSkipped) {
-            return 'SKIPPED';
-        }
+        // Jangan SKIPPED walau keduanya sudah VERIFIED — tetap kirim pengumuman
 
         if (! $teamSkipped) {
             $this->registrationService->verifyTeam($admin, $team, $requestId);

@@ -41,9 +41,9 @@ const CONFIG = {
   SERVICE_NAME: 'ISAC Spreadsheet Integration API',
   VERSION: '1.3.0',
 
-  // Email via Apps Script (semua operation jika PENDING)
+  // Email via Apps Script (semua operation jika PENDING) — anti-spam: pakai alias domain, jangan @gmail
   EMAIL_SENDER_NAME: 'ISAC 2026 — HIMSI UNAIR',
-  EMAIL_SENDER_ALIAS: '',
+  EMAIL_SENDER_ALIAS: 'isac@himsiunair.com',
   APP_URL: 'https://isac.himsiunair.com',
   LOGO_URL: 'https://isac.himsiunair.com/logo.png',
   DASHBOARD_URL: 'https://isac.himsiunair.com/dashboard',

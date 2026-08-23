@@ -13,12 +13,33 @@ import type { AdminOperationAction } from '../types/adminTypes'
 const MAX_TEAMS = 500
 
 const actionOptions: Array<{ value: AdminOperationAction; label: string; description: string }> = [
-  { value: 'VERIFY_TEAM_PAYMENT', label: 'Verifikasi Tim & Pembayaran', description: 'Verifikasi gabungan (team + payment) 300-400 tim sekaligus, opsional kirim email.' },
-  { value: 'VERIFY_TEAM', label: 'Verifikasi Tim', description: 'Set tim terpilih menjadi Terverifikasi.' },
-  { value: 'VERIFY_PAYMENT', label: 'Verifikasi Pembayaran', description: 'Verifikasi pembayaran registrasi tim terpilih.' },
-  { value: 'ADVANCE_STAGE', label: 'Advance Stage', description: 'Naikkan tim terpilih ke tahap tertentu.' },
-  { value: 'ANNOUNCE_RESULT', label: 'Pengumuman (Sending)', description: 'Kirim email pengumuman ke tim terpilih dan sinkronkan ke Spreadsheet.' },
+  { value: 'VERIFY_TEAM_PAYMENT', label: 'Verifikasi Tim & Pembayaran', description: 'Template otomatis + email pengumuman ke peserta.' },
+  { value: 'VERIFY_TEAM', label: 'Verifikasi Tim', description: 'Template otomatis + email pengumuman.' },
+  { value: 'VERIFY_PAYMENT', label: 'Verifikasi Pembayaran', description: 'Template otomatis + email pengumuman.' },
+  { value: 'ADVANCE_STAGE', label: 'Advance Stage', description: 'Template otomatis + email kelolosan tahap.' },
+  { value: 'ANNOUNCE_RESULT', label: 'Pengumuman Finalis', description: 'Tulis pesan custom untuk finalis / hasil.' },
 ]
+
+const TEMPLATE_MAP: Record<string, { title: string; message: string }> = {
+  VERIFY_TEAM: {
+    title: 'Verifikasi Data Team',
+    message: 'Data Team Anda telah diverifikasi oleh panitia ISAC 2026. Silakan lanjutkan ke tahap pembayaran jika diperlukan.',
+  },
+  VERIFY_PAYMENT: {
+    title: 'Verifikasi Pembayaran',
+    message: 'Pembayaran Team Anda telah diverifikasi oleh panitia ISAC 2026. Anda dapat melanjutkan ke tahap berikutnya.',
+  },
+  VERIFY_TEAM_PAYMENT: {
+    title: 'Verifikasi Tim & Pembayaran',
+    message: 'Data dan pembayaran Team Anda telah diverifikasi oleh panitia ISAC 2026. Anda dapat melanjutkan ke tahap berikutnya.',
+  },
+  ADVANCE_STAGE: {
+    title: 'Pengumuman Kelolosan Tahap',
+    message: 'Selamat! Team Anda dinyatakan lolos ke tahap berikutnya ISAC 2026. Pantau dashboard untuk jadwal selanjutnya.',
+  },
+}
+
+const TEMPLATE_ACTIONS = new Set(['VERIFY_TEAM', 'VERIFY_PAYMENT', 'VERIFY_TEAM_PAYMENT', 'ADVANCE_STAGE'])
 
 type SelectedTeam = { id: string; name: string }
 
@@ -99,13 +120,18 @@ export function RunOperationDialog({
 
   const activeAction = actionOptions.find((option) => option.value === action)
 
+  const isTemplateAction = TEMPLATE_ACTIONS.has(action)
+  const isAnnounceCustom = action === 'ANNOUNCE_RESULT'
+
   const canSubmit = Boolean(
     action
       && selectedTeams.length > 0
       && (action !== 'ADVANCE_STAGE' || stageId),
   ) && !create.isPending
+    // Untuk ANNOUNCE_RESULT, peserta harus isi pesan custom
+    && (isAnnounceCustom ? announcementMessage.trim().length > 0 : true)
 
-  const showAnnouncement = Boolean(action) // A & B: semua aksi boleh kirim email (300-400 tanpa batas via Apps Script)
+  const showAnnouncement = Boolean(action)
   const handleSubmit = async () => {
     if (!action || selectedTeams.length === 0) {
       setLocalError('Pilih aksi dan minimal satu tim.')
@@ -115,6 +141,12 @@ export function RunOperationDialog({
       setLocalError('Target Stage wajib dipilih untuk advance stage.')
       return
     }
+    if (isAnnounceCustom && !announcementMessage.trim()) {
+      setLocalError('Isi pesan pengumuman finalis tidak boleh kosong.')
+      return
+    }
+
+    const templateForAction = TEMPLATE_MAP[action as string]
 
     try {
       const response = await create.mutateAsync({
@@ -124,9 +156,9 @@ export function RunOperationDialog({
         sync_spreadsheet: syncSpreadsheet,
         announcement: showAnnouncement
           ? {
-              title: announcementTitle.trim() || null,
-              template: announcementTemplate.trim() || null,
-              message: announcementMessage.trim() || null,
+              title: isTemplateAction ? (templateForAction?.title ?? null) : (announcementTitle.trim() || null),
+              template: isTemplateAction ? action.toLowerCase() : (announcementTemplate.trim() || null),
+              message: isTemplateAction ? (templateForAction?.message ?? null) : (announcementMessage.trim() || null),
               send_notification: sendNotification,
             }
           : undefined,
@@ -195,36 +227,55 @@ export function RunOperationDialog({
 
           {showAnnouncement && (
             <div className="space-y-3 rounded-xl border border-border/60 p-4">
-              <p className="text-sm font-semibold">Detail Pengumuman {action==='VERIFY_TEAM_PAYMENT' ? '(Verifikasi Gabungan)' : action==='VERIFY_TEAM' || action==='VERIFY_PAYMENT' ? '(Opsional Email)' : ''}</p>
-              <Input
-                placeholder={action==='VERIFY_TEAM_PAYMENT' ? 'Judul: Verifikasi Tim & Pembayaran Diterima' : 'Judul pengumuman'}
-                value={announcementTitle}
-                onChange={(event) => setAnnouncementTitle(event.target.value)}
-                maxLength={160}
-              />
-              <Input
-                placeholder="Template (opsional)"
-                value={announcementTemplate}
-                onChange={(event) => setAnnouncementTemplate(event.target.value)}
-                maxLength={80}
-              />
-              <Textarea
-                placeholder={action==='VERIFY_TEAM_PAYMENT' ? 'Pesan: Data dan pembayaran Team Anda telah diverifikasi...' : 'Isi pesan pengumuman...'}
-                value={announcementMessage}
-                onChange={(event) => setAnnouncementMessage(event.target.value)}
-                rows={4}
-                maxLength={5000}
-              />
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={sendNotification}
-                  onChange={(event) => setSendNotification(event.target.checked)}
-                  className="size-4 accent-primary"
-                />
-                Kirim notifikasi email ke tim (via Apps Script, support 500/team)
-              </label>
-              {action==='VERIFY_TEAM_PAYMENT' && <p className="text-xs text-muted-foreground">Gabungan: 1 operasi akan verifikasi Team + Payment sekaligus. Jika salah satu sudah VERIFIED, hanya yang belum yang diproses. Email hanya dikirim jika dicentang.</p>}
+              {isTemplateAction ? (
+                <>
+                  <p className="text-sm font-semibold">Email Template Otomatis</p>
+                  <div className="rounded-xl border border-border bg-background/40 p-3">
+                    <p className="text-xs text-muted-foreground">Judul</p>
+                    <p className="text-sm font-medium">{TEMPLATE_MAP[action]?.title}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">Pesan (akan dipersonalisasi per Team)</p>
+                    <p className="text-sm whitespace-pre-wrap">{TEMPLATE_MAP[action]?.message}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">Logo: <span className="font-mono">/logo.png</span> dari public · Pengirim: <span className="font-mono">ISAC 2026 — HIMSI UNAIR</span></p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Template otomatis dipakai — admin tidak perlu input manual. Akan tetap terkirim sebagai pengumuman walau status Team sudah VERIFIED.</p>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={sendNotification}
+                      onChange={(event) => setSendNotification(event.target.checked)}
+                      className="size-4 accent-primary"
+                    />
+                    Kirim email pengumuman ke tim
+                  </label>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold">Pesan Pengumuman Finalis (Custom)</p>
+                  <Input
+                    placeholder="Judul pengumuman"
+                    value={announcementTitle}
+                    onChange={(event) => setAnnouncementTitle(event.target.value)}
+                    maxLength={160}
+                  />
+                  <Textarea
+                    placeholder="Tulis pesan pengumuman finalis di sini... (hanya text, tanpa template)"
+                    value={announcementMessage}
+                    onChange={(event) => setAnnouncementMessage(event.target.value)}
+                    rows={5}
+                    maxLength={5000}
+                  />
+                  <p className="text-xs text-muted-foreground">Untuk Finalis: isi pesan manual. Template tidak dipakai — hanya text yang kamu tulis yang akan dikirim.</p>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={sendNotification}
+                      onChange={(event) => setSendNotification(event.target.checked)}
+                      className="size-4 accent-primary"
+                    />
+                    Kirim notifikasi email ke tim
+                  </label>
+                </>
+              )}
             </div>
           )}
 

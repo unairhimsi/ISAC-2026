@@ -26,6 +26,7 @@ export const navigation: NavigationItem[] = [
   { label: 'Kompetisi', href: '/admin/competitions', icon: Layers3, roles: allRoles },
   { label: 'Batch', href: '/admin/batches', icon: Boxes, roles: allRoles },
   { label: 'Tahapan', href: '/admin/stages', icon: ClipboardList, roles: ['super_admin', 'admin_registration'] },
+  { label: 'Kelola Tahap Team', href: '/admin/team-stages', icon: Layers3, roles: ['super_admin', 'admin_registration'] },
   { label: 'Operasi', href: '/admin/operations', icon: FileSpreadsheet, roles: allRoles },
   { label: 'Buat Soal', href: '/admin/questions', icon: BookOpenCheck, roles: ['super_admin', 'judge'] },
   { label: 'Penilaian', href: '/admin/judging', icon: BookOpenCheck, roles: ['super_admin', 'judge'], comingSoon: true },

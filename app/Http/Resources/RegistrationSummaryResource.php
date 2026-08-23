@@ -16,7 +16,7 @@ class RegistrationSummaryResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $this->resource->loadMissing('members.photoFile', 'registration.competition', 'registration.batch');
+        $this->resource->loadMissing('members.photoFile', 'registration.competition', 'registration.batch', 'currentStage');
 
         $registration = $this->resource->registration;
 
@@ -66,6 +66,12 @@ class RegistrationSummaryResource extends JsonResource
             'auditLogs' => $auditLogs,
             'verificationNote' => $this->resource->verification_note,
             'revisionStep' => $this->resource->revision_step,
+            'currentStage' => $this->resource->currentStage ? [
+                'id' => $this->resource->currentStage->id,
+                'name' => $this->resource->currentStage->name,
+                'order' => $this->resource->currentStage->order,
+                'type' => $this->resource->currentStage->type,
+            ] : null,
         ];
     }
 }

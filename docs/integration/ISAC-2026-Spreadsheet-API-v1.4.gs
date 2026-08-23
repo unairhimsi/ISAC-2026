@@ -1,32 +1,40 @@
 /**
  * ============================================================
- * ISAC 2026 — GOOGLE SPREADSHEET INTEGRATION API v1.2
+ * ISAC 2026 — GOOGLE SPREADSHEET INTEGRATION API v1.4
  * ============================================================
  *
  * Database ISAC = Source of Truth
  * Spreadsheet   = Operational Monitoring / Integration Log
  *
- * Perubahan v1.2 (Operation via Apps Script):
- * - Operation ANNOUNCE_RESULT yang dikirim via ?path=events/batch-upsert
- *   langsung mengirim email via GmailApp di Apps Script (bukan via Laravel Brevo).
- * - Laravel Brevo TETAP dipakai untuk auth (OTP, verification, reset password).
- * - Flag routing: event.emailStatus === 'PENDING' + action === 'ANNOUNCE_RESULT'
- *   => Apps Script kirim email, set email_status=SENT/FAILED langsung di sheet.
- * - Untuk VERIFY_TEAM/PAYMENT/ADVANCE dengan emailStatus NOT_REQUIRED, email tidak dikirim.
+ * Perubahan v1.4 — Template Lebih Informatif + Anti-Spam (Tema Web)
+ * - Template email sekarang lebih informatif & sinkron tema web ISAC:
+ *   header gradient #23155f→#151827, lime accent #a7ff5a, dark #090b15/#151827
+ *   logo dari https://isac.himsiunair.com/logo.png (public/logo.png 126x45)
+ *   detail box: kode tim, kompetisi, batch, tahap/status, email terdaftar
+ *   langkah selanjutnya + CTA "Buka Team Dashboard" + preheader
+ *   footer alamat fisik HIMSI UNAIR (wajib anti-spam)
+ * - Anti-spam Spreadsheet (karena sebelumnya masuk spam via GmailApp):
+ *   • EMAIL_SENDER_ALIAS wajib diisi alias terverifikasi Google Workspace
+ *     contoh: isac@himsiunair.com (bukan @gmail.com). Set alias di
+ *     Admin console → Gmail → Settings → "Send mail as" → verifikasi.
+ *     Jika kosong, tetap pakai akun pemilik script (mudah masuk spam).
+ *   • Domain isac.himsiunair.com WAJIB SPF include:_spf.google.com
+ *     + include:spf.brevo.net, DKIM & DMARC (lihat docs/integration/README.md)
+ *   • Subject tanpa tanda kurung berlebihan: "ISAC 2026 — <judul>"
+ *   • Plain text + HTML (multipart) + preheader
+ *   • Footer fisik + notice "tambahkan ke kontak"
+ *   • Opsional: set GOOGLE_SHEET_EMAIL_VIA_APPS_SCRIPT=false di Laravel
+ *     untuk kirim via Brevo (deliverability lebih tinggi) — Sheet tetap SYNCED.
+ * - Kompatibel v1.3: HEADERS & endpoint sama, VERSION bump 1.4.0
  *
  * Konfigurasi Laravel:
- *   GOOGLE_SHEET_EMAIL_VIA_APPS_SCRIPT=true (default) => Laravel TIDAK dispatch SendCompetitionAnnouncementJob
- *   Jika false, fallback ke Brevo seperti v1.1.
+ *   GOOGLE_SHEET_API_URL=https://script.google.com/macros/s/.../exec
+ *   GOOGLE_SHEET_API_KEY=...
+ *   GOOGLE_SHEET_EMAIL_VIA_APPS_SCRIPT=true|false
  *
- * Supported endpoints: sama seperti v1.1
+ * Supported endpoints:
  * GET  /exec?path=health | /exec?path=events/{eventId}&apiKey=...
  * POST /exec?path=events/batch-upsert | /exec?path=events/{eventId}/delivery-status
- */
-
-/**
- * ============================================================
- * CONFIGURATION
- * ============================================================
  */
 
 const CONFIG = {
@@ -35,23 +43,19 @@ const CONFIG = {
   API_KEY_PROPERTY: 'ISAC_API_KEY',
   MAX_BATCH_SIZE: 500,
   SERVICE_NAME: 'ISAC Spreadsheet Integration API',
-  VERSION: '1.2.0',
+  VERSION: '1.4.0',
 
-  // Email via Apps Script (khusus operation)
+  // ANTI-SPAM: isi alias domain terverifikasi, JANGAN @gmail.com
+  // Setup: Google Workspace isac@himsiunair.com → Settings → Accounts → Send mail as → Add alias
+  // Jika dikosongkan, fallback ke akun pemilik script (rawan spam).
   EMAIL_SENDER_NAME: 'ISAC 2026 — HIMSI UNAIR',
-  // Opsional: pakai alias Gmail yang sudah terverifikasi di Apps Script account
-  // Kosongkan untuk pakai akun pelaksana Apps Script sebagai pengirim
-  EMAIL_SENDER_ALIAS: '',
+  EMAIL_SENDER_ALIAS: 'isac@himsiunair.com',
   APP_URL: 'https://isac.himsiunair.com',
   LOGO_URL: 'https://isac.himsiunair.com/logo.png',
   DASHBOARD_URL: 'https://isac.himsiunair.com/dashboard',
+  SUPPORT_EMAIL: 'isac@himsiunair.com',
+  PHYSICAL_ADDRESS: 'Departemen Sistem Informasi, FST Universitas Airlangga — Kampus C, Surabaya 60115',
 };
-
-/**
- * ============================================================
- * SPREADSHEET HEADERS — tetap kompatibel v1.1
- * ============================================================
- */
 
 const HEADERS = [
   'event_id','operation_id',
@@ -68,11 +72,6 @@ const HEADERS = [
   'created_at','updated_at',
 ];
 
-/**
- * ============================================================
- * INITIAL SETUP — sama seperti v1.1
- * ============================================================
- */
 function setup() {
   const properties = PropertiesService.getScriptProperties();
   let spreadsheetId = properties.getProperty(CONFIG.SPREADSHEET_ID_PROPERTY);
@@ -97,12 +96,11 @@ function setup() {
     properties.setProperty(CONFIG.API_KEY_PROPERTY, apiKey);
   }
   console.log('==========================================');
-  console.log('ISAC Spreadsheet API v1.2 initialized');
+  console.log('ISAC Spreadsheet API v1.4 initialized');
   console.log('Spreadsheet ID: ' + spreadsheetId);
   console.log('Spreadsheet URL: https://docs.google.com/spreadsheets/d/' + spreadsheetId);
   console.log('API Key configured: YES');
-  console.log('Email via Apps Script: ENABLED (operation ANNOUNCE_RESULT)');
-  console.log('Auth email tetap via Brevo (Laravel)');
+  console.log('Email v1.4: template informatif + anti-spam, alias=' + (CONFIG.EMAIL_SENDER_ALIAS || '(owner)'));
   console.log('==========================================');
   return { success: true, spreadsheetId, spreadsheetUrl: 'https://docs.google.com/spreadsheets/d/' + spreadsheetId, apiKeyConfigured: true };
 }
@@ -111,23 +109,14 @@ function rotateApiKey() {
   const properties = PropertiesService.getScriptProperties();
   const apiKey = generateApiKey_();
   properties.setProperty(CONFIG.API_KEY_PROPERTY, apiKey);
-  console.log('==========================================');
-  console.log('ISAC API KEY ROTATED');
-  console.log('NEW API KEY: ' + apiKey);
-  console.log('==========================================');
   return { success: true, message: 'API key successfully rotated.' };
 }
 
-/**
- * ============================================================
- * HTTP GET ROUTER — sama v1.1
- * ============================================================
- */
 function doGet(e) {
   try {
     const path = normalizePath_(e.pathInfo || (e.parameter ? e.parameter.path : ''));
     if (!path || path === 'health') {
-      return jsonResponse_({ success: true, service: CONFIG.SERVICE_NAME, version: CONFIG.VERSION, status: 'UP', timestamp: new Date().toISOString() });
+      return jsonResponse_({ success: true, service: CONFIG.SERVICE_NAME, version: CONFIG.VERSION, status: 'UP', timestamp: new Date().toISOString(), emailAlias: CONFIG.EMAIL_SENDER_ALIAS || 'owner' });
     }
     const eventMatch = path.match(/^events\/([^/]+)$/);
     if (eventMatch) {
@@ -139,11 +128,6 @@ function doGet(e) {
   } catch (error) { return errorResponse_(error); }
 }
 
-/**
- * ============================================================
- * HTTP POST ROUTER — sama v1.1
- * ============================================================
- */
 function doPost(e) {
   try {
     const path = normalizePath_(e.pathInfo || (e.parameter ? e.parameter.path : ''));
@@ -159,11 +143,6 @@ function doPost(e) {
   } catch (error) { return errorResponse_(error); }
 }
 
-/**
- * ============================================================
- * POST /events/batch-upsert — v1.2 dengan pengiriman email langsung
- * ============================================================
- */
 function batchUpsertEvents_(payload) {
   if (!payload.operationId) throw new ApiError(422, 'operationId is required');
   if (!Array.isArray(payload.events)) throw new ApiError(422, 'events must be an array');
@@ -185,14 +164,11 @@ function batchUpsertEvents_(payload) {
         if (existingEventIds.has(String(event.eventId))) { duplicates++; return; }
         const now = new Date().toISOString();
 
-        // --- EMAIL ROUTING v1.2 ---
-        // Laravel sekarang mengirim emailStatus di payload (PENDING untuk ANNOUNCE_RESULT yang butuh email, NOT_REQUIRED jika tidak)
-        // Apps Script yang kirim email untuk operation, bukan Brevo. Auth tetap Brevo di Laravel.
         let emailStatusRaw = event.emailStatus || event.email_status || null;
-        // fallback inferensi jika field tidak ada (backward compat)
         if (!emailStatusRaw) {
           const act = String(event.action || '').trim().toUpperCase();
-          emailStatusRaw = act === 'ANNOUNCE_RESULT' ? 'PENDING' : 'NOT_REQUIRED';
+          const needsEmail = ['VERIFY_TEAM','VERIFY_PAYMENT','VERIFY_TEAM_PAYMENT','ADVANCE_STAGE','ANNOUNCE_RESULT'].includes(act);
+          emailStatusRaw = needsEmail ? 'PENDING' : 'NOT_REQUIRED';
         }
         let emailStatus = String(emailStatusRaw).trim().toUpperCase();
         let providerMessageId = event.providerMessageId || '';
@@ -200,10 +176,10 @@ function batchUpsertEvents_(payload) {
         let retryCount = Number(event.retryCount || 0);
         let lastError = event.lastError || '';
 
-        // Hanya untuk ANNOUNCE_RESULT + PENDING, kirim via GmailApp langsung
         if (emailStatus === 'PENDING') {
           const actionUpper = String(event.action || '').trim().toUpperCase();
-          if (actionUpper === 'ANNOUNCE_RESULT') {
+          const emailableActions = ['VERIFY_TEAM','VERIFY_PAYMENT','VERIFY_TEAM_PAYMENT','ADVANCE_STAGE','ANNOUNCE_RESULT'];
+          if (emailableActions.includes(actionUpper)) {
             try {
               const teamEmail = (event.team && event.team.email) ? String(event.team.email).trim() : '';
               if (!teamEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(teamEmail)) {
@@ -217,14 +193,9 @@ function batchUpsertEvents_(payload) {
             } catch (emailErr) {
               emailStatus = 'FAILED';
               lastError = String(emailErr && emailErr.message ? emailErr.message : emailErr).slice(0,2000);
-              // retryCount biarkan 0, akan di-increment via delivery-status RETRYING nanti jika ada retry
             }
           } else {
-            // Untuk VERIFY_* dll, PENDING seharusnya tidak terjadi karena Laravel set NOT_REQUIRED
-            // Tapi jika terlanjur PENDING, set jadi NOT_REQUIRED biar tidak pending selamanya
-            // Kecuali memang mau kirim, ubah logic di sini
-            // emailStatus tetap PENDING akan di-handle sebagai NOT_REQUIRED agar tidak stuck
-            // Komentar: jika ke depan mau VERIFY juga kirim email via Apps Script, ganti ke pengiriman di sini
+            emailStatus = 'NOT_REQUIRED';
           }
         }
 
@@ -275,73 +246,110 @@ function batchUpsertEvents_(payload) {
 }
 
 /**
- * ============================================================
- * SEND OPERATION EMAIL VIA APPS SCRIPT (Gmail)
- * ============================================================
- * Dipanggil hanya untuk action ANNOUNCE_RESULT + emailStatus PENDING
- * Body HTML mirip resources/views/emails/competition-operation.blade.php
+ * SEND OPERATION EMAIL — v1.4 Informatif + Tema Web + Anti-Spam
  */
 function sendOperationEmail_(event) {
   const team = event.team || {};
   const competition = event.competition || {};
   const announcement = event.announcement || {};
-  const title = announcement.title || 'Pembaruan Kompetisi ISAC 2026';
+  const actionUpper = String(event.action || '').trim().toUpperCase();
+  const defaultTitles = {
+    'VERIFY_TEAM': 'Verifikasi Data Team',
+    'VERIFY_PAYMENT': 'Verifikasi Pembayaran',
+    'VERIFY_TEAM_PAYMENT': 'Verifikasi Tim & Pembayaran',
+    'ADVANCE_STAGE': 'Pengumuman Kelolosan Tahap',
+    'ANNOUNCE_RESULT': 'Pengumuman Hasil ISAC 2026'
+  };
+  const title = announcement.title || defaultTitles[actionUpper] || 'Pembaruan Kompetisi ISAC 2026';
   const message = announcement.message || 'Terdapat pembaruan pada perjalanan kompetisi Team Anda.';
   const statusAfter = event.statusAfter || event.currentStage || '—';
   const teamName = team.name || 'Team ISAC';
+  const teamCode = team.code || '—';
   const recipient = String(team.email || '').trim();
+  const actionLabel = actionUpper.replace(/_/g,' ');
 
-  // Escape HTML untuk message (simple)
   const escapedMessage = String(message)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/\r?\n/g, '<br>');
+  const preheader = String(message).slice(0,90) + ' — Lihat detail di dashboard ISAC 2026.';
 
+  // TEMA WEB: #090b15 background, #151827 card, #30364f border, #23155f→#151827 gradient, #a7ff5a lime
   const htmlBody = ''
-    + '<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>'
-    + '<body style="margin:0;background:#090b15;color:#eff2ff;font-family:Arial,sans-serif;">'
-    + '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#090b15;padding:28px 12px;"><tr><td align="center">'
+    + '<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><title>' + escapeHtml_(title) + '</title></head>'
+    + '<body style="margin:0;background:#090b15;color:#eff2ff;font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;">'
+    + '<div style="display:none;max-height:0;overflow:hidden;opacity:0;">' + escapeHtml_(preheader) + '</div>'
+    + '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#090b15;padding:24px 12px;"><tr><td align="center">'
     + '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#151827;border:1px solid #30364f;border-radius:24px;overflow:hidden;">'
-    + '<tr><td style="padding:30px 32px 20px;background:linear-gradient(135deg,#23155f,#151827);">'
-    + '<img src="' + CONFIG.LOGO_URL + '" alt="ISAC 2026" width="160" style="display:block;border:0;max-width:160px;height:auto;">'
-    + '<p style="margin:18px 0 0;color:#b9b5ff;font-size:12px;font-weight:700;letter-spacing:1.2px;">INFORMATION SYSTEMS AIRLANGGA COMPETITION 2026</p>'
-    + '<h1 style="margin:10px 0 0;color:#ffffff;font-size:26px;line-height:1.25;">' + escapeHtml_(title) + '</h1>'
+    // Header
+    + '<tr><td style="padding:28px 32px 22px;background:linear-gradient(135deg,#23155f 0%,#1a1440 45%,#151827 100%);border-bottom:1px solid rgba(255,255,255,0.06);">'
+    + '<img src="' + CONFIG.LOGO_URL + '" alt="ISAC 2026 — HIMSI UNAIR" width="132" height="48" style="display:block;border:0;max-width:132px;height:auto;">'
+    + '<p style="margin:16px 0 0;color:#b9b5ff;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;">INFORMATION SYSTEMS AIRLANGGA COMPETITION 2026</p>'
+    + '<p style="margin:6px 0 0;color:#8d95ae;font-size:11px;">HIMSI Universitas Airlangga — Fakultas Sains &amp; Teknologi</p>'
+    + '<h1 style="margin:16px 0 0;color:#ffffff;font-size:22px;line-height:1.3;font-weight:800;">' + escapeHtml_(title) + '</h1>'
+    + '<p style="margin:8px 0 0;display:inline-block;background:rgba(167,255,90,0.12);border:1px solid rgba(167,255,90,0.25);color:#a7ff5a;font-size:11px;font-weight:700;letter-spacing:0.6px;padding:4px 10px;border-radius:999px;">' + escapeHtml_(actionLabel) + '</p>'
     + '</td></tr>'
-    + '<tr><td style="padding:30px 32px;color:#e4e7f4;font-size:15px;line-height:1.65;">'
-    + '<p style="margin:0 0 16px;">Halo, <strong>' + escapeHtml_(teamName) + '</strong>.</p>'
-    + '<p style="margin:0 0 22px;">' + escapedMessage + '</p>'
-    + '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #30364f;border-radius:16px;background:#0f1220;"><tr><td style="padding:16px;">'
-    + '<p style="margin:0 0 6px;color:#aeb6cf;font-size:12px;">KOMPETISI</p><p style="margin:0;color:#ffffff;font-weight:700;">' + escapeHtml_(competition.name || 'ISAC 2026') + '</p>'
-    + '<p style="margin:10px 0 6px;color:#aeb6cf;font-size:12px;">BATCH</p><p style="margin:0;color:#ffffff;font-weight:700;">' + escapeHtml_(competition.batch || '—') + '</p>'
-    + '<p style="margin:10px 0 6px;color:#aeb6cf;font-size:12px;">TAHAP / STATUS</p><p style="margin:0;color:#ffffff;font-weight:700;">' + escapeHtml_(statusAfter) + '</p>'
+    // Body
+    + '<tr><td style="padding:28px 32px;color:#e4e7f4;font-size:14px;line-height:1.7;">'
+    + '<p style="margin:0 0 14px;">Halo, <strong style="color:#ffffff;">' + escapeHtml_(teamName) + '</strong> 👋</p>'
+    + '<p style="margin:0 0 18px;color:#e4e7f4;">' + escapedMessage + '</p>'
+    // Detail box
+    + '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:18px 0;border:1px solid #30364f;border-radius:16px;background:#0f1220;overflow:hidden;"><tr><td style="padding:18px;">'
+    + '<p style="margin:0 0 12px;color:#a7ff5a;font-size:12px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;">Detail Peserta</p>'
+    + '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px;line-height:1.5;">'
+    + '<tr><td style="padding:6px 0;color:#aeb6cf;width:38%;">Kode Tim</td><td style="padding:6px 0;color:#ffffff;font-weight:700;">' + escapeHtml_(teamCode) + '</td></tr>'
+    + '<tr><td style="padding:6px 0;color:#aeb6cf;">Kompetisi</td><td style="padding:6px 0;color:#ffffff;font-weight:700;">' + escapeHtml_(competition.name || 'ISAC 2026') + '</td></tr>'
+    + '<tr><td style="padding:6px 0;color:#aeb6cf;">Batch</td><td style="padding:6px 0;color:#ffffff;font-weight:700;">' + escapeHtml_(competition.batch || '—') + '</td></tr>'
+    + '<tr><td style="padding:6px 0;color:#aeb6cf;">Tahap / Status</td><td style="padding:6px 0;color:#ffffff;font-weight:700;">' + escapeHtml_(statusAfter) + '</td></tr>'
+    + '<tr><td style="padding:6px 0;color:#aeb6cf;">Email Terdaftar</td><td style="padding:6px 0;color:#e4e7f4;">' + escapeHtml_(recipient || '—') + '</td></tr>'
+    + '</table></td></tr></table>'
+    // Langkah selanjutnya
+    + '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:18px 0;background:rgba(167,255,90,0.07);border:1px solid rgba(167,255,90,0.18);border-radius:14px;"><tr><td style="padding:14px 16px;">'
+    + '<p style="margin:0 0 4px;color:#a7ff5a;font-size:12px;font-weight:700;">Langkah Selanjutnya</p>'
+    + '<p style="margin:0;color:#e4e7f4;font-size:13px;line-height:1.55;">Buka dashboard team untuk melihat jadwal, pengumuman, dan instruksi tahap berikutnya. Pastikan data tim &amp; anggota sudah lengkap.</p>'
     + '</td></tr></table>'
-    + '<p style="margin:26px 0 0;"><a href="' + CONFIG.DASHBOARD_URL + '" style="display:inline-block;border-radius:999px;background:#a7ff5a;color:#141a0c;padding:12px 20px;text-decoration:none;font-weight:700;">Buka Team Dashboard</a></p>'
-    + '<p style="margin:26px 0 0;color:#aeb6cf;font-size:12px;">Jika membutuhkan bantuan, hubungi panitia melalui kanal resmi ISAC 2026.</p>'
+    // CTA
+    + '<p style="margin:22px 0 0;text-align:center;"><a href="' + CONFIG.DASHBOARD_URL + '" style="display:inline-block;border-radius:999px;background:#a7ff5a;color:#141a0c;padding:13px 24px;text-decoration:none;font-weight:800;font-size:14px;letter-spacing:0.2px;box-shadow:0 6px 20px rgba(167,255,90,0.25);">Buka Team Dashboard →</a></p>'
+    + '<p style="margin:12px 0 0;text-align:center;color:#8d95ae;font-size:11px;">atau salin tautan: <a href="' + CONFIG.DASHBOARD_URL + '" style="color:#a7ff5a;word-break:break-all;">' + CONFIG.DASHBOARD_URL + '</a></p>'
+    + '<p style="margin:22px 0 0;color:#aeb6cf;font-size:12px;line-height:1.6;">Butuh bantuan? Hubungi panitia via <a href="mailto:' + CONFIG.SUPPORT_EMAIL + '" style="color:#a7ff5a;text-decoration:none;">' + CONFIG.SUPPORT_EMAIL + '</a> atau kanal resmi ISAC 2026.</p>'
+    + '<p style="margin:8px 0 0;color:#8d95ae;font-size:11px;line-height:1.5;">Pesan ini dikirim otomatis untuk <strong style="color:#e4e7f4;">' + escapeHtml_(recipient || 'email terdaftar') + '</strong>. Jika kamu merasa tidak mendaftar ISAC 2026, abaikan email ini.</p>'
     + '</td></tr>'
-    + '<tr><td style="padding:18px 32px;border-top:1px solid #30364f;color:#8d95ae;font-size:11px;text-align:center;">© Information Systems Airlangga Competition 2026 · HIMSI UNAIR</td></tr>'
+    // Footer fisik anti-spam
+    + '<tr><td style="padding:16px 32px;background:#0f1220;border-top:1px solid #30364f;color:#8d95ae;font-size:11px;line-height:1.6;text-align:center;">'
+    + '<p style="margin:0;color:#e4e7f4;font-weight:700;letter-spacing:0.3px;">© ' + new Date().getFullYear() + ' Information Systems Airlangga Competition — HIMSI UNAIR</p>'
+    + '<p style="margin:4px 0 0;">' + escapeHtml_(CONFIG.PHYSICAL_ADDRESS) + '</p>'
+    + '<p style="margin:8px 0 0;font-size:10px;color:#6b7280;">Email resmi ISAC 2026. Tambahkan <span style="color:#aeb6cf;">' + escapeHtml_(CONFIG.SUPPORT_EMAIL) + '</span> ke kontak agar tidak masuk spam. Mohon tidak membalas langsung ke email ini.</p>'
+    + '</td></tr>'
     + '</table></td></tr></table></body></html>';
 
-  const subject = '[ISAC 2026] ' + title;
-  const plainBody = 'Halo ' + teamName + ',\n\n' + String(message) + '\n\nKompetisi: ' + (competition.name || 'ISAC 2026') + '\nBatch: ' + (competition.batch || '—') + '\nStatus: ' + statusAfter + '\n\nBuka dashboard: ' + CONFIG.DASHBOARD_URL;
+  const subject = 'ISAC 2026 — ' + title;
+  const plainBody = 'Halo ' + teamName + ',\n\n'
+    + String(message) + '\n\n'
+    + 'Kode Tim: ' + teamCode + '\n'
+    + 'Kompetisi: ' + (competition.name || 'ISAC 2026') + '\n'
+    + 'Batch: ' + (competition.batch || '—') + '\n'
+    + 'Tahap/Status: ' + statusAfter + '\n'
+    + 'Aksi: ' + actionUpper + '\n\n'
+    + 'Buka dashboard: ' + CONFIG.DASHBOARD_URL + '\n\n'
+    + 'Butuh bantuan? ' + CONFIG.SUPPORT_EMAIL + '\n'
+    + CONFIG.PHYSICAL_ADDRESS;
 
-  // Kirim via GmailApp (butuh otorisasi). Alternatif: MailApp.sendEmail
   const options = {
     htmlBody: htmlBody,
     name: CONFIG.EMAIL_SENDER_NAME,
-    // replyTo: 'panitia@himsiunair.com' // opsional
   };
-  // Jika ada alias terverifikasi, GmailApp bisa pakai from
   if (CONFIG.EMAIL_SENDER_ALIAS) {
     options.from = CONFIG.EMAIL_SENDER_ALIAS;
   }
 
-  // GmailApp lebih direkomendasikan untuk HTML
+  // ANTI-SPAM: GmailApp akan kirim via alias domain jika terverifikasi.
+  // Jika kuota Gmail consumer terbatas (~500/hari), pertimbangkan switch ke Brevo:
+  // Laravel: GOOGLE_SHEET_EMAIL_VIA_APPS_SCRIPT=false
   if (typeof GmailApp !== 'undefined' && GmailApp.sendEmail) {
     GmailApp.sendEmail(recipient, subject, plainBody, options);
   } else {
     MailApp.sendEmail({ to: recipient, subject: subject, body: plainBody, htmlBody: htmlBody, name: CONFIG.EMAIL_SENDER_NAME });
   }
 
-  // Apps Script tidak mengembalikan messageId native, buat pseudo-id untuk sheet
   return { messageId: 'gmail-' + Utilities.getUuid().slice(0,12) };
 }
 
@@ -349,11 +357,6 @@ function escapeHtml_(str) {
   return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-/**
- * ============================================================
- * GET /events/{eventId} — sama v1.1
- * ============================================================
- */
 function getEvent_(eventId) {
   if (!eventId) throw new ApiError(422, 'eventId is required');
   const sheet = getEventsSheet_();
@@ -365,11 +368,6 @@ function getEvent_(eventId) {
   return jsonResponse_({ success: true, data: event, timestamp: new Date().toISOString() });
 }
 
-/**
- * ============================================================
- * POST /events/{eventId}/delivery-status — tetap ada untuk retry manual
- * ============================================================
- */
 function updateDeliveryStatus_(eventId, payload) {
   const allowedStatuses = ['PENDING','PROCESSING','SENT','FAILED','RETRYING','NOT_REQUIRED'];
   if (!payload.status) throw new ApiError(422, 'status is required');
@@ -402,11 +400,6 @@ function updateDeliveryStatus_(eventId, payload) {
   } finally { if (typeof lock.hasLock === 'function' ? lock.hasLock() : true) { try { lock.releaseLock(); } catch (_) {} } }
 }
 
-/**
- * ============================================================
- * EVENT VALIDATION — sama v1.1
- * ============================================================
- */
 function validateEvent_(event) {
   if (!event) throw new Error('Event cannot be null');
   if (!event.eventId) throw new Error('eventId is required');
@@ -417,11 +410,6 @@ function validateEvent_(event) {
   if (!action) throw new Error('action cannot be empty');
 }
 
-/**
- * ============================================================
- * DATABASE / SHEET HELPERS — sama v1.1
- * ============================================================
- */
 function getEventsSheet_() {
   const properties = PropertiesService.getScriptProperties();
   const spreadsheetId = properties.getProperty(CONFIG.SPREADSHEET_ID_PROPERTY);

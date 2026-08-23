@@ -200,10 +200,6 @@ export default function AdminOperationShow({ operationId }: { operationId: strin
                   </Button>
                 </>
               )}
-              <div className="rounded-2xl border border-border bg-background/20 p-3 text-xs leading-5 text-muted-foreground">
-                <p className="font-medium text-foreground">Cara kerja</p>
-                <p className="mt-1">Setiap item operasi membuat `SpreadsheetIntegrationEvent` dengan `POST ?path=/events/batch-upsert`. Job `SyncSpreadsheetIntegrationEventJob` akan retry otomatis 5x (backoff 1m,5m,15m,30m,60m). Tombol ini hanya untuk PENDING/FAILED → dispatch ulang.</p>
-              </div>
             </CardContent>
           </Card>
         </div>

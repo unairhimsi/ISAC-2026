@@ -109,6 +109,7 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/competitions', fn () => Inertia::render('Admin/Competitions', ['title' => 'Kompetisi']))->name('competitions');
     Route::get('/batches', fn () => Inertia::render('Admin/Batches', ['title' => 'Batch']))->name('batches');
     Route::get('/stages', fn () => Inertia::render('Admin/Stages', ['title' => 'Tahapan']))->name('stages');
+    Route::get('/team-stages', fn () => Inertia::render('Admin/TeamStages', ['title' => 'Kelola Tahap Team']))->name('team-stages');
     Route::get('/operations', fn () => Inertia::render('Admin/Operations/Index', ['title' => 'Operasi']))->name('operations.index');
     Route::get('/operations/{operation}', fn (string $operation) => Inertia::render('Admin/Operations/Show', ['title' => 'Detail Operasi', 'operationId' => $operation]))->whereUuid('operation')->name('operations.show');
     Route::get('/questions', fn () => Inertia::render('Admin/Questions', ['title' => 'Buat Soal']))->name('questions');

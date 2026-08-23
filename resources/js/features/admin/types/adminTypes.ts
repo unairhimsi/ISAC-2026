@@ -108,6 +108,7 @@ export type AdminTeamSummary = {
   auditLogs?: AdminAuditNote[]
   verificationNote?: string | null
   revisionStep?: string | null
+  currentStage?: { id: string; name: string; order: number; type: string } | null
 }
 
 export type LaravelPagination<T> = {
