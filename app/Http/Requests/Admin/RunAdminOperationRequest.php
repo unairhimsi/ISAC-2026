@@ -27,7 +27,7 @@ class RunAdminOperationRequest extends FormRequest
     {
         return [
             'action' => ['required', 'string', Rule::in(AdminOperation::ACTIONS)],
-            'team_ids' => ['required', 'array', 'min:1', 'max:100'],
+            'team_ids' => ['required', 'array', 'min:1', 'max:500'],
             'team_ids.*' => ['required', 'uuid', 'distinct', Rule::exists('teams', 'id')],
             'target_stage_id' => ['nullable', 'uuid', Rule::exists('stages', 'id')],
             'sync_spreadsheet' => ['required', 'boolean'],

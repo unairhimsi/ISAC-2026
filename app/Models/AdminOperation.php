@@ -13,12 +13,14 @@ class AdminOperation extends Model
 
     public const ACTION_VERIFY_TEAM = 'VERIFY_TEAM';
     public const ACTION_VERIFY_PAYMENT = 'VERIFY_PAYMENT';
+    public const ACTION_VERIFY_TEAM_PAYMENT = 'VERIFY_TEAM_PAYMENT';
     public const ACTION_ADVANCE_STAGE = 'ADVANCE_STAGE';
     public const ACTION_ANNOUNCE_RESULT = 'ANNOUNCE_RESULT';
 
     public const ACTIONS = [
         self::ACTION_VERIFY_TEAM,
         self::ACTION_VERIFY_PAYMENT,
+        self::ACTION_VERIFY_TEAM_PAYMENT,
         self::ACTION_ADVANCE_STAGE,
         self::ACTION_ANNOUNCE_RESULT,
     ];

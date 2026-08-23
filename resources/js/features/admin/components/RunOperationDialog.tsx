@@ -10,9 +10,10 @@ import { cn } from '@/lib/utils'
 import { useAdminStages, useAdminTeams, useCreateAdminOperation } from '../hooks/useAdmin'
 import type { AdminOperationAction } from '../types/adminTypes'
 
-const MAX_TEAMS = 100
+const MAX_TEAMS = 500
 
 const actionOptions: Array<{ value: AdminOperationAction; label: string; description: string }> = [
+  { value: 'VERIFY_TEAM_PAYMENT', label: 'Verifikasi Tim & Pembayaran', description: 'Verifikasi gabungan (team + payment) 300-400 tim sekaligus, opsional kirim email.' },
   { value: 'VERIFY_TEAM', label: 'Verifikasi Tim', description: 'Set tim terpilih menjadi Terverifikasi.' },
   { value: 'VERIFY_PAYMENT', label: 'Verifikasi Pembayaran', description: 'Verifikasi pembayaran registrasi tim terpilih.' },
   { value: 'ADVANCE_STAGE', label: 'Advance Stage', description: 'Naikkan tim terpilih ke tahap tertentu.' },
@@ -104,6 +105,7 @@ export function RunOperationDialog({
       && (action !== 'ADVANCE_STAGE' || stageId),
   ) && !create.isPending
 
+  const showAnnouncement = Boolean(action) // A & B: semua aksi boleh kirim email (300-400 tanpa batas via Apps Script)
   const handleSubmit = async () => {
     if (!action || selectedTeams.length === 0) {
       setLocalError('Pilih aksi dan minimal satu tim.')
@@ -120,7 +122,7 @@ export function RunOperationDialog({
         team_ids: selectedTeams.map((team) => team.id),
         target_stage_id: action === 'ADVANCE_STAGE' ? stageId : null,
         sync_spreadsheet: syncSpreadsheet,
-        announcement: action === 'ANNOUNCE_RESULT'
+        announcement: showAnnouncement
           ? {
               title: announcementTitle.trim() || null,
               template: announcementTemplate.trim() || null,
@@ -191,11 +193,11 @@ export function RunOperationDialog({
             </div>
           )}
 
-          {action === 'ANNOUNCE_RESULT' && (
+          {showAnnouncement && (
             <div className="space-y-3 rounded-xl border border-border/60 p-4">
-              <p className="text-sm font-semibold">Detail Pengumuman</p>
+              <p className="text-sm font-semibold">Detail Pengumuman {action==='VERIFY_TEAM_PAYMENT' ? '(Verifikasi Gabungan)' : action==='VERIFY_TEAM' || action==='VERIFY_PAYMENT' ? '(Opsional Email)' : ''}</p>
               <Input
-                placeholder="Judul pengumuman"
+                placeholder={action==='VERIFY_TEAM_PAYMENT' ? 'Judul: Verifikasi Tim & Pembayaran Diterima' : 'Judul pengumuman'}
                 value={announcementTitle}
                 onChange={(event) => setAnnouncementTitle(event.target.value)}
                 maxLength={160}
@@ -207,7 +209,7 @@ export function RunOperationDialog({
                 maxLength={80}
               />
               <Textarea
-                placeholder="Isi pesan pengumuman..."
+                placeholder={action==='VERIFY_TEAM_PAYMENT' ? 'Pesan: Data dan pembayaran Team Anda telah diverifikasi...' : 'Isi pesan pengumuman...'}
                 value={announcementMessage}
                 onChange={(event) => setAnnouncementMessage(event.target.value)}
                 rows={4}
@@ -220,8 +222,9 @@ export function RunOperationDialog({
                   onChange={(event) => setSendNotification(event.target.checked)}
                   className="size-4 accent-primary"
                 />
-                Kirim notifikasi email ke tim
+                Kirim notifikasi email ke tim (via Apps Script, support 500/team)
               </label>
+              {action==='VERIFY_TEAM_PAYMENT' && <p className="text-xs text-muted-foreground">Gabungan: 1 operasi akan verifikasi Team + Payment sekaligus. Jika salah satu sudah VERIFIED, hanya yang belum yang diproses. Email hanya dikirim jika dicentang.</p>}
             </div>
           )}
 

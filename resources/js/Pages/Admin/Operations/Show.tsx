@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 const actionLabels: Record<string, string> = {
   VERIFY_TEAM: 'Verifikasi Tim',
   VERIFY_PAYMENT: 'Verifikasi Pembayaran',
+  VERIFY_TEAM_PAYMENT: 'Verifikasi Tim & Pembayaran',
   ADVANCE_STAGE: 'Advance Stage',
   ANNOUNCE_RESULT: 'Pengumuman Hasil',
 }

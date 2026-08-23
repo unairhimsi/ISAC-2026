@@ -22,8 +22,9 @@ class AdminOperationPolicy
         return match ($action) {
             AdminOperation::ACTION_VERIFY_PAYMENT => in_array($admin->role, ['super_admin', 'admin_payment'], true),
             AdminOperation::ACTION_VERIFY_TEAM,
+            AdminOperation::ACTION_VERIFY_TEAM_PAYMENT,
             AdminOperation::ACTION_ADVANCE_STAGE,
-            AdminOperation::ACTION_ANNOUNCE_RESULT => in_array($admin->role, ['super_admin', 'admin_registration'], true),
+            AdminOperation::ACTION_ANNOUNCE_RESULT => in_array($admin->role, ['super_admin', 'admin_registration', 'admin_payment'], true),
             default => false,
         };
     }

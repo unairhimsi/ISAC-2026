@@ -287,6 +287,7 @@ class AdminOperationService
         return match ($operation->action) {
             AdminOperation::ACTION_VERIFY_TEAM => $this->verifyTeam($admin, $team, $requestId),
             AdminOperation::ACTION_VERIFY_PAYMENT => $this->verifyPayment($admin, $registration, $requestId),
+            AdminOperation::ACTION_VERIFY_TEAM_PAYMENT => $this->verifyTeamAndPayment($admin, $team, $registration, $requestId),
             AdminOperation::ACTION_ADVANCE_STAGE => $this->advanceStage($admin, $team, $operation->targetStage, $requestId),
             AdminOperation::ACTION_ANNOUNCE_RESULT => $this->announce($admin, $team, $operation, $requestId),
             default => throw ValidationException::withMessages(['action' => ['Aksi operation tidak valid.']]),
@@ -314,6 +315,43 @@ class AdminOperationService
         }
 
         $this->registrationService->verifyPayment($admin, $registration, $requestId);
+
+        return 'COMPLETED';
+    }
+
+    private function verifyTeamAndPayment(Admin $admin, Team $team, ?Registration $registration, ?string $requestId): string
+    {
+        if ($registration === null) {
+            throw ValidationException::withMessages(['payment' => ['Registration Team tidak ditemukan.']]);
+        }
+
+        $teamSkipped = $team->status === Team::STATUS_VERIFIED;
+        $paymentSkipped = $registration->status === RegistrationStatus::VERIFIED;
+
+        if ($teamSkipped && $paymentSkipped) {
+            return 'SKIPPED';
+        }
+
+        if (! $teamSkipped) {
+            $this->registrationService->verifyTeam($admin, $team, $requestId);
+        }
+
+        if (! $paymentSkipped) {
+            $this->registrationService->verifyPayment($admin, $registration, $requestId);
+        }
+
+        // Audit gabungan untuk traceability
+        AdminAuditLog::query()->create([
+            'admin_id' => $admin->id,
+            'action' => 'competition.team_payment_verified',
+            'subject_type' => Team::class,
+            'subject_id' => $team->id,
+            'before_data' => ['team_status' => $team->status, 'registration_status' => $registration->status?->value],
+            'after_data' => ['team_status' => Team::STATUS_VERIFIED, 'registration_status' => RegistrationStatus::VERIFIED->value],
+            'reason' => 'Verifikasi Tim & Pembayaran gabungan',
+            'request_id' => $requestId,
+            'created_at' => now(),
+        ]);
 
         return 'COMPLETED';
     }
@@ -403,6 +441,7 @@ class AdminOperationService
         return match ($operation->action) {
             AdminOperation::ACTION_VERIFY_TEAM => $snapshot['team_status'],
             AdminOperation::ACTION_VERIFY_PAYMENT => $snapshot['registration_status'],
+            AdminOperation::ACTION_VERIFY_TEAM_PAYMENT => $snapshot['team_status'].'/'.$snapshot['registration_status'],
             AdminOperation::ACTION_ADVANCE_STAGE => $snapshot['payment_for_stage'] ?? $snapshot['current_stage'],
             default => $snapshot['current_stage'] ?? $snapshot['team_status'],
         };
@@ -451,6 +490,7 @@ class AdminOperationService
         return match ($operation->action) {
             AdminOperation::ACTION_VERIFY_TEAM => 'Verifikasi Data Team',
             AdminOperation::ACTION_VERIFY_PAYMENT => 'Verifikasi Pembayaran',
+            AdminOperation::ACTION_VERIFY_TEAM_PAYMENT => 'Verifikasi Tim & Pembayaran',
             AdminOperation::ACTION_ADVANCE_STAGE => 'Pengumuman Kelolosan Tahap',
             default => 'Pengumuman Hasil ISAC 2026',
         };
@@ -461,6 +501,7 @@ class AdminOperationService
         return match ($operation->action) {
             AdminOperation::ACTION_VERIFY_TEAM => "Data Team {$team->name} telah diverifikasi oleh panitia ISAC 2026.",
             AdminOperation::ACTION_VERIFY_PAYMENT => "Pembayaran Team {$team->name} telah diverifikasi oleh panitia ISAC 2026.",
+            AdminOperation::ACTION_VERIFY_TEAM_PAYMENT => "Data dan pembayaran Team {$team->name} telah diverifikasi oleh panitia ISAC 2026. Anda dapat melanjutkan ke tahap berikutnya.",
             AdminOperation::ACTION_ADVANCE_STAGE => "Selamat, Team {$team->name} diproses ke tahap berikutnya ISAC 2026.",
             default => "Terdapat pengumuman hasil kompetisi untuk Team {$team->name}.",
         };

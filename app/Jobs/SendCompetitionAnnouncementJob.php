@@ -30,9 +30,10 @@ class SendCompetitionAnnouncementJob implements ShouldQueue
         // Auth (verification/OTP) tetap via Brevo karena tidak lewat SpreadsheetIntegrationEvent.
         if ((bool) config('services.google_sheet.email_via_apps_script', true)) {
             $check = SpreadsheetIntegrationEvent::query()->where('event_id', $this->eventId)->first();
-            $action = data_get($check?->payload, 'action');
-            if ($action === 'ANNOUNCE_RESULT' || $check?->action === 'ANNOUNCE_RESULT') {
-                // Apps Script sudah kirim email langsung saat batch-upsert, jadi skip Brevo.
+            $action = strtoupper((string) (data_get($check?->payload, 'action') ?? $check?->action ?? ''));
+            $emailable = ['VERIFY_TEAM','VERIFY_PAYMENT','VERIFY_TEAM_PAYMENT','ADVANCE_STAGE','ANNOUNCE_RESULT'];
+            if (in_array($action, $emailable, true)) {
+                // v1.3: SEMUA aksi operation sudah dikirim langsung via Apps Script GmailApp, skip Brevo
                 return;
             }
         }

@@ -291,7 +291,7 @@ export type AdminStageResponse = ApiResponse<AdminStage>
 export type AdminPaymentsResponse = ApiResponse<LaravelPagination<AdminPayment>>
 export type AdminPaymentResponse = ApiResponse<AdminPayment>
 
-export type AdminOperationAction = 'VERIFY_TEAM' | 'VERIFY_PAYMENT' | 'ADVANCE_STAGE' | 'ANNOUNCE_RESULT'
+export type AdminOperationAction = 'VERIFY_TEAM' | 'VERIFY_PAYMENT' | 'VERIFY_TEAM_PAYMENT' | 'ADVANCE_STAGE' | 'ANNOUNCE_RESULT'
 export type AdminOperationStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'PARTIAL' | 'FAILED'
 export type SpreadsheetStatus = 'PENDING' | 'PROCESSING' | 'SYNCED' | 'FAILED' | 'SKIPPED'
 
