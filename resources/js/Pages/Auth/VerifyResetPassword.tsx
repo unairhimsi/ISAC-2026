@@ -4,13 +4,13 @@ import { AuthShell } from '@/features/auth/components/AuthShell'
 import { VerifyResetPasswordForm } from '@/features/auth/components/VerifyResetPasswordForm'
 
 const VerifyResetPassword = () => (
-  <AuthShell title="Verifikasi Reset Password" description="Masukkan kode OTP reset password.">
+  <AuthShell title="Verifikasi OTP Reset — ISAC 2026" description="Masukkan kode OTP reset password ISAC 2026 Symphony of System untuk melanjutkan perubahan kredensial.">
     <VerifyResetPasswordForm />
   </AuthShell>
 )
 
 VerifyResetPassword.layout = (page: React.ReactNode) => (
-  <AuthLayout title="Verifikasi Reset Password" description="Verifikasi kode OTP reset password." noindex>
+  <AuthLayout title="Verifikasi OTP Reset — ISAC 2026" description="Verifikasi kode OTP reset password ISAC 2026 Symphony of System, HIMSI UNAIR." noindex>
     {page}
   </AuthLayout>
 )

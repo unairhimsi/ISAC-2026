@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { ChevronUp, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FAQ_ITEMS } from '@/constants/faq'
+import { ContactPersonDialog, WhatsAppIcon } from './ContactPersonDialog'
 
 export function Faq() {
   const [openId, setOpenId] = useState<string | null>('faq-1')
+  const [contactOpen, setContactOpen] = useState(false)
 
   const toggleItem = (id: string) => {
     setOpenId((prev) => (prev === id ? null : id))
@@ -23,6 +25,20 @@ export function Faq() {
                 Questions
               </span>
             </h2>
+
+            <button
+              type="button"
+              onClick={() => setContactOpen(true)}
+              className="mt-8 flex items-center gap-3 rounded-full border border-emerald-400/60 bg-emerald-500/15 px-5 py-3 text-left transition-all duration-300 hover:border-emerald-400 hover:bg-emerald-500/25 hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.6)]">
+                <WhatsAppIcon className="size-5" />
+              </span>
+              <span>
+                <span className="block text-sm font-bold text-white">Masih ada pertanyaan?</span>
+                <span className="block text-xs text-white/70">Chat langsung dengan panitia via WhatsApp</span>
+              </span>
+            </button>
           </div>
 
           <div className="flex flex-col gap-4 lg:col-span-7">
@@ -63,6 +79,8 @@ export function Faq() {
           </div>
         </div>
       </div>
+
+      <ContactPersonDialog open={contactOpen} onOpenChange={setContactOpen} />
     </section>
   )
 }

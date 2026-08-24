@@ -25,13 +25,18 @@
     <meta property="og:image:alt" content="Logo ISAC 2026">
     <meta property="og:site_name" content="<?php echo e($appName); ?>">
     <meta property="og:locale" content="id_ID">
-    <meta name="twitter:card" content="summary">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="<?php echo e($appName); ?>">
     <meta name="twitter:description" content="<?php echo e($defaultDescription); ?>">
     <meta name="twitter:image" content="<?php echo e($defaultImage); ?>">
     <meta name="twitter:image:alt" content="Logo ISAC 2026">
+    <?php if(config('seo.google_site_verification')): ?>
+        <meta name="google-site-verification" content="<?php echo e(config('seo.google_site_verification')); ?>">
+    <?php endif; ?>
     <link rel="icon" type="image/png" href="/logo.png">
     <link rel="apple-touch-icon" href="/logo.png">
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml">
+    <?php echo $__env->make('partials.seo-ld', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
 
     <?php echo app('Illuminate\Foundation\Vite')->reactRefresh(); ?>

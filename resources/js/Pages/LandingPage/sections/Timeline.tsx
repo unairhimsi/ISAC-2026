@@ -5,7 +5,7 @@ function DateBadge({ event }: { event: TimelineEvent }) {
   return (
     <div className="flex w-32 h-full shrink-0 flex-col items-center border-2 border-primary bg-primary/40 px-3 py-2 text-center leading-tight text-primary-foreground">
       <span className="text-lg font-extrabold md:text-xl text-shadow-[0_0_8px_#fff]">{event.day}</span>
-      <span className="text-[12px] font-medium opacity-90 text-shadow-[0_0_8px_#fff]">{event.month}</span>
+      <span className="text-[12px] font-medium opacity-90 text-shadow-[0_0_8px_#fff]">{event.tag}</span>
     </div>
   )
 }

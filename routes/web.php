@@ -9,9 +9,28 @@ Route::get('/', function () {
     ]);
 })->name('landing.index');
 
+Route::get('/robots.txt', function () {
+    $appUrl = rtrim(config('app.url'), '/');
+    $lines = ['User-agent: *'];
+
+    if (config('seo.robots_allow')) {
+        $lines[] = 'Allow: /';
+        foreach (['/admin', '/dashboard', '/api', '/auth', '/registration', '/todos'] as $privatePath) {
+            $lines[] = "Disallow: {$privatePath}";
+        }
+        $lines[] = '';
+        $lines[] = "Sitemap: {$appUrl}/sitemap.xml";
+    } else {
+        $lines[] = 'Disallow: /';
+    }
+
+    return response(implode(PHP_EOL, $lines), 200)
+        ->header('Content-Type', 'text/plain; charset=UTF-8');
+})->name('robots');
+
 Route::get('/sitemap.xml', function () {
     $appUrl = rtrim(config('app.url'), '/');
-    $publicPaths = ['/'];
+    $publicPaths = ['/', '/auth/register'];
     $urls = collect($publicPaths)
         ->map(fn (string $path) => sprintf(
             '    <url><loc>%s%s</loc></url>',
@@ -90,7 +109,10 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/competitions', fn () => Inertia::render('Admin/Competitions', ['title' => 'Kompetisi']))->name('competitions');
     Route::get('/batches', fn () => Inertia::render('Admin/Batches', ['title' => 'Batch']))->name('batches');
     Route::get('/stages', fn () => Inertia::render('Admin/Stages', ['title' => 'Tahapan']))->name('stages');
-    Route::get('/audit-logs', fn () => Inertia::render('Admin/AuditLogs', ['title' => 'Audit Aktivitas']))->name('audit-logs');
+    Route::get('/team-stages', fn () => Inertia::render('Admin/TeamStages', ['title' => 'Kelola Tahap Team']))->name('team-stages');
+    Route::get('/operations', fn () => Inertia::render('Admin/Operations/Index', ['title' => 'Operasi']))->name('operations.index');
+    Route::get('/operations/{operation}', fn (string $operation) => Inertia::render('Admin/Operations/Show', ['title' => 'Detail Operasi', 'operationId' => $operation]))->whereUuid('operation')->name('operations.show');
+    Route::get('/questions', fn () => Inertia::render('Admin/Questions', ['title' => 'Buat Soal']))->name('questions');
     Route::get('/judging', fn () => Inertia::render('Admin/Judging', ['title' => 'Penilaian']))->name('judging');
 });
 
@@ -99,6 +121,20 @@ Route::get('/dashboard', function () {
         'title' => 'Dashboard',
     ]);
 })->name('dashboard.index');
+
+Route::get('/dashboard/olimpiade/{exam}', function (string $exam) {
+    return Inertia::render('Dashboard/Olympiad/Show', [
+        'title' => 'Detail Ujian',
+        'examId' => $exam,
+    ]);
+})->whereUuid('exam')->name('dashboard.olympiad.show');
+
+Route::get('/dashboard/submission/{stage}', function (string $stage) {
+    return Inertia::render('Dashboard/Submission/Show', [
+        'title' => 'Tahap Pengumpulan',
+        'stageId' => $stage,
+    ]);
+})->whereUuid('stage')->name('dashboard.submission.show');
 
 Route::get('/todos', function () {
     return Inertia::render('Todos/Index', [

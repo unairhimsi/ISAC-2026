@@ -55,6 +55,9 @@ class RegistrationController extends Controller
     public function getMembers(Request $request): JsonResponse
     {
         $team = $this->registrationService->getMembers($request->user());
+        if ($team->registration === null) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['registration' => ['Tim belum memilih kompetisi.']]);
+        }
         $type = $team->registration->competition->type;
         [$minimum, $maximum] = $type === Competition::TYPE_OLIMPIADE ? [1, 1] : [3, 3];
 

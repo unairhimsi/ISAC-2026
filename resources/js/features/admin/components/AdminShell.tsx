@@ -43,7 +43,7 @@ function SidebarContent({ minimized, mobile, closeMobile }: { minimized: boolean
     <>
       <div className={cn('flex h-full flex-col', minimized && !mobile ? 'px-3' : 'px-4')}>
         <div className={cn('flex h-20 items-center border-b border-sidebar-border', minimized && !mobile ? 'justify-center' : 'gap-3')}>
-          <img src="/logo.png" alt="Logo ISAC 2026" className="size-11 shrink-0 object-contain" />
+          <img src="/logo.png" alt="ISAC 2026 — HIMSI UNAIR" className="size-11 shrink-0 rounded-xl object-contain shadow-sm" width={44} height={44} loading="eager" />
           {(!minimized || mobile) && (
             <div className="min-w-0">
               <p className="truncate font-semibold text-sidebar-foreground">ISAC 2026</p>
@@ -164,6 +164,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
   )
 }
 
-export function adminPageLayout(page: ReactNode) {
-  return <AdminShell>{page}</AdminShell>
-}
+export const adminPageLayout = (page: ReactNode) => (
+  <AdminShell>{page}</AdminShell>
+)

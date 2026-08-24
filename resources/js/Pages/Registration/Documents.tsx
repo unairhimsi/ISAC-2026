@@ -35,7 +35,7 @@ const Documents = () => {
     try {
       const response = await updateDocuments.mutateAsync(data)
       toast.success(response.message)
-      router.visit(response.data.redirectTo)
+      router.visit(response.data.redirectTo, { replace: true })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Gagal menyimpan dokumen')
     }
@@ -77,7 +77,7 @@ const Documents = () => {
 }
 
 Documents.layout = (page: React.ReactNode) => (
-  <RegistrationLayout title="Registrasi - Documents" description="Masukkan tautan dokumen yang diperlukan untuk melanjutkan proses pendaftaran.">
+  <RegistrationLayout title="Dokumen Pendaftaran — ISAC 2026" description="Unggah tautan Google Drive berisi berkas persyaratan & link twibbon ISAC 2026 Symphony of System sebelum lanjut ke pembayaran.">
     {page}
   </RegistrationLayout>
 )

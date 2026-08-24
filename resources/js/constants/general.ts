@@ -4,6 +4,10 @@ export const IMAGES = {
     bg:'/images/bg_isac.svg',
     bgHero: '/images/bg_hero.svg',
     logo:'/logo.png',
+    logoFallback:'/logo.png',
+    ogImage:'/images/og-isac-2026.jpg',
+    favicon:'/favicon.ico',
+    appleTouchIcon:'/apple-touch-icon.png',
     vector:'/images/Vector_2.png',
 }
 

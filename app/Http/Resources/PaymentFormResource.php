@@ -27,7 +27,13 @@ class PaymentFormResource extends JsonResource
             'promoCode' => $hasSubmittedPayment ? $registration->promo_code : null,
             'paymentMethods' => config('registration.payment_methods'),
             'paymentInstructions' => config('registration.payment_instructions'),
-            'qrImageUrl' => config('registration.qr_image_url'),
+            'bankAccounts' => collect(config('registration.bank_accounts'))
+                ->map(fn (array $account): array => [
+                    'bank' => (string) $account['bank'],
+                    'accountNumber' => (string) $account['account_number'],
+                    'accountName' => (string) $account['account_name'],
+                ])
+                ->all(),
             'paymentStatus' => $registration?->status?->value,
             'existingProof' => $registration?->paymentProofFile === null ? null : new FileResource($registration->paymentProofFile),
             'rejectionReason' => $registration?->payment_rejection_reason,

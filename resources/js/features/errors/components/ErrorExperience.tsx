@@ -360,8 +360,8 @@ export function ErrorExperience({
             ? '/'
             : window.location.pathname
         }
-        image="/logo.png"
-        imageAlt="Logo ISAC 2026"
+        image="/images/og-isac-2026.jpg"
+        imageAlt="ISAC 2026 — Symphony of System"
         noindex
         nofollow
       />

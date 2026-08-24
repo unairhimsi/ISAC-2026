@@ -13,7 +13,7 @@ const Validation = () => {
     try {
       const response = await submitMutation.mutateAsync()
       toast.success(response.message)
-      router.visit(response.data.redirectTo)
+      router.visit(response.data.redirectTo, { replace: true })
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -46,8 +46,8 @@ const Validation = () => {
 
 Validation.layout = (page: React.ReactNode) => (
   <RegistrationLayout
-    title="Registrasi - Validation"
-    description="Periksa kembali seluruh data tim sebelum dikirim untuk verifikasi."
+    title="Verifikasi Akhir — Pendaftaran ISAC 2026"
+    description="Tinjau rangkuman data tim, biodata & dokumen sebelum kirim untuk verifikasi admin ISAC 2026 HIMSI UNAIR."
   >
     {page}
   </RegistrationLayout>

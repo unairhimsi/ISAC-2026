@@ -6,8 +6,8 @@ import { VerifyEmailForm } from '@/features/auth/components/VerifyEmailForm';
 const VerifyEmail = () => {
     return (
         <AuthShell
-            title="Verifikasi Email"
-            description="Masukkan kode OTP yang dikirim ke email Anda."
+            title="Verifikasi Email — ISAC 2026"
+            description="Masukkan kode OTP yang dikirim ke email untuk aktivasi akun ISAC 2026 Symphony of System, HIMSI UNAIR."
         >
             <VerifyEmailForm />
         </AuthShell>
@@ -16,8 +16,8 @@ const VerifyEmail = () => {
 
 VerifyEmail.layout = (page: React.ReactNode) => (
     <AuthLayout
-        title="Verifikasi Email"
-        description="Masukkan kode OTP yang dikirim ke email Anda untuk verifikasi akun."
+        title="Verifikasi Email — ISAC 2026"
+        description="Aktivasi akun ISAC 2026 dengan kode OTP email — Symphony of System HIMSI UNAIR."
         noindex
     >
         {page}

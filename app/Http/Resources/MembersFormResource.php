@@ -14,6 +14,8 @@ class MembersFormResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $this->resource->loadMissing('photoFile');
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -23,6 +25,8 @@ class MembersFormResource extends JsonResource
             'faculty' => $this->faculty,
             'studentId' => $this->student_id,
             'photoFileId' => $this->photo_file_id,
+            'photoUrl' => $this->photoFile?->url,
+            'photo' => $this->photoFile ? new FileResource($this->photoFile) : null,
             'sortOrder' => $this->sort_order,
         ];
     }

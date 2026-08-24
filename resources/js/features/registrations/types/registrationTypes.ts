@@ -29,11 +29,17 @@ export type RegistrationContext = {
   registration: null | {
     id: string; status: RegistrationStatus; competition: CompetitionSummary; batch: BatchSummary
     paymentRequiredAt: string | null; paymentSubmittedAt: string | null; paymentRejectionReason: string | null
+    paymentForStage: StageSummary | null
   }
   progress: { teamCompleted: boolean; membersCompleted: boolean; documentsCompleted: boolean; submitted: boolean }
   currentStep: RegistrationStep
   allowedActions: string[]
   redirectTo: string
+}
+
+export type StageSummary = {
+  id: string; name: string; type: string; order: number; description: string | null
+  startDate: string | null; endDate: string | null
 }
 
 export type TeamFormValues = {
@@ -49,7 +55,7 @@ export type TeamProfile = {
 export type MemberRecord = {
   id: string; name: string; role: MemberRole; email: string
   major: string | null; faculty: string | null; studentId: string
-  photoFileId: string | null; sortOrder: number
+  photoFileId: string | null; photoUrl?: string | null; photo?: { id: string; fileId: string; url: string; purpose?: string } | null; sortOrder: number
 }
 export type MemberFormValues = {
   id?: string; name: string; role: MemberRole; email: string
@@ -64,6 +70,7 @@ export type MembersPageData = {
 export type DocumentsFormValues = { document_url: string; twibbon_url: string }
 export type DocumentsPageData = { documentUrl: string | null; twibbonUrl: string | null; revisionNote: string | null }
 export type PaymentMethod = 'BANK_TRANSFER' | 'QRIS'
+export type BankAccount = { bank: string; accountNumber: string; accountName: string }
 export type ExternalFile = { id: string; fileId: string; url: string; purpose?: string; name?: string }
 export type PaymentFormValues = { payment_proof_file_id: string; payment_method: PaymentMethod; promo_code?: string }
 export type PaymentQuoteData = {
@@ -74,7 +81,7 @@ export type PaymentPageData = {
   registrationId: string; originalAmount: number; amount: number; discountPercent: number
   discountAmount: number; promoApplied: boolean; promoCode: string | null
   paymentMethods: PaymentMethod[]; paymentInstructions: string | null
-  qrImageUrl: string | null; paymentStatus: RegistrationStatus; existingProof: ExternalFile | null
+  bankAccounts: BankAccount[]; paymentStatus: RegistrationStatus; existingProof: ExternalFile | null
   rejectionReason: string | null; paymentSubmittedAt: string | null; paymentForStage: { id: string; name: string } | null
 }
 export type RegistrationSummary = {
@@ -82,7 +89,7 @@ export type RegistrationSummary = {
   registration: null | { id: string; status: RegistrationStatus; competition: CompetitionSummary; batch: BatchSummary }
 }
 export type CompetitionQuery = { status?: CompetitionStatus }
-export type SelectCompetitionPayload = { competition_id: string; batch_id: string }
+export type SelectCompetitionPayload = { competition_id: string }
 export type FinalizeMembersPayload = { members: MemberFormValues[] }
 export type RegistrationMutationData = RedirectData & { context: RegistrationContext }
 

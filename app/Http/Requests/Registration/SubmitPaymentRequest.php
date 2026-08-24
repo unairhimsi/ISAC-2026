@@ -17,7 +17,7 @@ class SubmitPaymentRequest extends FormRequest
     {
         return [
             'payment_proof_file_id' => ['required', 'uuid', 'exists:files,id'],
-            'payment_method' => ['required', Rule::in(['BANK_TRANSFER', 'QRIS'])],
+            'payment_method' => ['required', Rule::in(config('registration.payment_methods'))],
             'promo_code' => ['nullable', 'string', 'max:50'],
         ];
     }

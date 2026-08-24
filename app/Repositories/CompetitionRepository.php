@@ -30,7 +30,17 @@ class CompetitionRepository implements CompetitionRepositoryInterface
     {
         return Competition::query()
             ->where('status', Competition::STATUS_REGISTRATION_OPEN)
-            ->with(['batches' => fn ($query) => $query->where('status', 'OPEN')->orderBy('start_date')])
+            ->whereHas('batches', fn ($query) => $query
+                ->where('status', 'OPEN')
+                ->where('start_date', '<=', now())
+                ->where('end_date', '>=', now())
+                ->where(fn ($q) => $q->whereNull('quota')->orWhereColumn('current_registrations', '<', 'quota')))
+            ->with(['batches' => fn ($query) => $query
+                ->where('status', 'OPEN')
+                ->where('start_date', '<=', now())
+                ->where('end_date', '>=', now())
+                ->where(fn ($q) => $q->whereNull('quota')->orWhereColumn('current_registrations', '<', 'quota'))
+                ->orderBy('start_date')])
             ->get();
     }
 

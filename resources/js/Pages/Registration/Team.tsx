@@ -33,7 +33,7 @@ const Team = () => {
 }
 
 Team.layout = (page: React.ReactNode) => (
-  <RegistrationLayout title="Registrasi - Team" description="Lengkapi data tim Anda untuk melanjutkan proses pendaftaran.">{page}</RegistrationLayout>
+  <RegistrationLayout title="Data Tim — Pendaftaran ISAC 2026" description="Isi data tim ISAC 2026: nama tim, kontak & asal instansi sekolah/kampus untuk cabang pilihan Symphony of System, HIMSI Universitas Airlangga.">{page}</RegistrationLayout>
 )
 
 export default Team
