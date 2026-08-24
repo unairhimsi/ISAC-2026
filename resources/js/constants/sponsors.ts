@@ -7,34 +7,53 @@ export interface SponsorPartner {
 
 export const SPONSORS_PARTNERS: SponsorPartner[] = [
   {
-    id: 'telkomsel',
-    name: 'Telkomsel',
-    logo: '/images/Telkomsel.png',
+    id: 'bemfst_unair',
+    name: 'BEM FST UNAIR',
+    logo: '/images/Media_Partner/bemfst_unair.jpg.jpeg',
   },
   {
-    id: 'pelindo',
-    name: 'PELINDO',
-    logo: '/images/Pelindo.png',
+    id: 'dwdg_its',
+    name: 'DWDG ITS',
+    logo: '/images/Media_Partner/dwdg_its.jpg.jpeg',
   },
   {
-    id: 'pln',
-    name: 'PLN',
-    logo: '/images/PLN.png',
+    id: 'edukasi.ind',
+    name: 'Edukasi Indonesia',
+    logo: '/images/Media_Partner/edukasi.ind.jpg.jpeg',
   },
   {
-    id: 'freeport',
-    name: 'PT FREEPORT INDONESIA',
-    logo: '/images/freeport.png',
-    isFreeport: true,
+    id: 'eventhunter.id',
+    name: 'Event Hunter ID',
+    logo: '/images/Media_Partner/eventhunter.id.jpg.jpeg',
   },
   {
-    id: 'pertamina',
-    name: 'PERTAMINA',
-    logo: '/images/Pertamina.png',
+    id: 'himagiunpad',
+    name: 'HIMAGI UNPAD',
+    logo: '/images/Media_Partner/himagiunpad.jpg.jpeg',
   },
   {
-    id: 'mandiri',
-    name: 'mandiri',
-    logo: '/images/Mandiri.png',
+    id: 'himakom_ugm',
+    name: 'HIMAKOM UGM',
+    logo: '/images/Media_Partner/himakom_ugm.jpg.jpeg',
+  },
+  {
+    id: 'hmsi_its',
+    name: 'HMSI ITS',
+    logo: '/images/Media_Partner/hmsi_its.jpg.jpeg',
+  },
+  {
+    id: 'infolomba',
+    name: 'Info Lomba',
+    logo: '/images/Media_Partner/infolomba.jpg.jpeg',
+  },
+  {
+    id: 'lombabisnis',
+    name: 'Lomba Bisnis',
+    logo: '/images/Media_Partner/lombabisnis.jpg.jpeg',
+  },
+  {
+    id: 'lombsma',
+    name: 'Lomba SMA',
+    logo: '/images/Media_Partner/lombsma.jpg.jpeg',
   },
 ]
