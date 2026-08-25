@@ -372,8 +372,11 @@ class RegistrationService
         if (! $paymentGateActive || ! in_array($registration->status, [RegistrationStatus::WAITING_PAYMENT, RegistrationStatus::REVISION_REQUIRED], true)) {
             $requestedPromoCode = Str::upper(trim((string) ($data['promo_code'] ?? '')));
             $submittedPromoCode = Str::upper(trim((string) $registration->promo_code));
+            $requestedTransactionId = trim((string) ($data['transaction_id'] ?? ''));
             if ($registration->payment_submitted_at !== null
                 && $registration->payment_proof_file_id === $data['payment_proof_file_id']
+                && $registration->payment_method?->value === $data['payment_method']
+                && ($registration->transaction_id ?? '') === $requestedTransactionId
                 && $submittedPromoCode === $requestedPromoCode) {
                 return $this->getPaymentData($team);
             }
@@ -388,6 +391,7 @@ class RegistrationService
                 'payment_proof_file_id' => $data['payment_proof_file_id'],
                 'amount_paid' => $quote['amount'],
                 'payment_method' => $data['payment_method'],
+                'transaction_id' => isset($data['transaction_id']) ? trim((string) $data['transaction_id']) : null,
                 'promo_code' => $quote['promoCode'],
                 'discount_percent' => $quote['discountPercent'],
                 'discount_amount' => $quote['discountAmount'],

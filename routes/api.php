@@ -88,6 +88,7 @@ Route::prefix('admin')->middleware(['auth:admins', 'principal.admin'])->group(fu
         Route::get('/', [AdminStageController::class, 'index']);
         Route::post('/', [AdminStageController::class, 'store']);
         Route::get('/{stage}', [AdminStageController::class, 'show'])->whereUuid('stage');
+        Route::get('/{stage}/scores', [AdminStageController::class, 'scores'])->whereUuid('stage');
         Route::patch('/{stage}', [AdminStageController::class, 'update'])->whereUuid('stage');
         Route::delete('/{stage}', [AdminStageController::class, 'destroy'])->whereUuid('stage');
     });

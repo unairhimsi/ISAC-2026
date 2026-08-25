@@ -240,6 +240,7 @@ export type AdminPaymentBatch = {
 
 export type AdminPaymentDetail = {
   method: PaymentMethod | null
+  transactionId?: string | null
   originalAmount: string
   amountPaid: string
   promoCode: string | null
@@ -288,6 +289,26 @@ export type AdminBatchResponse = ApiResponse<AdminBatch>
 export type DeleteResponse = ApiResponse<null>
 export type AdminStagesResponse = ApiResponse<AdminStage[]>
 export type AdminStageResponse = ApiResponse<AdminStage>
+
+export type AdminStageScoreMode = 'exam' | 'submission'
+
+export type AdminStageScoreEntry = {
+  teamId: string
+  score: number | null
+  maxScore?: number | null
+  finishedAttempts?: number
+  attemptCount?: number
+  flagged?: boolean
+  submissionStatus?: string | null
+}
+
+export type AdminStageScores = {
+  mode: AdminStageScoreMode
+  stage: { id: string; name: string; order: number; type: string }
+  scores: AdminStageScoreEntry[]
+}
+
+export type AdminStageScoresResponse = ApiResponse<AdminStageScores>
 
 export type AdminPaymentsResponse = ApiResponse<LaravelPagination<AdminPayment>>
 export type AdminPaymentResponse = ApiResponse<AdminPayment>

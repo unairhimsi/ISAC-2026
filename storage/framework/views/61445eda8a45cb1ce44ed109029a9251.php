@@ -3,8 +3,9 @@
     $seoSiteName = config('app.name', 'ISAC 2026');
     $seoOrganization = config('seo.organization_name');
     $seoInstagram = config('seo.instagram_url');
-    $seoLogo = $seoAppUrl . '/logo.png';
-    $seoDescription = 'Platform resmi pendaftaran kompetisi ISAC 2026 untuk Olimpiade, Business Plan, dan Business IT Case.';
+    $seoLogo = $seoAppUrl . '/images/og-isac-2026.jpg';
+    $seoFavIcon = $seoAppUrl . '/android-chrome-512x512.png';
+    $seoDescription = 'Kompetisi informatika tahunan HIMSI Universitas Airlangga bertema Symphony of System — Olimpiade, Business Plan & Business IT Case. Pendaftaran 23 Agustus – 31 Oktober 2026 di Surabaya.';
 
     $websiteLd = [
         '@context' => 'https://schema.org',
@@ -23,7 +24,8 @@
         '@type' => 'Organization',
         'name' => $seoOrganization,
         'url' => $seoAppUrl,
-        'logo' => $seoLogo,
+        'logo' => $seoFavIcon,
+        'image' => $seoLogo,
         'sameAs' => array_values(array_filter([$seoInstagram])),
     ];
 
@@ -46,7 +48,7 @@
                 'addressCountry' => 'ID',
             ],
         ],
-        'image' => [$seoLogo],
+        'image' => [$seoLogo, $seoFavIcon],
         'url' => $seoAppUrl,
         'organizer' => [
             '@type' => 'Organization',

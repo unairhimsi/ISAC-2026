@@ -16,8 +16,7 @@ class AdminStageController extends Controller
 {
     public function __construct(
         private readonly AdminStageService $stages,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -32,6 +31,13 @@ class AdminStageController extends Controller
         Gate::authorize('view', $stage);
 
         return $this->success('Detail tahap berhasil diambil.', new AdminStageResource($this->stages->detail($stage)));
+    }
+
+    public function scores(Stage $stage): JsonResponse
+    {
+        Gate::authorize('view', $stage);
+
+        return $this->success('Nilai tahap berhasil diambil.', $this->stages->scores($stage));
     }
 
     public function store(StoreStageRequest $request): JsonResponse

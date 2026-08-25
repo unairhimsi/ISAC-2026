@@ -27,6 +27,7 @@ class Registration extends Model
         'status',
         'amount_paid',
         'payment_method',
+        'transaction_id',
         'promo_code',
         'discount_percent',
         'discount_amount',

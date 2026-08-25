@@ -171,6 +171,7 @@ export default function AdminPaymentShow({ registrationId }: { registrationId: s
               <div className="grid gap-4 sm:grid-cols-2">
                 <div><p className="text-xs text-muted-foreground">Harga dasar</p><p className="mt-1 font-medium">{formatCurrency(payment.originalAmount)}</p></div>
                 <div><p className="text-xs text-muted-foreground">Metode</p><p className="mt-1">{payment.method ? paymentMethodLabels[payment.method] ?? payment.method : '—'}</p></div>
+                {payment.transactionId && <div><p className="text-xs text-muted-foreground">No. Referensi</p><p className="mt-1 font-mono">{payment.transactionId}</p></div>}
                 {payment.promoCode && (
                   <>
                     <div className="flex items-center gap-2"><Tag className="size-3.5 shrink-0 text-accent" /><div><p className="text-xs text-muted-foreground">Kode promo</p><p className="mt-1 font-mono text-accent">{payment.promoCode}</p></div></div>

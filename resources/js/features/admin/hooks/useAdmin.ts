@@ -74,6 +74,14 @@ export function useAdminStages(competitionId?: string) {
   return useQuery({ queryKey: adminKeys.stages(competitionId), queryFn: () => adminApi.stages(competitionId) })
 }
 
+export function useAdminStageScores(stageId?: string) {
+  return useQuery({
+    queryKey: [...adminKeys.all, 'stage-scores', stageId] as const,
+    queryFn: () => adminApi.stageScores(stageId as string),
+    enabled: Boolean(stageId),
+  })
+}
+
 export function useCreateStage() {
   const client = useQueryClient()
   return useMutation({ mutationFn: (payload: StagePayload) => adminApi.createStage(payload), onSuccess: () => client.invalidateQueries({ queryKey: [...adminKeys.all, 'stages'] }) })

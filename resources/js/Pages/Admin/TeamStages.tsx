@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { ArrowRight, Check, ChevronLeft, ChevronRight, FilterX, Layers3, Loader2, Search } from 'lucide-react'
+import { ArrowRight, Check, ChevronLeft, ChevronRight, FilterX, Flag, Layers3, Loader2, Search } from 'lucide-react'
 import { Seo } from '@/components/seo/Seo'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,12 +9,14 @@ import { AdminPageHeader } from '@/features/admin/components/AdminPageHeader'
 import { AdminStatusBadge } from '@/features/admin/components/AdminStatusBadge'
 import { AdminEmptyState, AdminErrorState, AdminLoadingState } from '@/features/admin/components/AdminStates'
 import { adminPageLayout } from '@/features/admin/components/AdminShell'
-import { useAdminBatches, useAdminCompetitions, useAdminStages, useAdminTeams, useCreateAdminOperation } from '@/features/admin/hooks/useAdmin'
+import { useAdminBatches, useAdminCompetitions, useAdminStageScores, useAdminStages, useAdminTeams, useCreateAdminOperation } from '@/features/admin/hooks/useAdmin'
+import type { AdminTeamSummary } from '@/features/admin/types/adminTypes'
 import { cn } from '@/lib/utils'
 
 export default function AdminTeamStages() {
   const [competitionId, setCompetitionId] = useState('')
   const [stageFilter, setStageFilter] = useState('') // current stage id filter
+  const [scoreStageId, setScoreStageId] = useState('')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -30,6 +32,7 @@ export default function AdminTeamStages() {
     per_page: 20,
     competition_id: competitionId || undefined,
   })
+  const scoresQuery = useAdminStageScores(scoreStageId || undefined)
 
   const createOp = useCreateAdminOperation()
 
@@ -37,6 +40,9 @@ export default function AdminTeamStages() {
   const stages = useMemo(() => [...(stagesQuery.data?.data ?? [])].sort((a,b)=>a.order-b.order), [stagesQuery.data])
   const pagination = teamsQuery.data?.data
   const teams = pagination?.data ?? []
+  const scoreMode = scoresQuery.data?.data.mode
+  const scoreEntries = scoresQuery.data?.data.scores ?? []
+  const scoreByTeam = useMemo(() => new Map(scoreEntries.map(e => [e.teamId, e])), [scoreEntries])
 
   // filter by stage & search client-side (since API belum support filter current_stage)
   const filteredTeams = useMemo(() => {
@@ -72,6 +78,36 @@ export default function AdminTeamStages() {
     const regOk = team.registration?.status === 'VERIFIED'
     if (!teamOk || !regOk) return false
     return isEligible(team.currentStage, targetStage)
+  }
+
+  function renderScoreCell(item: AdminTeamSummary) {
+    if (!scoreStageId) return <span className="text-xs text-muted-foreground">—</span>
+    if (scoresQuery.isPending) return <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+    if (scoresQuery.error) return <button type="button" onClick={() => scoresQuery.refetch()} className="text-xs text-destructive underline">Gagal muat</button>
+
+    const entry = scoreByTeam.get(item.team.id)
+    if (!entry) return <span className="text-xs text-muted-foreground">Belum mengerjakan</span>
+
+    if (scoreMode === 'exam') {
+      return (
+        <div className="flex flex-col">
+          <span className="inline-flex items-center gap-1 text-sm font-medium">
+            {entry.flagged && <Flag className="size-3 text-destructive" aria-label="Ditandai" />}
+            {entry.score !== null && entry.score !== undefined ? `${entry.score}/${entry.maxScore ?? 0}` : '—'}
+          </span>
+          {(entry.attemptCount ?? 0) > (entry.finishedAttempts ?? 0) && (
+            <span className="text-[11px] text-amber-600">ujian belum selesai</span>
+          )}
+        </div>
+      )
+    }
+
+    if (entry.score !== null && entry.score !== undefined) {
+      return <span className="text-sm font-medium">{entry.score}</span>
+    }
+    return entry.submissionStatus
+      ? <span className="text-xs capitalize text-muted-foreground">{entry.submissionStatus.replace(/_/g, ' ')}</span>
+      : <span className="text-xs text-muted-foreground">Belum dinilai</span>
   }
 
   const selectedList = useMemo(() => filteredTeams.filter(t => selectedIds.has(t.team.id)), [filteredTeams, selectedIds])
@@ -145,6 +181,7 @@ export default function AdminTeamStages() {
   function resetFilters() {
     setCompetitionId('')
     setStageFilter('')
+    setScoreStageId('')
     setSearch('')
     setPage(1)
     setTargetStageId('')
@@ -162,7 +199,7 @@ export default function AdminTeamStages() {
       <Card className="mb-5 border-border/60 bg-card/70 backdrop-blur-md">
         <CardContent className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
           <label className="space-y-1.5 text-xs text-muted-foreground">Kompetisi
-            <select value={competitionId} onChange={e => { setCompetitionId(e.target.value); setStageFilter(''); setPage(1); setTargetStageId('') }} className="h-10 w-full rounded-3xl border border-input bg-background/60 px-3 text-sm">
+            <select value={competitionId} onChange={e => { setCompetitionId(e.target.value); setStageFilter(''); setScoreStageId(''); setPage(1); setTargetStageId('') }} className="h-10 w-full rounded-3xl border border-input bg-background/60 px-3 text-sm">
               <option value="">Semua kompetisi</option>
               {competitions.map(c => <option key={c.id} value={c.id}>{c.name} ({c.type})</option>)}
             </select>
@@ -171,6 +208,13 @@ export default function AdminTeamStages() {
           <label className="space-y-1.5 text-xs text-muted-foreground">Filter Tahap Saat Ini
             <select value={stageFilter} onChange={e => { setStageFilter(e.target.value); setPage(1) }} className="h-10 w-full rounded-3xl border border-input bg-background/60 px-3 text-sm" disabled={!competitionId}>
               <option value="">Semua tahap</option>
+              {stages.map(s => <option key={s.id} value={s.id}>Tahap {s.order}: {s.name}</option>)}
+            </select>
+          </label>
+
+          <label className="space-y-1.5 text-xs text-muted-foreground">Lihat Nilai Tahap
+            <select value={scoreStageId} onChange={e => setScoreStageId(e.target.value)} className="h-10 w-full rounded-3xl border border-input bg-background/60 px-3 text-sm" disabled={!competitionId || stages.length===0}>
+              <option value="">Pilih tahap...</option>
               {stages.map(s => <option key={s.id} value={s.id}>Tahap {s.order}: {s.name}</option>)}
             </select>
           </label>
@@ -238,6 +282,7 @@ export default function AdminTeamStages() {
                 <TableHead>Tahap Saat Ini</TableHead>
                 <TableHead>Status Tim</TableHead>
                 <TableHead>Registrasi</TableHead>
+                <TableHead>{scoreStageId && scoresQuery.data ? `Nilai — Tahap ${scoresQuery.data.data.stage.order}: ${scoresQuery.data.data.stage.name}` : 'Nilai'}</TableHead>
                 <TableHead>Eligible</TableHead>
               </TableRow></TableHeader>
               <TableBody>
@@ -254,6 +299,7 @@ export default function AdminTeamStages() {
                       </TableCell>
                       <TableCell><AdminStatusBadge status={item.team.status} /></TableCell>
                       <TableCell>{item.registration ? <AdminStatusBadge status={item.registration.status} /> : '—'}</TableCell>
+                      <TableCell>{renderScoreCell(item)}</TableCell>
                       <TableCell>
                         {targetStage
                           ? eligible ? <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600"><Check className="size-3.5" />Eligible</span>
@@ -283,6 +329,7 @@ export default function AdminTeamStages() {
                     </div>
                     <div className="text-xs space-y-1">
                       <p>Tahap: {item.currentStage ? `Tahap ${item.currentStage.order}: ${item.currentStage.name}` : 'REGISTRATION'}</p>
+                      <div className="flex items-center gap-1">Nilai: {renderScoreCell(item)}</div>
                       <div className="flex gap-2"><AdminStatusBadge status={item.team.status} />{item.registration && <AdminStatusBadge status={item.registration.status} />}</div>
                     </div>
                   </CardContent>

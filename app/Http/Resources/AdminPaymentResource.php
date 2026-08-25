@@ -64,6 +64,7 @@ class AdminPaymentResource extends JsonResource
             ],
             'payment' => [
                 'method' => $this->payment_method?->value,
+                'transactionId' => $this->transaction_id,
                 'originalAmount' => number_format($originalAmount, 2, '.', ''),
                 'amountPaid' => (string) $this->amount_paid,
                 'promoCode' => $this->promo_code,

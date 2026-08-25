@@ -15,6 +15,8 @@ class StoreExamQuestionRequest extends FormRequest
     /** @return array<string, array<int, mixed>> */
     public function rules(): array
     {
+        $isEssay = $this->input('type') === 'essay';
+
         return [
             'question' => ['required', 'string', 'max:60000'],
             'explanation' => ['nullable', 'string', 'max:60000'],
@@ -23,7 +25,7 @@ class StoreExamQuestionRequest extends FormRequest
             'options.*.id' => ['required_with:options', 'string', 'max:80', 'distinct'],
             'options.*.content' => ['required_with:options', 'string', 'max:60000'],
             'correct_answer' => ['nullable', 'string', 'max:60000'],
-            'correct_score' => ['required', 'integer', 'min:0', 'max:1000'],
+            'correct_score' => ['required', 'integer', $isEssay ? 'min:1' : 'min:0', $isEssay ? 'max:15' : 'max:1000'],
             'wrong_score' => ['required', 'integer', 'min:-1000', 'max:1000'],
             'empty_score' => ['required', 'integer', 'min:-1000', 'max:1000'],
             'difficulty' => ['required', Rule::in(['easy', 'medium', 'hard'])],

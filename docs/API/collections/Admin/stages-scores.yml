@@ -1,0 +1,39 @@
+info:
+  name: stages-scores
+  type: http
+  seq: 20
+
+http:
+  method: GET
+  url: "{{baseUrl}}/api/admin/stages/{{stage_id}}/scores"
+  headers:
+    - name: Accept
+      value: application/json
+  auth:
+    type: bearer
+    token: "{{adminToken}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  #### GET /api/admin/stages/{stage}/scores
+  Nilai per Team untuk satu Stage, adaptif terhadap tipe kompetisi.
+
+  - OLIMPIADE (`mode: exam`): agregasi seluruh exam attempt pada Stage.
+    `score` dan `maxScore` adalah penjumlahan `total_score` serta
+    `max_possible_score` dari attempt yang `finished`. Attempt yang belum
+    selesai tidak dihitung ke nilai namun tetap terlihat dari
+    `attemptCount > finishedAttempts`. `flagged` bernilai true bila ada
+    attempt Team yang ditandai.
+  - BUSINESS_PLAN / BUSINESS_IT_CASE (`mode: submission`): `score` adalah
+    nilai review Submission terakhir Team pada Stage tersebut dan
+    `submissionStatus` status reviewnya. Belum dinilai dikembalikan sebagai
+    `score: null`.
+
+  Hanya Team yang memiliki data attempt atau submission yang muncul di
+  `scores`. Response memakai envelope standar dengan `data.mode`,
+  `data.stage {id, name, order, type}`, dan `data.scores[]`.

@@ -27,6 +27,7 @@ class PaymentFormResource extends JsonResource
             'promoCode' => $hasSubmittedPayment ? $registration->promo_code : null,
             'paymentMethods' => config('registration.payment_methods'),
             'paymentInstructions' => config('registration.payment_instructions'),
+            'qrisImageUrl' => config('registration.qris.image_url'),
             'bankAccounts' => collect(config('registration.bank_accounts'))
                 ->map(fn (array $account): array => [
                     'bank' => (string) $account['bank'],
