@@ -118,6 +118,27 @@ class AdminRegistrationService
         return $this->detail($team->fresh());
     }
 
+    public function unverifyTeam(Admin $admin, Team $team, ?string $reason, ?string $requestId): Team
+    {
+        if ($team->status !== Team::STATUS_VERIFIED) {
+            throw ValidationException::withMessages(['team' => ['Team tidak dalam status terverifikasi.']]);
+        }
+
+        DB::transaction(function () use ($admin, $team, $reason, $requestId): void {
+            $before = $team->toArray();
+            $team->update([
+                'status' => Team::STATUS_WAITING_VERIFICATION,
+                'verified_by' => null,
+                'verified_at' => null,
+                'verification_note' => $reason,
+                'revision_step' => null,
+            ]);
+            $this->audit($admin, 'team.unverified', $team, $before, $team->fresh()->toArray(), $reason, $requestId);
+        });
+
+        return $this->detail($team->fresh());
+    }
+
     public function reviseTeam(Admin $admin, Team $team, string $step, string $note, ?string $requestId): Team
     {
         if ($team->status === Team::STATUS_REVISION_REQUIRED && $team->revision_step === $step && $team->verification_note === $note) {
@@ -209,6 +230,30 @@ class AdminRegistrationService
     public function rejectPayment(Admin $admin, Registration $registration, string $note, ?string $requestId): Registration
     {
         return $this->setPaymentStatus($admin, $registration, RegistrationStatus::REJECTED, $note, 'payment.rejected', $requestId);
+    }
+
+    public function unverifyPayment(Admin $admin, Registration $registration, ?string $reason, ?string $requestId): Registration
+    {
+        return DB::transaction(function () use ($admin, $registration, $reason, $requestId): Registration {
+            $registration = Registration::query()->lockForUpdate()->findOrFail($registration->id);
+            if ($registration->status !== RegistrationStatus::VERIFIED) {
+                throw ValidationException::withMessages(['payment' => ['Pembayaran tidak dalam status terverifikasi.']]);
+            }
+
+            DB::transaction(function () use ($admin, $registration, $reason, $requestId): void {
+                $before = $registration->toArray();
+                $registration->update([
+                    'status' => RegistrationStatus::WAITING_VERIFICATION,
+                    'payment_verified_by' => null,
+                    'payment_verified_at' => null,
+                    'paid_at' => null,
+                    'payment_rejection_reason' => $reason,
+                ]);
+                $this->audit($admin, 'payment.unverified', $registration, $before, $registration->fresh()->toArray(), $reason, $requestId);
+            });
+
+            return $this->loadPayment($registration->fresh());
+        });
     }
 
     public function advanceStage(Admin $admin, Team $team, Stage $stage, ?string $requestId): Team

@@ -35,6 +35,7 @@ export const adminApi = {
   verifyTeam: (teamId: string) => postJson<AdminTeamResponse>(`/api/admin/teams/${teamId}/verify`, undefined, { headers: requestHeaders() }),
   reviseTeam: (teamId: string, payload: TeamRevisionPayload) => postJson<AdminTeamResponse>(`/api/admin/teams/${teamId}/revision`, payload, { headers: requestHeaders() }),
   rejectTeam: (teamId: string, reason: string) => postJson<AdminTeamResponse>(`/api/admin/teams/${teamId}/reject`, { reason }, { headers: requestHeaders() }),
+  unverifyTeam: (teamId: string, reason?: string) => postJson<AdminTeamResponse>(`/api/admin/teams/${teamId}/unverify`, reason ? { reason } : undefined, { headers: requestHeaders() }),
   updateTeamRegistration: (teamId: string, payload: AdminTeamUpdatePayload) => patchJson<AdminTeamResponse>(`/api/admin/teams/${teamId}/registration`, payload, { headers: requestHeaders() }),
   competitions: (filters: CompetitionFilters) => getJson<AdminCompetitionsResponse>(`/api/competitions${toSearchParams(filters)}`),
   createCompetition: (payload: CompetitionPayload) => postJson<AdminCompetitionResponse>('/api/admin/competitions', payload),
@@ -56,6 +57,7 @@ export const adminApi = {
   verifyPayment: (registrationId: string) => postJson<AdminPaymentResponse>(`/api/admin/registrations/${registrationId}/payment/verify`, undefined, { headers: requestHeaders() }),
   revisePayment: (registrationId: string, reason: string) => postJson<AdminPaymentResponse>(`/api/admin/registrations/${registrationId}/payment/revision`, { reason }, { headers: requestHeaders() }),
   rejectPayment: (registrationId: string, reason: string) => postJson<AdminPaymentResponse>(`/api/admin/registrations/${registrationId}/payment/reject`, { reason }, { headers: requestHeaders() }),
+  unverifyPayment: (registrationId: string, reason: string) => postJson<AdminPaymentResponse>(`/api/admin/registrations/${registrationId}/payment/unverify`, { reason }, { headers: requestHeaders() }),
 
   operations: (filters: AdminOperationFilters) => getJson<AdminOperationsResponse>(`/api/admin/operations${toSearchParams(filters)}`),
   operation: (operationId: string) => getJson<AdminOperationResponse>(`/api/admin/operations/${operationId}`),

@@ -61,11 +61,13 @@ Route::prefix('admin')->middleware(['auth:admins', 'principal.admin'])->group(fu
     Route::post('/teams/{team}/verify', [AdminRegistrationController::class, 'verifyTeam'])->whereUuid('team');
     Route::post('/teams/{team}/revision', [AdminRegistrationController::class, 'reviseTeam'])->whereUuid('team');
     Route::post('/teams/{team}/reject', [AdminRegistrationController::class, 'rejectTeam'])->whereUuid('team');
+    Route::post('/teams/{team}/unverify', [AdminRegistrationController::class, 'unverifyTeam'])->whereUuid('team');
     Route::get('/payments', [AdminRegistrationController::class, 'payments']);
     Route::get('/payments/{registration}', [AdminRegistrationController::class, 'payment'])->whereUuid('registration');
     Route::post('/registrations/{registration}/payment/verify', [AdminRegistrationController::class, 'verifyPayment'])->whereUuid('registration');
     Route::post('/registrations/{registration}/payment/revision', [AdminRegistrationController::class, 'revisePayment'])->whereUuid('registration');
     Route::post('/registrations/{registration}/payment/reject', [AdminRegistrationController::class, 'rejectPayment'])->whereUuid('registration');
+    Route::post('/registrations/{registration}/payment/unverify', [AdminRegistrationController::class, 'unverifyPayment'])->whereUuid('registration');
     Route::post('/teams/{team}/stages/{stage}/advance', [AdminRegistrationController::class, 'advanceStage'])->whereUuid(['team', 'stage']);
     Route::post('/competitions', [CompetitionController::class, 'store']);
     Route::patch('/competitions/{competition}', [CompetitionController::class, 'update']);

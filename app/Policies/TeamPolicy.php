@@ -41,4 +41,9 @@ class TeamPolicy
     {
         return $this->verifyData($admin, $team);
     }
+
+    public function unverify(Admin $admin, Team $team): bool
+    {
+        return $admin->role === 'admin_registration';
+    }
 }

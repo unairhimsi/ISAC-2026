@@ -132,6 +132,24 @@ class AdminRegistrationController extends Controller
         ));
     }
 
+    public function unverifyTeam(Request $request, Team $team): JsonResponse
+    {
+        $this->authorize($request, 'unverify', $team);
+
+        return $this->success('Verifikasi tim dibatalkan.', new RegistrationSummaryResource(
+            $this->service->unverifyTeam($this->admin($request), $team, $request->input('reason'), $request->header('X-Request-ID')),
+        ));
+    }
+
+    public function unverifyPayment(Request $request, Registration $registration): JsonResponse
+    {
+        $this->authorize($request, 'unverifyPayment', $registration);
+
+        return $this->success('Verifikasi pembayaran dibatalkan.', new AdminPaymentResource(
+            $this->service->unverifyPayment($this->admin($request), $registration, $request->input('reason'), $request->header('X-Request-ID')),
+        ));
+    }
+
     private function authorize(Request $request, string $ability, mixed $subject): void
     {
         Gate::forUser($this->admin($request))->authorize($ability, $subject);
