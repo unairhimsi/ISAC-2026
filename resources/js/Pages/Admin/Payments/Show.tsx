@@ -25,6 +25,7 @@ import { adminPageLayout } from '@/features/admin/components/AdminShell'
 import { AdminStatusBadge } from '@/features/admin/components/AdminStatusBadge'
 import { AdminErrorState, AdminLoadingState } from '@/features/admin/components/AdminStates'
 import { PaymentReviewDialog } from '@/features/admin/components/PaymentReviewDialog'
+import { PaymentUnverifyDialog } from '@/features/admin/components/PaymentUnverifyDialog'
 import { useAdminPayment } from '@/features/admin/hooks/useAdmin'
 import { useAuthSession } from '@/features/auth/context/AuthProvider'
 import { formatInstitutionAddress, parseInstitutionAddress } from '@/features/registrations/utils/institutionAddress'
@@ -60,6 +61,7 @@ export default function AdminPaymentShow({ registrationId }: { registrationId: s
   const { principal } = useAuthSession()
   const query = useAdminPayment(registrationId)
   const [reviewAction, setReviewAction] = useState<ReviewAction | null>(null)
+  const [unverifyOpen, setUnverifyOpen] = useState(false)
   const [previewError, setPreviewError] = useState(false)
   const data = query.data?.data
   const role = principal?.principalType === 'ADMIN' ? principal.admin.role : null
@@ -254,6 +256,11 @@ export default function AdminPaymentShow({ registrationId }: { registrationId: s
             <CardContent className="space-y-3">
               {!canMutate ? (
                 <p className="text-sm text-muted-foreground">Role Anda hanya dapat melihat detail pembayaran.</p>
+              ) : data.status === 'VERIFIED' ? (
+                <>
+                  <p className="text-sm text-muted-foreground">Pembayaran sudah terverifikasi. Batalkan jika perlu koreksi.</p>
+                  <Button variant="outline" className="w-full" onClick={() => setUnverifyOpen(true)}><RotateCcw />Batalkan Verifikasi</Button>
+                </>
               ) : !data.canBeReviewed ? (
                 <p className="text-sm text-muted-foreground">
                   {!data.isSubmitted

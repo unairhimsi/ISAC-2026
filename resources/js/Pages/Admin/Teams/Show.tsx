@@ -10,6 +10,7 @@ import { AdminStatusBadge } from '@/features/admin/components/AdminStatusBadge'
 import { AdminErrorState, AdminLoadingState } from '@/features/admin/components/AdminStates'
 import { AdminTeamEditDialog } from '@/features/admin/components/AdminTeamEditDialog'
 import { TeamReviewDialog } from '@/features/admin/components/TeamReviewDialog'
+import { TeamUnverifyDialog } from '@/features/admin/components/TeamUnverifyDialog'
 import { useAdminTeam } from '@/features/admin/hooks/useAdmin'
 import { useAuthSession } from '@/features/auth/context/AuthProvider'
 import { formatInstitutionAddress } from '@/features/registrations/utils/institutionAddress'
@@ -28,12 +29,14 @@ export default function AdminTeamShow({ teamId }: { teamId: string }) {
   const { principal } = useAuthSession()
   const query = useAdminTeam(teamId)
   const [reviewAction, setReviewAction] = useState<'verify' | 'revise' | 'reject' | null>(null)
+  const [unverifyOpen, setUnverifyOpen] = useState(false)
   const data = query.data?.data
   const role = principal?.principalType === 'ADMIN' ? principal.admin.role : null
   const [editOpen, setEditOpen] = useState(false)
   const canReview = role === 'super_admin' || role === 'admin_registration'
   const canEdit = role === 'super_admin' || role === 'admin_registration'
   const waitingReview = data?.team.status === 'WAITING_VERIFICATION'
+  const isVerified = data?.team.status === 'VERIFIED'
 
   const paymentAvailable = data?.registration?.paymentAvailable === true
   const competitionType = data?.registration?.competition.type
@@ -231,7 +234,7 @@ export default function AdminTeamShow({ teamId }: { teamId: string }) {
           <Card className="border-border/60 bg-card/70 backdrop-blur-md">
             <CardHeader><CardTitle>Keputusan Review</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              {!canReview ? <p className="text-sm text-muted-foreground">Role Anda hanya dapat melihat detail tim.</p> : !waitingReview ? <p className="text-sm text-muted-foreground">Aksi review hanya tersedia ketika tim berstatus Menunggu Verifikasi.</p> : <><Button className="w-full" onClick={() => setReviewAction('verify')}><CheckCircle2 />Verifikasi Tim</Button><Button variant="outline" className="w-full" onClick={() => setReviewAction('revise')}><RotateCcw />Minta Revisi</Button><Button variant="destructive" className="w-full" onClick={() => setReviewAction('reject')}><ShieldX />Tolak Tim</Button></>}
+              {!canReview ? <p className="text-sm text-muted-foreground">Role Anda hanya dapat melihat detail tim.</p> : isVerified ? <><p className="text-sm text-muted-foreground">Tim sudah terverifikasi. Batalkan jika perlu koreksi.</p><Button variant="outline" className="w-full" onClick={() => setUnverifyOpen(true)}><RotateCcw />Batalkan Verifikasi</Button></> : !waitingReview ? <p className="text-sm text-muted-foreground">Aksi review hanya tersedia ketika tim berstatus Menunggu Verifikasi.</p> : <><Button className="w-full" onClick={() => setReviewAction('verify')}><CheckCircle2 />Verifikasi Tim</Button><Button variant="outline" className="w-full" onClick={() => setReviewAction('revise')}><RotateCcw />Minta Revisi</Button><Button variant="destructive" className="w-full" onClick={() => setReviewAction('reject')}><ShieldX />Tolak Tim</Button></>}
             </CardContent>
           </Card>
 
@@ -249,6 +252,7 @@ export default function AdminTeamShow({ teamId }: { teamId: string }) {
       </div>
 
       {reviewAction && <TeamReviewDialog teamId={teamId} action={reviewAction} open onOpenChange={(open) => { if (!open) setReviewAction(null) }} />}
+      {unverifyOpen && <TeamUnverifyDialog teamId={teamId} open={unverifyOpen} onOpenChange={setUnverifyOpen} />}
       {data.registration && <AdminTeamEditDialog data={data} open={editOpen} onOpenChange={setEditOpen} />}
     </>
   )
