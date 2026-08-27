@@ -15,6 +15,7 @@ beforeEach(function (): void {
     $this->competition = Competition::factory()->create([
         'status' => Competition::STATUS_REGISTRATION_OPEN,
         'type' => Competition::TYPE_BUSINESS_PLAN,
+        'payment_flow' => Competition::PAYMENT_UPFRONT,
     ]);
     $this->batch = $this->competition->batches()->create([
         'name' => 'Batch 1', 'slug' => 'batch-1',
@@ -29,6 +30,9 @@ beforeEach(function (): void {
         'team_completed_at' => now(),
         'members_completed_at' => now(),
         'documents_completed_at' => now(),
+        'payment_required_at' => now(),
+        'payment_submitted_at' => now(),
+        'payment_verified_at' => now(),
     ]);
     $this->team->members()->create([
         'name' => 'Leader', 'role' => 'LEADER', 'email' => 'leader@test.com',

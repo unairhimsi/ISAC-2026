@@ -94,14 +94,14 @@ test('olympiad dashboard only exposes exam metadata from the current stage', fun
         ->assertForbidden();
 });
 
-test('business dashboard exposes the payment target stage and registration batch price', function (): void {
+test('business dashboard exposes the upfront payment requirement and registration batch price', function (): void {
     $team = Team::factory()->create([
         'email_verified_at' => now(),
-        'status' => Team::STATUS_VERIFIED,
+        'status' => Team::STATUS_WAITING_VERIFICATION,
     ]);
     $competition = Competition::factory()->create([
         'type' => Competition::TYPE_BUSINESS_PLAN,
-        'payment_flow' => Competition::PAYMENT_SEMIFINAL,
+        'payment_flow' => Competition::PAYMENT_UPFRONT,
     ]);
     $batch = createDashboardBatch($competition, 175000, 'business-dashboard-batch');
     $preliminary = Stage::query()->create([
@@ -109,12 +109,6 @@ test('business dashboard exposes the payment target stage and registration batch
         'name' => 'Preliminary',
         'type' => 'submission',
         'order' => 1,
-    ]);
-    $semifinal = Stage::query()->create([
-        'competition_id' => $competition->id,
-        'name' => 'Semifinal',
-        'type' => 'submission',
-        'order' => 2,
     ]);
     $team->update(['current_stage_id' => $preliminary->id]);
     Registration::query()->create([
@@ -125,20 +119,17 @@ test('business dashboard exposes the payment target stage and registration batch
         'team_completed_at' => now(),
         'members_completed_at' => now(),
         'documents_completed_at' => now(),
-        'submitted_at' => now(),
         'payment_required_at' => now(),
-        'payment_for_stage_id' => $semifinal->id,
     ]);
 
     $token = $team->createToken('dashboard')->plainTextToken;
     $this->withToken($token)->getJson('/api/dashboard/summary')
         ->assertOk()
-        ->assertJsonPath('data.currentStep', 'DASHBOARD')
-        ->assertJsonPath('data.registration.paymentForStage.id', $semifinal->id)
+        ->assertJsonPath('data.currentStep', 'PAYMENT')
         ->assertJsonPath('data.registration.batch.price', '175000.00')
         ->assertJsonPath('data.payment.originalAmount', 175000);
 
-    $this->withToken($token)->getJson("/api/dashboard/stages/{$semifinal->id}")
+    $this->withToken($token)->getJson("/api/dashboard/stages/{$preliminary->id}")
         ->assertOk()
         ->assertJsonPath('data.payment.state', 'PAYMENT_REQUIRED')
         ->assertJsonPath('data.payment.originalAmount', 175000)

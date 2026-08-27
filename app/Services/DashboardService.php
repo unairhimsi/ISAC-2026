@@ -78,6 +78,11 @@ class DashboardService
             ], true);
         $isCurrentStage = $team->current_stage_id === $stage->id;
         $isPaymentTarget = $registration?->payment_for_stage_id === $stage->id;
+        // UNIFIED: all competitions use UPFRONT payment. If registration hasn't been verified yet,
+        // the payment gate applies to any stage access (not just the payment_for_stage target).
+        $isUpfrontPaymentGate = $registration !== null
+            && $registration->competition->payment_flow === Competition::PAYMENT_UPFRONT
+            && in_array($registration->status, [RegistrationStatus::WAITING_PAYMENT, RegistrationStatus::REVISION_REQUIRED], true);
         $canAccess = $isBusinessCompetition
             && $stage->competition_id === $registration->competition_id
             && ($isCurrentStage || $isPaymentTarget);
@@ -99,7 +104,7 @@ class DashboardService
                 'price' => (float) $registration->batch->price,
             ],
             'payment' => [
-                'isTargetStage' => $isPaymentTarget,
+                'isTargetStage' => $isPaymentTarget || $isUpfrontPaymentGate,
                 'status' => $registration->status?->value,
                 'originalAmount' => (float) $registration->batch->price,
                 'requiredAt' => $registration->payment_required_at?->toISOString(),
@@ -107,11 +112,11 @@ class DashboardService
                 'rejectionReason' => $registration->payment_rejection_reason,
                 'state' => $this->paymentState(
                     $registration->status,
-                    $isPaymentTarget,
+                    $isPaymentTarget || $isUpfrontPaymentGate,
                     $registration->payment_submitted_at !== null,
                 ),
             ],
-            'submissionLocked' => $isPaymentTarget && ! $isCurrentStage,
+            'submissionLocked' => ($isPaymentTarget && ! $isCurrentStage) || $isUpfrontPaymentGate,
         ];
     }
 
