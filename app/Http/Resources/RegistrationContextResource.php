@@ -81,14 +81,10 @@ class RegistrationContextResource extends JsonResource
         if ($registration->documents_completed_at === null) {
             return 'DOCUMENTS';
         }
-        $isStagePaymentCheckpoint = $registration->payment_for_stage_id !== null
-            && $registration->competition->payment_flow === Competition::PAYMENT_SEMIFINAL;
-
-        if (! $isStagePaymentCheckpoint
-            && ($registration->status === RegistrationStatus::WAITING_PAYMENT || $registration->status === RegistrationStatus::REVISION_REQUIRED)) {
+        if ($registration->status === RegistrationStatus::WAITING_PAYMENT || $registration->status === RegistrationStatus::REVISION_REQUIRED) {
             return 'PAYMENT';
         }
-        if ($registration->competition->type === Competition::TYPE_OLIMPIADE && $registration->payment_submitted_at === null) {
+        if ($registration->payment_submitted_at === null) {
             return 'PAYMENT';
         }
 

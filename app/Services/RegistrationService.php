@@ -360,8 +360,7 @@ class RegistrationService
             throw ValidationException::withMessages(['payment' => ['Lengkapi seluruh data pendaftaran terlebih dahulu.']]);
         }
 
-        $paymentGateActive = $registration->competition->type === Competition::TYPE_OLIMPIADE || $registration->payment_for_stage_id !== null;
-        if (! $paymentGateActive || ! in_array($registration->status, [RegistrationStatus::WAITING_PAYMENT, RegistrationStatus::REVISION_REQUIRED], true)) {
+        if (! in_array($registration->status, [RegistrationStatus::WAITING_PAYMENT, RegistrationStatus::REVISION_REQUIRED], true)) {
             $requestedPromoCode = Str::upper(trim((string) ($data['promo_code'] ?? '')));
             $submittedPromoCode = Str::upper(trim((string) $registration->promo_code));
             $requestedTransactionId = trim((string) ($data['transaction_id'] ?? ''));
@@ -393,9 +392,7 @@ class RegistrationService
                 'submitted_at' => $registration->submitted_at ?? now(),
             ]);
 
-            if ($registration->payment_for_stage_id === null) {
-                $team->update(['status' => Team::STATUS_WAITING_VERIFICATION]);
-            }
+            $team->update(['status' => Team::STATUS_WAITING_VERIFICATION]);
         });
 
         return $team->fresh()->load('registration.batch', 'registration.paymentProofFile', 'registration.paymentForStage');
@@ -444,7 +441,7 @@ class RegistrationService
             }
         }
 
-        if ($registration->competition->type === Competition::TYPE_OLIMPIADE && $registration->payment_submitted_at === null) {
+        if ($registration->payment_submitted_at === null) {
             throw ValidationException::withMessages(['payment' => ['Lengkapi pembayaran terlebih dahulu.']]);
         }
 
