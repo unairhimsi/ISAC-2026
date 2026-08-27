@@ -229,29 +229,9 @@ class AdminRegistrationService
             throw ValidationException::withMessages(['stage' => ['Stage harus diproses berurutan.']]);
         }
 
-        DB::transaction(function () use ($admin, $team, $stage, $registration, $requestId): void {
+        DB::transaction(function () use ($admin, $team, $stage, $requestId): void {
             $before = $team->toArray();
-            $needsSemifinalPayment = $registration->competition->payment_flow === Competition::PAYMENT_SEMIFINAL
-                && str_contains(strtolower($stage->name), 'semifinal');
-
-            if ($needsSemifinalPayment) {
-                $registration->update([
-                    'status' => RegistrationStatus::WAITING_PAYMENT,
-                    'payment_required_at' => now(),
-                    'payment_for_stage_id' => $stage->id,
-                    'payment_proof_file_id' => null,
-                    'payment_submitted_at' => null,
-                    'payment_verified_by' => null,
-                    'payment_verified_at' => null,
-                    'paid_at' => null,
-                    'amount_paid' => 0,
-                    'promo_code' => null,
-                    'discount_percent' => 0,
-                    'discount_amount' => 0,
-                ]);
-            } else {
-                $team->update(['current_stage_id' => $stage->id]);
-            }
+            $team->update(['current_stage_id' => $stage->id]);
 
             $this->audit($admin, 'stage.advance', $team, $before, $team->fresh()->toArray(), null, $requestId);
         });
@@ -297,8 +277,8 @@ class AdminRegistrationService
                 'paymentForStage',
             ])
             ->where(function (Builder $query): void {
-                $query->whereHas('competition', fn (Builder $competition) => $competition->where('payment_flow', Competition::PAYMENT_UPFRONT))
-                    ->orWhereNotNull('payment_required_at');
+                $query->whereNotNull('payment_required_at')
+                    ->orWhereNotNull('payment_submitted_at');
             });
     }
 

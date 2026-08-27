@@ -55,8 +55,7 @@ class RegistrationSummaryResource extends JsonResource
                     'membersCompletedAt' => $registration->members_completed_at?->toISOString(),
                     'documentsCompletedAt' => $registration->documents_completed_at?->toISOString(),
                     'submittedAt' => $registration->submitted_at?->toISOString(),
-                    'paymentAvailable' => $registration->competition->payment_flow === Competition::PAYMENT_UPFRONT
-                        || $registration->payment_required_at !== null,
+                    'paymentAvailable' => $registration->payment_required_at !== null,
                     'paymentRequiredAt' => $registration->payment_required_at?->toISOString(),
                     'paymentSubmittedAt' => $registration->payment_submitted_at?->toISOString(),
                     'competition' => new CompetitionResource($registration->competition),
