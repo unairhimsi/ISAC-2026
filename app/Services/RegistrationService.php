@@ -54,17 +54,14 @@ class RegistrationService
                 throw ValidationException::withMessages(['competition_id' => ['Belum ada Batch aktif dengan kuota tersedia untuk kompetisi ini.']]);
             }
 
-            $isOlympiad = $competition->type === Competition::TYPE_OLIMPIADE;
-            // A Team owns exactly one Registration. Repeating the save is
-            // idempotent and must never assign a different Batch or price.
-            // withTrashed is handled above; here we know no active registration exists.
+            // UNIFIED: semua lomba wajib bayar di awal, tanpa membedakan type/payment_flow. No DB schema change — payment_for_stage_id tetap ada tapi diabaikan.
             $registration = Registration::create([
                 'team_id' => $team->id,
                 'competition_id' => $competition->id,
                 'batch_id' => $batch->id,
-                'status' => $isOlympiad ? RegistrationStatus::WAITING_PAYMENT : RegistrationStatus::VERIFIED,
-                'payment_required_at' => $isOlympiad ? now() : null,
-                'payment_verified_at' => $isOlympiad ? null : now(),
+                'status' => RegistrationStatus::WAITING_PAYMENT,
+                'payment_required_at' => now(),
+                'payment_verified_at' => null,
             ]);
 
             $batch->increment('current_registrations');
