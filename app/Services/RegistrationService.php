@@ -334,11 +334,6 @@ class RegistrationService
             ]);
             $registration->update(['documents_completed_at' => $registration->documents_completed_at ?? now()]);
 
-            if ($registration->competition->type !== Competition::TYPE_OLIMPIADE) {
-                $registration->update(['submitted_at' => $registration->submitted_at ?? now()]);
-                $team->update(['status' => Team::STATUS_WAITING_VERIFICATION]);
-            }
-
             $this->resolveDataRevision($team, 'DOCUMENTS');
         });
 
