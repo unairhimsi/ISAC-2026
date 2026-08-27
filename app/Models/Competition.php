@@ -26,7 +26,7 @@ class Competition extends Model
 
     public const PAYMENT_UPFRONT = 'UPFRONT';
 
-    public const PAYMENT_SEMIFINAL = 'SEMIFINAL';
+    public const PAYMENT_SEMIFINAL = 'SEMIFINAL'; // @deprecated legacy - existing rows keep value, new competitions must use UPFRONT. No migration will convert them.
 
     public const PAYMENTS = [
         self::PAYMENT_UPFRONT,

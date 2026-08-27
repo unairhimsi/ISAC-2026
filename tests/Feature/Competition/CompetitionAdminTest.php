@@ -115,12 +115,14 @@ test('admin cannot delete competition with active batches', function (): void {
 });
 
 test('admin cannot create business plan with upfront payment', function (): void {
+    // UNIFIED: BPC now must be UPFRONT, so SEMIFINAL is rejected (legacy behavior inverted)
     $payload = [
         'name' => 'BUSINESS PLAN 2026',
         'type' => 'BUSINESS_PLAN',
-        'payment_flow' => 'UPFRONT',
+        'payment_flow' => 'SEMIFINAL',
         'start_date' => now()->addDay()->toDateString(),
         'end_date' => now()->addMonth()->toDateString(),
+        'status' => 'DRAFT',
     ];
 
     $response = $this->withToken($this->token)
@@ -128,6 +130,22 @@ test('admin cannot create business plan with upfront payment', function (): void
 
     $response->assertUnprocessable()
         ->assertJsonStructure(['error' => ['details' => ['payment_flow']]]);
+});
+
+test('admin can create business plan with upfront payment (unified)', function (): void {
+    $payload = [
+        'name' => 'BUSINESS PLAN UNIFIED 2026',
+        'type' => 'BUSINESS_PLAN',
+        'payment_flow' => 'UPFRONT',
+        'start_date' => now()->addDay()->toDateString(),
+        'end_date' => now()->addMonth()->toDateString(),
+        'status' => 'DRAFT',
+    ];
+
+    $response = $this->withToken($this->token)
+        ->postJson('/api/admin/competitions', $payload);
+
+    $response->assertCreated();
 });
 
 test('guest cannot create competition', function (): void {

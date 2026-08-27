@@ -95,15 +95,15 @@ class CompetitionService
         $type = $data['type'];
         $paymentFlow = $data['payment_flow'];
 
-        if ($type === Competition::TYPE_OLIMPIADE && $paymentFlow !== Competition::PAYMENT_UPFRONT) {
-            throw ValidationException::withMessages([
-                'payment_flow' => 'OLIMPIADE harus menggunakan payment flow UPFRONT.',
-            ]);
-        }
+        if ($paymentFlow !== Competition::PAYMENT_UPFRONT) {
+            $msg = match ($type) {
+                Competition::TYPE_OLIMPIADE => 'OLIMPIADE harus menggunakan payment flow UPFRONT.',
+                Competition::TYPE_BUSINESS_PLAN, Competition::TYPE_BUSINESS_IT_CASE => 'BUSINESS_PLAN dan BUSINESS_IT_CASE harus menggunakan payment flow UPFRONT.',
+                default => 'Payment flow harus UPFRONT.',
+            };
 
-        if (in_array($type, ['BUSINESS_PLAN', 'BUSINESS_IT_CASE'], true) && $paymentFlow !== 'SEMIFINAL') {
             throw ValidationException::withMessages([
-                'payment_flow' => 'BUSINESS_PLAN dan BUSINESS_IT_CASE harus menggunakan payment flow SEMIFINAL.',
+                'payment_flow' => $msg,
             ]);
         }
     }
