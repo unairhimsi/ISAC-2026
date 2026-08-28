@@ -37,6 +37,7 @@ RUN apt-get update \
     && docker-php-ext-install -j"$(nproc)" \
         bcmath \
         exif \
+        fileinfo \
         gd \
         intl \
         mbstring \
