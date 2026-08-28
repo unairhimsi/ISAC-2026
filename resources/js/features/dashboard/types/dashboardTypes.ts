@@ -62,26 +62,39 @@ export type ExamShellData = {
   batch: DashboardBatch
 }
 
-export type SubmissionPaymentState =
-  | 'NOT_REQUIRED'
-  | 'PAYMENT_REQUIRED'
-  | 'WAITING_VERIFICATION'
-  | 'REVISION_REQUIRED'
+export type SubmissionWindow = {
+  isOpen: boolean
+  isOverdue: boolean
+  remainingMs: number | null
+  startDate: string | null
+  endDate: string | null
+}
+
+export type SubmissionFileRef = {
+  id: string
+  fileId: string
+  url: string
+}
+
+export type SubmissionData = {
+  id: string
+  title: string
+  description: string | null
+  status: 'draft' | 'submitted' | 'under_review' | 'approved' | 'rejected' | 'revision_requested'
+  score: number | null
+  feedback: string | null
+  submittedAt: string | null
+  reviewedAt: string | null
+  file: SubmissionFileRef | null
+}
 
 export type SubmissionShellData = {
   stage: StageSummary
   competition: DashboardCompetition
   batch: DashboardBatch
-  payment: {
-    isTargetStage: boolean
-    status: RegistrationStatus
-    originalAmount: number
-    requiredAt: string | null
-    submittedAt: string | null
-    rejectionReason: string | null
-    state: SubmissionPaymentState
-  }
-  submissionLocked: boolean
+  window: SubmissionWindow
+  submission: SubmissionData | null
+  canSubmit: boolean
 }
 
 export type ExamShellResponse = ApiResponse<ExamShellData>

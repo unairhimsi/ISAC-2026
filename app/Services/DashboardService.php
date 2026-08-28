@@ -66,7 +66,6 @@ class DashboardService
         $team->loadMissing(
             'registration.competition',
             'registration.batch',
-            'registration.paymentForStage',
             'currentStage',
         );
 
@@ -77,19 +76,39 @@ class DashboardService
                 Competition::TYPE_BUSINESS_IT_CASE,
             ], true);
         $isCurrentStage = $team->current_stage_id === $stage->id;
-        $isPaymentTarget = $registration?->payment_for_stage_id === $stage->id;
-        // UNIFIED: all competitions use UPFRONT payment. If registration hasn't been verified yet,
-        // the payment gate applies to any stage access (not just the payment_for_stage target).
-        $isUpfrontPaymentGate = $registration !== null
-            && $registration->competition->payment_flow === Competition::PAYMENT_UPFRONT
-            && in_array($registration->status, [RegistrationStatus::WAITING_PAYMENT, RegistrationStatus::REVISION_REQUIRED], true);
+
+        // Direktori baru: semua lomba UPFRONT di registrasi awal, submission langsung tanpa payment gate
         $canAccess = $isBusinessCompetition
             && $stage->competition_id === $registration->competition_id
-            && ($isCurrentStage || $isPaymentTarget);
+            && $isCurrentStage;
 
         if (! $canAccess) {
             throw new AuthorizationException('Tahap pengumpulan tidak tersedia untuk Team ini.');
         }
+
+        $now = now();
+        $start = $stage->start_date;
+        $end = $stage->end_date;
+        $isOpen = true;
+        if ($start !== null && $now->lt($start)) {
+            $isOpen = false;
+        }
+        if ($end !== null && $now->gt($end)) {
+            $isOpen = false;
+        }
+        $isOverdue = $end !== null && $now->gt($end);
+        $remainingMs = null;
+        if ($end !== null && $isOpen) {
+            $remainingMs = (int) max(0, ($end->getTimestamp() - $now->getTimestamp()) * 1000);
+        }
+
+        $submission = \App\Models\Submission::query()
+            ->where('team_id', $team->id)
+            ->where('stage_id', $stage->id)
+            ->with('file:id,file_id,url')
+            ->first();
+
+        $canSubmit = $isOpen;
 
         return [
             'stage' => $this->stageMetadata($stage),
@@ -103,20 +122,29 @@ class DashboardService
                 'name' => $registration->batch->name,
                 'price' => (float) $registration->batch->price,
             ],
-            'payment' => [
-                'isTargetStage' => $isPaymentTarget || $isUpfrontPaymentGate,
-                'status' => $registration->status?->value,
-                'originalAmount' => (float) $registration->batch->price,
-                'requiredAt' => $registration->payment_required_at?->toISOString(),
-                'submittedAt' => $registration->payment_submitted_at?->toISOString(),
-                'rejectionReason' => $registration->payment_rejection_reason,
-                'state' => $this->paymentState(
-                    $registration->status,
-                    $isPaymentTarget || $isUpfrontPaymentGate,
-                    $registration->payment_submitted_at !== null,
-                ),
+            'window' => [
+                'isOpen' => $isOpen,
+                'isOverdue' => $isOverdue,
+                'remainingMs' => $remainingMs,
+                'startDate' => $start?->toISOString(),
+                'endDate' => $end?->toISOString(),
             ],
-            'submissionLocked' => ($isPaymentTarget && ! $isCurrentStage) || $isUpfrontPaymentGate,
+            'submission' => $submission === null ? null : [
+                'id' => $submission->id,
+                'title' => $submission->title,
+                'description' => $submission->description,
+                'status' => $submission->status,
+                'score' => $submission->score,
+                'feedback' => $submission->feedback,
+                'submittedAt' => $submission->submitted_at?->toISOString(),
+                'reviewedAt' => $submission->reviewed_at?->toISOString(),
+                'file' => $submission->file === null ? null : [
+                    'id' => $submission->file->id,
+                    'fileId' => $submission->file->file_id,
+                    'url' => $submission->file->url,
+                ],
+            ],
+            'canSubmit' => $canSubmit,
         ];
     }
 
