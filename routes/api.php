@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\ExamAttemptController;
 use App\Http\Controllers\Api\FileController;
 use App\Http\Controllers\Api\RegistrationController;
+use App\Http\Controllers\Api\SubmissionController;
 use App\Http\Controllers\Api\TeamController;
 use App\Http\Controllers\ImageKitAuthController;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +36,10 @@ Route::get('/system/status', function () {
 
 Route::get('/dashboard/summary', [DashboardController::class, 'summary'])->middleware(['auth:sanctum', 'principal.team', 'team.verified']);
 Route::prefix('dashboard')->middleware(['auth:sanctum', 'principal.team', 'team.verified'])->group(function (): void {
+    Route::get('/stages/{stage}/submission', [SubmissionController::class, 'show'])->whereUuid('stage');
+    Route::post('/stages/{stage}/submission', [SubmissionController::class, 'upsert'])->whereUuid('stage');
+    Route::post('/stages/{stage}/submission/submit', [SubmissionController::class, 'submit'])->whereUuid('stage');
+    Route::post('/stages/{stage}/submission/unsubmit', [SubmissionController::class, 'unsubmit'])->whereUuid('stage');
     Route::get('/exams/{exam}', [DashboardController::class, 'exam'])->whereUuid('exam');
     Route::get('/stages/{stage}', [DashboardController::class, 'stage'])->whereUuid('stage');
     Route::post('/exams/{exam}/attempts', [ExamAttemptController::class, 'start'])->whereUuid('exam');
