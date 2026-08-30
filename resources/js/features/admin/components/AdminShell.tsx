@@ -7,7 +7,6 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -74,7 +73,6 @@ function SidebarContent({ minimized, mobile, closeMobile }: { minimized: boolean
               >
                 <Icon className={cn('size-4.5 shrink-0', active && 'text-secondary')} />
                 {(!minimized || mobile) && <span className="flex-1 truncate">{item.label}</span>}
-                {item.comingSoon && (!minimized || mobile) && <Badge variant="outline" className="border-primary/25 text-[10px] text-primary">Segera</Badge>}
               </Link>
             )
           })}

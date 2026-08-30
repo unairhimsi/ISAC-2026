@@ -50,6 +50,8 @@ class ExamAttemptController extends Controller
         $team = $request->user();
         $this->ensureTeamCanAccess($team, $exam);
         $result = $this->attemptService->resume($team, $exam, $attempt);
+        $canViewResult = $exam->type === 'tryout' && (bool) $result['attempt']->finished;
+        $request->attributes->set('canViewResult', $canViewResult);
 
         return response()->json([
             'status' => 'success',
@@ -60,6 +62,8 @@ class ExamAttemptController extends Controller
                 'savedAnswers' => $result['savedAnswers'],
                 'saved_answers' => $result['saved_answers'],
                 'serverTime' => $result['serverTime'],
+                'canViewResult' => $canViewResult,
+                'can_view_result' => $canViewResult,
             ],
             'metadata' => (object) [],
             'error' => null,

@@ -11,6 +11,7 @@ class ExamQuestionResource extends JsonResource
     public function toArray(Request $request): array
     {
         $isAdmin = $request->user() && $request->user() instanceof Admin;
+        $canViewTryout = (bool) $request->attributes->get('canViewResult', false);
         $options = $this->options;
 
         if (is_array($options) && $this->exam && $this->exam->shuffle_options && ! $isAdmin) {
@@ -21,7 +22,7 @@ class ExamQuestionResource extends JsonResource
             'id' => $this->id,
             'examId' => $this->exam_id,
             'question' => $this->question,
-            'explanation' => $isAdmin ? $this->explanation : null,
+            'explanation' => ($isAdmin || $canViewTryout) ? $this->explanation : null,
             'type' => $this->type,
             'options' => $options,
             'order' => $this->order,
@@ -31,7 +32,7 @@ class ExamQuestionResource extends JsonResource
             'isActive' => $this->is_active,
         ];
 
-        if ($isAdmin) {
+        if ($isAdmin || $canViewTryout) {
             $data['correctAnswer'] = $this->correct_answer;
             $data['correctScore'] = $this->correct_score;
             $data['wrongScore'] = $this->wrong_score;

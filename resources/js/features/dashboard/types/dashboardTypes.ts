@@ -14,6 +14,7 @@ export type DashboardExam = {
   endDate: string | null
   duration: number
   maxAttempts: number
+  type?: string
 }
 
 export type DashboardSummary = RegistrationContext & {
