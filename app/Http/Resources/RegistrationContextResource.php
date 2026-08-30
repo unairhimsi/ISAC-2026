@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources;
 
-use App\Models\Competition;
 use App\Models\RegistrationStatus;
 use App\Models\Team;
 use Illuminate\Http\Request;

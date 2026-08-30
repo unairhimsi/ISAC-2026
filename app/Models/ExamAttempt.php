@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,14 +11,14 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ExamAttempt extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasUuids, SoftDeletes;
 
     protected $keyType = 'string';
 
     public $incrementing = false;
 
     protected $fillable = [
-        'team_id', 'exam_id', 'reviewed_by', 'total_score', 'max_possible_score', 'start_time', 'end_time', 'finished', 'flagged', 'cheat_count', 'suspicious_score', 'device_id', 'ip_address', 'user_agent', 'metadata',
+        'id', 'team_id', 'exam_id', 'reviewed_by', 'total_score', 'max_possible_score', 'start_time', 'end_time', 'finished', 'flagged', 'cheat_count', 'suspicious_score', 'device_id', 'ip_address', 'user_agent', 'metadata',
     ];
 
     protected function casts(): array
@@ -52,11 +53,11 @@ class ExamAttempt extends Model
 
     public function answers(): HasMany
     {
-        return $this->hasMany(ExamAnswer::class);
+        return $this->hasMany(ExamAnswer::class, 'attempt_id');
     }
 
     public function eventLogs(): HasMany
     {
-        return $this->hasMany(ExamEventLog::class);
+        return $this->hasMany(ExamEventLog::class, 'attempt_id');
     }
 }

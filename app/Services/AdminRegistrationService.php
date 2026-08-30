@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Admin;
 use App\Models\AdminAuditLog;
-use App\Models\Competition;
 use App\Models\Registration;
 use App\Models\RegistrationStatus;
 use App\Models\Stage;

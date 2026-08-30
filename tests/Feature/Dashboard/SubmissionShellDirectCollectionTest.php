@@ -2,8 +2,9 @@
 
 use App\Models\BatchStatus;
 use App\Models\Competition;
-use App\Models\RegistrationStatus;
+use App\Models\File;
 use App\Models\Registration;
+use App\Models\RegistrationStatus;
 use App\Models\Stage;
 use App\Models\Submission;
 use App\Models\Team;
@@ -147,7 +148,7 @@ test('submission shell includes existing submission when present', function (): 
     ]);
 
     // Create a file for submission
-    $file = \App\Models\File::create([
+    $file = File::create([
         'file_id' => 'test-file-'.uniqid(),
         'url' => 'https://ik.imagekit.io/isac/submission.pdf',
         'purpose' => 'SUBMISSION',

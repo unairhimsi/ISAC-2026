@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreExamQuestionRequest;
+use App\Http\Requests\Admin\UpdateExamRequest;
 use App\Models\Admin;
 use App\Models\Competition;
 use App\Models\Exam;
@@ -61,6 +62,7 @@ class AdminExamController extends Controller
         $exam->loadCount('questions');
 
         $this->ensureOlympiadExam($exam);
+
         return $this->success('Detail ujian berhasil diambil.', [
             ...$this->examData($exam),
             'questions' => $exam->questions()->orderBy('order')->get()->map(fn (ExamQuestion $question) => $this->questionData($question)),
@@ -107,6 +109,68 @@ class AdminExamController extends Controller
         return $this->success('Soal berhasil dibuat.', $this->questionData($created));
     }
 
+    public function update(UpdateExamRequest $request, Exam $exam): JsonResponse
+    {
+        $this->authorize($request);
+        $this->ensureOlympiadExam($exam);
+        $data = $request->validated();
+        $payload = [];
+
+        if (array_key_exists('title', $data)) {
+            $payload['title'] = $data['title'];
+        }
+        if (array_key_exists('description', $data)) {
+            $payload['description'] = $data['description'];
+        }
+        if (array_key_exists('start_date', $data)) {
+            $payload['start_date'] = $data['start_date'];
+        } elseif (array_key_exists('startDate', $data)) {
+            $payload['start_date'] = $data['startDate'];
+        }
+        if (array_key_exists('end_date', $data)) {
+            $payload['end_date'] = $data['end_date'];
+        } elseif (array_key_exists('endDate', $data)) {
+            $payload['end_date'] = $data['endDate'];
+        }
+        if (array_key_exists('duration', $data)) {
+            $payload['duration'] = $data['duration'];
+        }
+        if (array_key_exists('max_attempts', $data)) {
+            $payload['max_attempts'] = $data['max_attempts'];
+        } elseif (array_key_exists('maxAttempts', $data)) {
+            $payload['max_attempts'] = $data['maxAttempts'];
+        }
+        if (array_key_exists('shuffle_questions', $data)) {
+            $payload['shuffle_questions'] = $data['shuffle_questions'];
+        } elseif (array_key_exists('shuffleQuestions', $data)) {
+            $payload['shuffle_questions'] = $data['shuffleQuestions'];
+        }
+        if (array_key_exists('shuffle_options', $data)) {
+            $payload['shuffle_options'] = $data['shuffle_options'];
+        } elseif (array_key_exists('shuffleOptions', $data)) {
+            $payload['shuffle_options'] = $data['shuffleOptions'];
+        }
+        if (array_key_exists('show_result_immediately', $data)) {
+            $payload['show_result_immediately'] = $data['show_result_immediately'];
+        } elseif (array_key_exists('showResultImmediately', $data)) {
+            $payload['show_result_immediately'] = $data['showResultImmediately'];
+        }
+        if (array_key_exists('passing_score', $data)) {
+            $payload['passing_score'] = $data['passing_score'];
+        } elseif (array_key_exists('passingScore', $data)) {
+            $payload['passing_score'] = $data['passingScore'];
+        }
+
+        if (isset($payload['start_date']) && isset($payload['end_date']) && $payload['start_date'] > $payload['end_date']) {
+            throw ValidationException::withMessages(['end_date' => ['Waktu selesai harus setelah waktu mulai.']]);
+        }
+
+        $exam->update($payload);
+        $exam->loadCount('questions');
+
+        return $this->success('Ujian berhasil diperbarui.', $this->examData($exam));
+    }
+
     private function ensureOlympiadExamStage(string $stageId): void
     {
         $isOlympiadStage = Stage::query()
@@ -131,7 +195,6 @@ class AdminExamController extends Controller
         Gate::forUser($admin)->authorize('author', [Exam::class]);
     }
 
-    /** @return array<string, mixed> */
     private function examData(Exam $exam): array
     {
         return [
@@ -142,6 +205,13 @@ class AdminExamController extends Controller
             'startDate' => $exam->start_date?->toISOString(),
             'endDate' => $exam->end_date?->toISOString(),
             'questionCount' => $exam->questions_count,
+            'duration' => $exam->duration,
+            'maxAttempts' => $exam->max_attempts,
+            'shuffleQuestions' => $exam->shuffle_questions,
+            'shuffleOptions' => $exam->shuffle_options,
+            'showResultImmediately' => $exam->show_result_immediately,
+            'passingScore' => $exam->passing_score,
+            'type' => $exam->type,
         ];
     }
 

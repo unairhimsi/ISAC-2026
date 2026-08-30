@@ -2,21 +2,21 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ExamAnswer extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasUuids;
 
     protected $keyType = 'string';
 
     public $incrementing = false;
 
     protected $fillable = [
-        'attempt_id', 'question_id', 'answer', 'selected_options', 'is_correct', 'score_obtained', 'answered_at', 'time_spent',
+        'id', 'attempt_id', 'question_id', 'answer', 'selected_options', 'is_correct', 'score_obtained', 'answered_at', 'time_spent',
     ];
 
     protected function casts(): array

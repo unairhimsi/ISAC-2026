@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Save, Sparkles } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,11 +11,11 @@ import { Seo } from '@/components/seo/Seo'
 import { AdminPageHeader } from '@/features/admin/components/AdminPageHeader'
 import { adminPageLayout } from '@/features/admin/components/AdminShell'
 import { useAdminCompetitions } from '@/features/admin/hooks/useAdmin'
-import { getJson, postJson } from '@/lib/api'
+import { getJson, patchJson, postJson } from '@/lib/api'
 import { RichTextEditor } from '@/features/admin/components/RichTextEditor'
 
 type Stage = { id: string; competition_id: string; name: string; order: number }
-type Exam = { id: string; title: string; description: string | null; questionCount: number }
+type Exam = { id: string; title: string; description: string | null; questionCount: number; duration: number; maxAttempts: number; shuffleQuestions: boolean; shuffleOptions: boolean; showResultImmediately: boolean; passingScore: number | null; type: string }
 type Question = { id: string; question: string; explanation: string | null; type: string; options: { id: string; content: string }[] | null; correctAnswer: string | null; order: number; correctScore: number; wrongScore: number; emptyScore: number; difficulty: string }
 type Response<T> = { data: T }
 
@@ -98,6 +98,24 @@ export default function AdminQuestions() {
     enabled: Boolean(examId),
   })
 
+  const [examDuration, setExamDuration] = useState(60)
+  const [examMaxAttempts, setExamMaxAttempts] = useState(1)
+  const [examShuffleQuestions, setExamShuffleQuestions] = useState(false)
+  const [examShuffleOptions, setExamShuffleOptions] = useState(false)
+
+  const updateExam = useMutation({
+    mutationFn: () => patchJson('/api/admin/exams/' + examId, {
+      duration: examDuration,
+      max_attempts: examMaxAttempts,
+      shuffle_questions: examShuffleQuestions,
+      shuffle_options: examShuffleOptions,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'exam', examId] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'exams', stageId] })
+    },
+  })
+
   const createQuestion = useMutation({
     mutationFn: () => postJson('/api/admin/exams/' + examId + '/questions', {
       question, explanation: explanation || null, type,
@@ -116,10 +134,19 @@ export default function AdminQuestions() {
     },
   })
 
-  const competitionRows = competitions.data?.data ?? []
+  const competitionRows = (competitions.data?.data ?? []).filter((item: any) => item.type === 'OLIMPIADE')
   const stageRows = stages.data?.data ?? []
   const examRows = exams.data?.data ?? []
   const activeExam = exam.data?.data
+
+  useEffect(() => {
+    if (activeExam) {
+      setExamDuration(activeExam.duration ?? 60)
+      setExamMaxAttempts(activeExam.maxAttempts ?? 1)
+      setExamShuffleQuestions(Boolean(activeExam.shuffleQuestions))
+      setExamShuffleOptions(Boolean(activeExam.shuffleOptions))
+    }
+  }, [activeExam?.id])
   const selectedCompetition = competitionRows.find((item) => item.id === competitionId)
   const selectedStage = stageRows.find((item) => item.id === stageId)
   const selectedExam = examRows.find((item) => item.id === examId)
@@ -141,6 +168,24 @@ export default function AdminQuestions() {
             <div className="space-y-2"><Label>Ujian</Label><Select value={examId} onValueChange={(v) => setExamId(v ?? '')} disabled={!stageId || exams.isLoading}><SelectTrigger className="w-full"><span data-slot="select-value" className={selectedExam ? 'flex flex-1 truncate text-left' : 'flex flex-1 text-left text-muted-foreground'}>{selectedExam?.title ?? (exams.isLoading ? 'Memuat ujian…' : 'Pilih ujian')}</span></SelectTrigger><SelectContent>{examRows.map((item) => <SelectItem value={item.id} key={item.id}>{item.title}</SelectItem>)}</SelectContent></Select></div>
           </div>
           {!examId ? <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">Pilih ujian untuk mulai membuat soal.</div> : <>
+            <div className="rounded-2xl border border-border bg-muted/20 p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Pengaturan Ujian</p>
+                  <p className="text-xs text-muted-foreground">Durasi & percobaan khusus Olimpiade — Business tidak perlu.</p>
+                </div>
+                <Button type="button" size="sm" onClick={() => updateExam.mutate()} disabled={updateExam.isPending}>{updateExam.isPending ? 'Menyimpan…' : 'Simpan Pengaturan'}</Button>
+              </div>
+              <div className="grid gap-4 md:grid-cols-4">
+                <div className="space-y-2"><Label>Durasi (menit)</Label><Input type="number" min={1} max={480} value={examDuration} onChange={(e) => setExamDuration(toInteger(e.target.value) || 60)} /></div>
+                <div className="space-y-2"><Label>Max Percobaan</Label><Input type="number" min={1} max={5} value={examMaxAttempts} onChange={(e) => setExamMaxAttempts(toInteger(e.target.value) || 1)} /></div>
+                <div className="space-y-2"><Label>Acak Soal</Label><div className="flex h-10 items-center"><input type="checkbox" checked={examShuffleQuestions} onChange={(e) => setExamShuffleQuestions(e.target.checked)} className="size-4" /> <span className="ml-2 text-sm">Aktif</span></div></div>
+                <div className="space-y-2"><Label>Acak Opsi</Label><div className="flex h-10 items-center"><input type="checkbox" checked={examShuffleOptions} onChange={(e) => setExamShuffleOptions(e.target.checked)} className="size-4" /> <span className="ml-2 text-sm">Aktif</span></div></div>
+              </div>
+              {activeExam && <p className="mt-2 text-xs text-muted-foreground">Ujian: {activeExam.title} · {activeExam.duration} menit · {activeExam.maxAttempts}x percobaan · {activeExam.questionCount} soal</p>}
+              {updateExam.isSuccess && <p className="mt-2 text-xs text-green-600">Pengaturan tersimpan.</p>}
+              {updateExam.isError && <p className="mt-2 text-xs text-destructive">Gagal menyimpan pengaturan.</p>}
+            </div>
             <div className="space-y-2"><Label>Pertanyaan</Label><RichTextEditor value={question} onChange={setQuestion} placeholder="Tulis pertanyaan; gunakan toolbar untuk format atau sisipkan gambar." /></div>
             <div className="space-y-2"><Label>Tipe jawaban</Label><Select value={type} onValueChange={(v) => switchType(v as QuestionType)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="multiple_choice">Pilihan ganda</SelectItem><SelectItem value="true_false">Benar / Salah</SelectItem><SelectItem value="essay">Esai</SelectItem></SelectContent></Select></div>
             <div className="grid gap-4 md:grid-cols-2">

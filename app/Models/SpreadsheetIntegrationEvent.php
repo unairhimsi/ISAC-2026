@@ -11,9 +11,13 @@ class SpreadsheetIntegrationEvent extends Model
     use HasUuids;
 
     public const STATUS_PENDING = 'PENDING';
+
     public const STATUS_PROCESSING = 'PROCESSING';
+
     public const STATUS_SYNCED = 'SYNCED';
+
     public const STATUS_FAILED = 'FAILED';
+
     public const STATUS_SKIPPED = 'SKIPPED';
 
     protected $fillable = [

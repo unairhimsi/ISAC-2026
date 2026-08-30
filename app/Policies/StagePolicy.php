@@ -11,6 +11,7 @@ class StagePolicy
     {
         return $admin->role === 'super_admin' ? true : null;
     }
+
     public function viewAny(Admin $admin): bool
     {
         return in_array($admin->role, ['admin_registration', 'judge'], true);
@@ -35,7 +36,6 @@ class StagePolicy
     {
         return $this->create($admin);
     }
-
 
     public function advanceTeam(Admin $admin, Stage $stage): bool
     {

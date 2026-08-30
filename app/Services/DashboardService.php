@@ -6,6 +6,7 @@ use App\Models\Competition;
 use App\Models\Exam;
 use App\Models\RegistrationStatus;
 use App\Models\Stage;
+use App\Models\Submission;
 use App\Models\Team;
 use Illuminate\Auth\Access\AuthorizationException;
 
@@ -102,7 +103,7 @@ class DashboardService
             $remainingMs = (int) max(0, ($end->getTimestamp() - $now->getTimestamp()) * 1000);
         }
 
-        $submission = \App\Models\Submission::query()
+        $submission = Submission::query()
             ->where('team_id', $team->id)
             ->where('stage_id', $stage->id)
             ->with('file:id,file_id,url')

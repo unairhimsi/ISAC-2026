@@ -89,26 +89,26 @@ test('payment queue includes due payments but excludes semifinal registrations b
         ->assertNotFound()
         ->assertJsonPath('error.code', 'NOT_FOUND');
 
-test('team detail only exposes payment access when its payment gate is active', function (): void {
-    [$upfront, $upfrontTeam] = createPaymentRegistration();
-    [$beforeGate, $beforeGateTeam] = createPaymentRegistration([], [
-        'type' => Competition::TYPE_BUSINESS_PLAN,
-        'payment_flow' => Competition::PAYMENT_SEMIFINAL,
-    ]);
-    $beforeGate->update(['payment_required_at' => null]);
-    $admin = Admin::factory()->create(['role' => 'admin_registration', 'is_active' => true]);
-    $token = $admin->createToken('admin')->plainTextToken;
+    test('team detail only exposes payment access when its payment gate is active', function (): void {
+        [$upfront, $upfrontTeam] = createPaymentRegistration();
+        [$beforeGate, $beforeGateTeam] = createPaymentRegistration([], [
+            'type' => Competition::TYPE_BUSINESS_PLAN,
+            'payment_flow' => Competition::PAYMENT_SEMIFINAL,
+        ]);
+        $beforeGate->update(['payment_required_at' => null]);
+        $admin = Admin::factory()->create(['role' => 'admin_registration', 'is_active' => true]);
+        $token = $admin->createToken('admin')->plainTextToken;
 
-    $this->withToken($token)
-        ->getJson("/api/admin/teams/{$upfrontTeam->id}")
-        ->assertOk()
-        ->assertJsonPath('data.registration.paymentAvailable', true);
+        $this->withToken($token)
+            ->getJson("/api/admin/teams/{$upfrontTeam->id}")
+            ->assertOk()
+            ->assertJsonPath('data.registration.paymentAvailable', true);
 
-    $this->withToken($token)
-        ->getJson("/api/admin/teams/{$beforeGateTeam->id}")
-        ->assertOk()
-        ->assertJsonPath('data.registration.paymentAvailable', false);
-});
+        $this->withToken($token)
+            ->getJson("/api/admin/teams/{$beforeGateTeam->id}")
+            ->assertOk()
+            ->assertJsonPath('data.registration.paymentAvailable', false);
+    });
 
 });
 

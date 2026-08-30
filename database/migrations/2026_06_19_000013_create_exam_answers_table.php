@@ -15,8 +15,8 @@ return new class extends Migration
             $table->text('answer')->nullable();
             $table->json('selected_options')->nullable();
             $table->boolean('is_correct')->nullable();
-            $table->integer('score_obtained')->default(0);
-            $table->dateTime('answered_at');
+            $table->integer('score_obtained')->nullable();
+            $table->dateTime('answered_at')->nullable();
             $table->integer('time_spent')->nullable();
             $table->timestamps();
 

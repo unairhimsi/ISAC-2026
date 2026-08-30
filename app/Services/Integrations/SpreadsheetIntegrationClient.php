@@ -2,13 +2,14 @@
 
 namespace App\Services\Integrations;
 
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use LogicException;
 
 class SpreadsheetIntegrationClient
 {
     /**
-     * @param array<string, mixed> $event
+     * @param  array<string, mixed>  $event
      * @return array<string, mixed>
      */
     public function batchUpsert(array $event): array
@@ -88,7 +89,7 @@ class SpreadsheetIntegrationClient
         return rtrim((string) config('services.google_sheet.url'), '/').'?path='.rawurlencode(ltrim($path, '/'));
     }
 
-    private function request(): \Illuminate\Http\Client\PendingRequest
+    private function request(): PendingRequest
     {
         return Http::acceptJson()
             ->asJson()
