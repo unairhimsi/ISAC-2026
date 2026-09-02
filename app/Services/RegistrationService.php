@@ -291,12 +291,21 @@ class RegistrationService
         }
 
         DB::transaction(function () use ($team, $members, $registration): void {
+            $keptIds = [];
             foreach (array_values($members) as $index => $payload) {
+                $member = null;
                 if (! empty($payload['id'])) {
-                    if (! $team->members()->whereKey($payload['id'])->exists()) {
+                    $member = $team->members()->whereKey($payload['id'])->first();
+                    if ($member === null) {
                         throw ValidationException::withMessages(['members' => ['Anggota tidak dimiliki oleh Team ini.']]);
                     }
+                } else {
+                    $member = $team->members()->where('sort_order', $index + 1)->first();
                 }
+
+                $photoFileId = array_key_exists('photo_file_id', $payload)
+                    ? ($payload['photo_file_id'] ?: null)
+                    : $member?->photo_file_id;
 
                 $attributes = [
                     'name' => $payload['name'],
@@ -305,12 +314,19 @@ class RegistrationService
                     'major' => $payload['major'] ?? null,
                     'faculty' => $payload['faculty'] ?? null,
                     'student_id' => $payload['student_id'],
-                    'photo_file_id' => $payload['photo_file_id'] ?? null,
+                    'photo_file_id' => $photoFileId,
                     'sort_order' => $index + 1,
                 ];
 
-                $team->members()->updateOrCreate(['sort_order' => $index + 1], $attributes);
+                if ($member === null) {
+                    $member = $team->members()->create($attributes);
+                } else {
+                    $member->update($attributes);
+                }
+                $keptIds[] = $member->id;
             }
+
+            $team->members()->whereNotIn('id', $keptIds)->delete();
 
             $registration->update(['members_completed_at' => $registration->members_completed_at ?? now()]);
             $this->resolveDataRevision($team, 'MEMBERS');

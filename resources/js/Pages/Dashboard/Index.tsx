@@ -598,25 +598,6 @@ export default function DashboardIndex() {
         >
           <Card className="border border-white/10 bg-card/45 backdrop-blur-xl">
             <CardContent className="flex items-center gap-3 pt-6">
-              <Users className="size-5 text-secondary" />
-
-              <div>
-                <p className="text-xs text-muted-foreground">
-                  Jumlah peserta
-                </p>
-
-                <p className="mt-1 text-xl font-bold">
-                  {
-                    summary.team
-                      .memberCount
-                  }
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border border-white/10 bg-card/45 backdrop-blur-xl">
-            <CardContent className="flex items-center gap-3 pt-6">
               <FileText className="size-5 text-primary" />
 
               <div className="min-w-0">

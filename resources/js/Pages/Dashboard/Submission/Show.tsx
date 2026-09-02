@@ -398,11 +398,6 @@ export default function SubmissionShell({
                 </span>
               )}
             </div>
-
-            <div className="rounded-2xl border border-dashed border-white/15 bg-background/20 p-4 text-xs leading-5 text-muted-foreground">
-              <p className="font-semibold text-foreground">Alur pembayaran all upfront (visual di bawah):</p>
-              <p className="mt-1">OLIMPIADE, BUSINESS_PLAN, BUSINESS_IT_CASE semua bayar di registrasi awal → status VERIFIED → dashboard submission tinggal kumpul. Tidak ada `payment` atau `submissionLocked` di API lagi.</p>
-            </div>
           </CardContent>
         </Card>
       </div>
