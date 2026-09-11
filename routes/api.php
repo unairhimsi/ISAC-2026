@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\CompetitionController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\ExamAttemptController;
 use App\Http\Controllers\Api\FileController;
+use App\Http\Controllers\Api\JudgingController;
 use App\Http\Controllers\Api\RegistrationController;
 use App\Http\Controllers\Api\SubmissionController;
 use App\Http\Controllers\Api\TeamController;
@@ -115,6 +116,10 @@ Route::prefix('admin')->middleware(['auth:admins', 'principal.admin'])->group(fu
     Route::get('/exams/{exam}/attempts', [AdminExamAttemptController::class, 'index'])->whereUuid('exam');
     Route::get('/exams/{exam}/attempts/{attempt}', [AdminExamAttemptController::class, 'show'])->whereUuid(['exam', 'attempt']);
     Route::patch('/exams/{exam}/attempts/{attempt}/score', [AdminExamAttemptController::class, 'updateScore'])->whereUuid(['exam', 'attempt']);
+
+    Route::get('/stages/{stage}/submissions', [JudgingController::class, 'index'])->whereUuid('stage');
+    Route::get('/submissions/{submission}', [JudgingController::class, 'show'])->whereUuid('submission');
+    Route::post('/submissions/{submission}/review', [JudgingController::class, 'review'])->whereUuid('submission');
 });
 
 Route::prefix('registrations')->middleware(['auth:sanctum', 'principal.team', 'team.verified'])->group(function (): void {
