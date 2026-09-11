@@ -8,6 +8,7 @@ use App\Models\Competition;
 use App\Models\Exam;
 use App\Models\Registration;
 use App\Models\Stage;
+use App\Models\Submission;
 use App\Models\Team;
 use App\Policies\AdminOperationPolicy;
 use App\Policies\BatchPolicy;
@@ -15,6 +16,7 @@ use App\Policies\CompetitionPolicy;
 use App\Policies\ExamPolicy;
 use App\Policies\RegistrationPolicy;
 use App\Policies\StagePolicy;
+use App\Policies\SubmissionPolicy;
 use App\Policies\TeamPolicy;
 use App\Repositories\AdminRepository;
 use App\Repositories\AuthRepository;
@@ -61,6 +63,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Team::class, TeamPolicy::class);
         Gate::policy(Registration::class, RegistrationPolicy::class);
         Gate::policy(Stage::class, StagePolicy::class);
+        Gate::policy(Submission::class, SubmissionPolicy::class);
 
         RateLimiter::for('auth.register', fn (Request $request): array => [
             Limit::perMinute(3)->by($request->ip()),
