@@ -3,6 +3,7 @@
 use App\Models\BatchStatus;
 use App\Models\Competition;
 use App\Models\File;
+use App\Models\PaymentMethod;
 use App\Models\Registration;
 use App\Models\RegistrationStatus;
 use App\Models\Team;
@@ -51,6 +52,15 @@ test('can get payment data', function (): void {
         ->assertJsonPath('data.discountAmount', 0)
         ->assertJsonPath('data.promoApplied', false)
         ->assertJsonPath('data.paymentStatus', RegistrationStatus::WAITING_PAYMENT->value);
+});
+
+test('exposes qris image url in payment form data', function (): void {
+    config()->set('registration.qris.image_url', '/qris.jpeg');
+
+    $this->withToken($this->token)
+        ->getJson('/api/registrations/me/payment')
+        ->assertOk()
+        ->assertJsonPath('data.qrisImageUrl', '/qris.jpeg');
 });
 
 test('can quote the configured promo against the active batch price', function (): void {
@@ -114,7 +124,34 @@ test('promo reduces and snapshots the submitted payment amount', function (): vo
         ->and($registration->discount_percent)->toBe('15.00')
         ->and($registration->discount_amount)->toBe('22500.00')
         ->and($registration->amount_paid)->toBe('127500.00')
-        ->and(Schema::hasColumn('registrations', 'transaction_id'))->toBeFalse();
+        ->and(Schema::hasColumn('registrations', 'transaction_id'))->toBeTrue();
+});
+
+test('can submit payment via QRIS with optional transaction reference', function (): void {
+    $this->withToken($this->token)
+        ->postJson('/api/registrations/me/payment', [
+            'payment_proof_file_id' => $this->file->id,
+            'payment_method' => 'QRIS',
+            'transaction_id' => 'TP-20260825-XYZ',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.context.registration.status', RegistrationStatus::WAITING_VERIFICATION->value);
+
+    $registration = $this->team->registration()->firstOrFail();
+    expect($registration->payment_method)->toBe(PaymentMethod::QRIS)
+        ->and($registration->transaction_id)->toBe('TP-20260825-XYZ');
+});
+
+test('rejects payment methods outside configured list', function (): void {
+    config()->set('registration.payment_methods', ['BANK_TRANSFER']);
+
+    $this->withToken($this->token)
+        ->postJson('/api/registrations/me/payment', [
+            'payment_proof_file_id' => $this->file->id,
+            'payment_method' => 'QRIS',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonStructure(['error' => ['details' => ['payment_method']]]);
 });
 
 test('same payment submission is idempotent', function (): void {

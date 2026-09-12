@@ -5,15 +5,18 @@ import { Check, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { FileUpload } from '@/components/shared/FileUpload'
 import { uploadPaymentSchema, type UploadPaymentInput } from '../schemas/uploadPayment'
-import type { BankAccount, ExternalFile, PaymentFormValues, PaymentQuoteData } from '../types/registrationTypes'
+import type { BankAccount, ExternalFile, PaymentFormValues, PaymentMethod, PaymentQuoteData } from '../types/registrationTypes'
 import { usePaymentQuote } from '../hooks/useRegistration'
 import { ApiClientError } from '@/lib/api'
 import { formatCurrency } from '@/lib/formatters'
 
 type Props = {
   bankAccounts: BankAccount[]
+  paymentMethods: PaymentMethod[]
+  qrisImageUrl: string | null
   originalAmount: number
   amount: number
   discountPercent: number
@@ -30,6 +33,8 @@ const formatAccountNumber = (value: string) => value.replace(/(\d{4})(?=\d)/g, '
 
 const FormPayment = ({
   bankAccounts,
+  paymentMethods,
+  qrisImageUrl,
   originalAmount,
   amount,
   discountPercent,
@@ -56,12 +61,21 @@ const FormPayment = ({
     mode: 'onChange',
     resolver: zodResolver(uploadPaymentSchema),
     defaultValues: {
-      payment_method: 'BANK_TRANSFER',
+      payment_method: paymentMethods[0] ?? 'BANK_TRANSFER',
       promo_code: promoCode ?? '',
+      transaction_id: '',
       paymentProof: existingProof,
     },
   })
   const currentPromoCode = form.watch('promo_code')
+  const currentMethod = form.watch('payment_method')
+
+  const selectMethod = (method: PaymentMethod) => {
+    form.setValue('payment_method', method, { shouldValidate: true })
+    if (method !== 'QRIS') {
+      form.setValue('transaction_id', '', { shouldValidate: true })
+    }
+  }
 
   const handleCopyAccount = async (bank: string, accountNumber: string) => {
     try {
@@ -142,6 +156,7 @@ const FormPayment = ({
     await onSubmit({
       payment_method: values.payment_method,
       promo_code: normalizedPromoCode || undefined,
+      transaction_id: values.payment_method === 'QRIS' && values.transaction_id ? values.transaction_id : undefined,
       payment_proof_file_id: values.paymentProof.id,
     })
   }
@@ -154,26 +169,55 @@ const FormPayment = ({
       <div className="relative z-10 rounded-[inherit] bg-background/60 px-6 py-8 backdrop-blur-sm">
         <div className="flex md:flex-row flex-col justify-center md:items-center gap-8 md:gap-10">
           <div className="flex justify-center w-full">
-            <div className="w-full max-w-[260px] space-y-3">
-              <p className="text-center text-sm font-semibold uppercase tracking-wide text-foreground">Rekening Tujuan</p>
-              {bankAccounts.map((account) => (
-                <div key={account.bank} className="rounded-2xl border border-primary bg-background p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold uppercase tracking-wide text-foreground">{account.bank}</p>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyAccount(account.bank, account.accountNumber)}
-                      className="flex cursor-pointer items-center gap-1 rounded-full border border-input px-3 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-                      aria-label={`Salin nomor rekening ${account.bank}`}
-                    >
-                      {copiedBank === account.bank ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                      {copiedBank === account.bank ? 'Tersalin' : 'Salin'}
-                    </button>
+            <div className="w-full max-w-[260px] space-y-4">
+              <Field>
+                <FieldLabel className="block text-center text-sm font-semibold uppercase tracking-wide text-foreground">Saya bayar via</FieldLabel>
+                <Controller
+                  name="payment_method"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={(value) => selectMethod(value as PaymentMethod)}>
+                      <SelectTrigger className="w-full rounded-full bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BANK_TRANSFER">Transfer Bank</SelectItem>
+                        {qrisImageUrl && <SelectItem value="QRIS">QRIS</SelectItem>}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
+
+              <div className="space-y-3">
+                <p className="text-center text-sm font-semibold uppercase tracking-wide text-foreground">Rekening Tujuan</p>
+                {bankAccounts.map((account) => (
+                  <div key={account.bank} className="rounded-2xl border border-primary bg-background p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold uppercase tracking-wide text-foreground">{account.bank}</p>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyAccount(account.bank, account.accountNumber)}
+                        className="flex cursor-pointer items-center gap-1 rounded-full border border-input px-3 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                        aria-label={`Salin nomor rekening ${account.bank}`}
+                      >
+                        {copiedBank === account.bank ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                        {copiedBank === account.bank ? 'Tersalin' : 'Salin'}
+                      </button>
+                    </div>
+                    <p className="mt-2 text-lg font-bold tracking-wide text-foreground">{formatAccountNumber(account.accountNumber)}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">a.n. {account.accountName}</p>
                   </div>
-                  <p className="mt-2 text-lg font-bold tracking-wide text-foreground">{formatAccountNumber(account.accountNumber)}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">a.n. {account.accountName}</p>
+                ))}
+              </div>
+
+              {qrisImageUrl && (
+                <div className="space-y-2">
+                  <p className="text-center text-sm font-semibold uppercase tracking-wide text-foreground">Scan QRIS</p>
+                  <img src={qrisImageUrl} alt="Kode QRIS pembayaran ISAC 2026" className="w-full rounded-2xl border border-primary bg-white p-2" />
+                  <p className="text-center text-xs text-muted-foreground">Scan dengan aplikasi pembayaran atau e-wallet apa pun, lalu unggah bukti pembayarannya.</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
@@ -218,6 +262,27 @@ const FormPayment = ({
                 </Field>
               )}
             />
+
+            {currentMethod === 'QRIS' && (
+              <Controller
+                name="transaction_id"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel className="text-sm font-semibold uppercase tracking-wide text-foreground">No. Referensi / ID Transaksi (Opsional)</FieldLabel>
+                    <Input
+                      {...field}
+                      value={field.value ?? ''}
+                      placeholder="Contoh: TP-20260825-XYZ"
+                      autoComplete="off"
+                      aria-invalid={fieldState.invalid}
+                      className="rounded-full bg-background py-5"
+                    />
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
+            )}
 
             <Controller
               name="paymentProof"

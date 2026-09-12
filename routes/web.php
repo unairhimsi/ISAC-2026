@@ -129,6 +129,13 @@ Route::get('/dashboard/olimpiade/{exam}', function (string $exam) {
     ]);
 })->whereUuid('exam')->name('dashboard.olympiad.show');
 
+Route::get('/dashboard/olimpiade/{exam}/workspace', function (string $exam) {
+    return Inertia::render('Dashboard/Olympiad/ExamWorkspacePage', [
+        'title' => 'Pengerjaan Ujian',
+        'examId' => $exam,
+    ]);
+})->whereUuid('exam')->name('dashboard.olympiad.workspace');
+
 Route::get('/dashboard/submission/{stage}', function (string $stage) {
     return Inertia::render('Dashboard/Submission/Show', [
         'title' => 'Tahap Pengumpulan',

@@ -148,6 +148,7 @@ rate limit, dan `503 EMAIL_DELIVERY_FAILED` ketika provider email gagal.
 | POST | `/api/admin/registrations/{registration}/payment/revision` | Admin | Minta revisi pembayaran |
 | POST | `/api/admin/registrations/{registration}/payment/reject` | Admin | Tolak pembayaran |
 | POST | `/api/admin/teams/{team}/stages/{stage}/advance` | Admin | Proses Stage berikutnya |
+| GET | `/api/admin/stages/{stage}/scores` | Admin | Nilai per Team pada satu Stage (adaptif exam/submission) |
 | POST | `/api/admin/competitions` | Admin | Buat Competition |
 | PATCH | `/api/admin/competitions/{competition}` | Admin | Update Competition |
 | DELETE | `/api/admin/competitions/{competition}` | Admin | Hapus Competition yang aman dihapus |

@@ -47,7 +47,7 @@ test('can update documents for OLIMPIADE', function (): void {
     ]);
 
     $this->withToken($this->token)
-        ->patchJson('/api/registrations/me/documents', [
+        ->putJson('/api/registrations/me/documents', [
             'document_url' => 'https://drive.google.com/proposal',
             'twibbon_url' => 'https://drive.google.com/twibbon-upload',
         ])
@@ -61,6 +61,7 @@ test('can update documents for OLIMPIADE', function (): void {
 });
 
 test('documents auto-finalizes for non-OLIMPIADE', function (): void {
+    // UNIFIED: non-OLIMPIADE now same as OLIMPIADE — goes to payment, not dashboard
     $competition = Competition::factory()->create([
         'status' => Competition::STATUS_REGISTRATION_OPEN,
         'type' => Competition::TYPE_BUSINESS_PLAN,
@@ -74,26 +75,26 @@ test('documents auto-finalizes for non-OLIMPIADE', function (): void {
         'competition_id' => $competition->id,
         'batch_id' => $batch->id,
         'team_id' => $this->team->id,
-        'status' => RegistrationStatus::VERIFIED,
+        'status' => RegistrationStatus::WAITING_PAYMENT,
         'team_completed_at' => now(),
         'members_completed_at' => now(),
+        'payment_required_at' => now(),
     ]);
 
     $this->withToken($this->token)
-        ->patchJson('/api/registrations/me/documents', [
+        ->putJson('/api/registrations/me/documents', [
             'document_url' => 'https://drive.google.com/proposal',
             'twibbon_url' => 'https://drive.google.com/twibbon-upload',
         ])
         ->assertOk()
-        ->assertJsonPath('data.context.team.status', Team::STATUS_WAITING_VERIFICATION)
-        ->assertJsonPath('data.redirectTo', '/dashboard');
+        ->assertJsonPath('data.redirectTo', '/registration/payment');
 
     $this->team->refresh();
-    expect($this->team->registration->submitted_at)->not->toBeNull();
-    expect($this->team->status)->toBe(Team::STATUS_WAITING_VERIFICATION);
+    expect($this->team->registration->submitted_at)->toBeNull();
+    expect($this->team->registration->documents_completed_at)->not->toBeNull();
 });
 
 test('documents endpoints require authentication', function (): void {
     $this->getJson('/api/registrations/me/documents')->assertUnauthorized();
-    $this->patchJson('/api/registrations/me/documents', [])->assertUnauthorized();
+    $this->putJson('/api/registrations/me/documents', [])->assertUnauthorized();
 });

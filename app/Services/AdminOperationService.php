@@ -22,7 +22,7 @@ class AdminOperationService
     public function __construct(private readonly AdminRegistrationService $registrationService) {}
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     public function create(Admin $admin, array $data, ?string $idempotencyKey): AdminOperation
     {

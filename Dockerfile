@@ -35,7 +35,8 @@ RUN docker-php-ext-install \
     intl \
     pcntl \
     bcmath \
-    gd
+    gd \
+    fileinfo
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 

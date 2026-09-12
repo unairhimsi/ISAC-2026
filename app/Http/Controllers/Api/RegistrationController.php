@@ -20,6 +20,7 @@ use App\Models\Team;
 use App\Services\RegistrationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class RegistrationController extends Controller
 {
@@ -56,7 +57,7 @@ class RegistrationController extends Controller
     {
         $team = $this->registrationService->getMembers($request->user());
         if ($team->registration === null) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['registration' => ['Tim belum memilih kompetisi.']]);
+            throw ValidationException::withMessages(['registration' => ['Tim belum memilih kompetisi.']]);
         }
         $type = $team->registration->competition->type;
         [$minimum, $maximum] = $type === Competition::TYPE_OLIMPIADE ? [1, 1] : [3, 3];

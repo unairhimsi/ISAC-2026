@@ -14,9 +14,7 @@ const getStepPath = (index: number, name: string) =>
 const Steps = () => {
   const { url } = usePage()
   const contextQuery = useRegistrationContext()
-  const isOlympiad =
-    contextQuery.data?.data.registration?.competition.type === 'OLIMPIADE'
-  const registrationSteps = getRegistrationSteps(isOlympiad)
+  const registrationSteps = getRegistrationSteps()
   const pathname = url.split('?')[0]
 
   const rawStep = registrationSteps.findIndex((step, index) => pathname === getStepPath(index, step.name))
@@ -72,7 +70,7 @@ const Steps = () => {
         }
       })
     },
-    { scope: containerRef, dependencies: [currentStep, isOlympiad] }
+    { scope: containerRef, dependencies: [currentStep] }
   )
 
   return (

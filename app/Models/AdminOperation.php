@@ -12,9 +12,13 @@ class AdminOperation extends Model
     use HasUuids;
 
     public const ACTION_VERIFY_TEAM = 'VERIFY_TEAM';
+
     public const ACTION_VERIFY_PAYMENT = 'VERIFY_PAYMENT';
+
     public const ACTION_VERIFY_TEAM_PAYMENT = 'VERIFY_TEAM_PAYMENT';
+
     public const ACTION_ADVANCE_STAGE = 'ADVANCE_STAGE';
+
     public const ACTION_ANNOUNCE_RESULT = 'ANNOUNCE_RESULT';
 
     public const ACTIONS = [
@@ -26,9 +30,13 @@ class AdminOperation extends Model
     ];
 
     public const STATUS_PENDING = 'PENDING';
+
     public const STATUS_PROCESSING = 'PROCESSING';
+
     public const STATUS_COMPLETED = 'COMPLETED';
+
     public const STATUS_PARTIAL = 'PARTIAL';
+
     public const STATUS_FAILED = 'FAILED';
 
     protected $fillable = [

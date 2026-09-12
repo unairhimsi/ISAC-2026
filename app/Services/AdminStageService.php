@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\Competition;
+use App\Models\ExamAttempt;
 use App\Models\Registration;
 use App\Models\Stage;
+use App\Models\Submission;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -60,5 +63,80 @@ class AdminStageService
 
             $stage->delete();
         });
+    }
+
+    /**
+     * Per-team scores for one stage, adaptive to the competition mode:
+     * OLIMPIADE aggregates finished exam attempts, other competition types
+     * read the reviewed submission score for the stage.
+     *
+     * @return array<string, mixed>
+     */
+    public function scores(Stage $stage): array
+    {
+        $stage->loadMissing('competition:id,type');
+        $isExamMode = $stage->competition?->type === Competition::TYPE_OLIMPIADE;
+
+        return [
+            'mode' => $isExamMode ? 'exam' : 'submission',
+            'stage' => [
+                'id' => $stage->id,
+                'name' => $stage->name,
+                'order' => $stage->order,
+                'type' => $stage->type,
+            ],
+            'scores' => $isExamMode
+                ? $this->examScores($stage)
+                : $this->submissionScores($stage),
+        ];
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function examScores(Stage $stage): array
+    {
+        return ExamAttempt::query()
+            ->select(['team_id', 'total_score', 'max_possible_score', 'finished', 'flagged'])
+            ->whereHas('exam', fn ($query) => $query->where('stage_id', $stage->id))
+            ->get()
+            ->groupBy('team_id')
+            ->map(fn ($attempts, $teamId): array => $this->examScoreEntry($teamId, $attempts))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  Collection<int, ExamAttempt>  $attempts
+     * @return array<string, mixed>
+     */
+    private function examScoreEntry(string $teamId, Collection $attempts): array
+    {
+        $finished = $attempts->where('finished', true)->values();
+
+        return [
+            'teamId' => $teamId,
+            'score' => $finished->isNotEmpty() ? (int) $finished->sum('total_score') : null,
+            'maxScore' => $finished->isNotEmpty() ? (int) $finished->sum('max_possible_score') : null,
+            'finishedAttempts' => $finished->count(),
+            'attemptCount' => $attempts->count(),
+            'flagged' => $attempts->contains(fn (ExamAttempt $attempt): bool => (bool) $attempt->flagged),
+        ];
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function submissionScores(Stage $stage): array
+    {
+        return Submission::query()
+            ->select(['team_id', 'score', 'status'])
+            ->where('stage_id', $stage->id)
+            ->orderBy('submitted_at')
+            ->get()
+            ->groupBy('team_id')
+            ->map(fn (Collection $submissions, string $teamId): array => [
+                'teamId' => $teamId,
+                'score' => $submissions->last()?->score,
+                'submissionStatus' => $submissions->last()?->status,
+            ])
+            ->values()
+            ->all();
     }
 }

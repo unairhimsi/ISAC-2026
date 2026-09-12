@@ -8,8 +8,9 @@ export const paymentProofSchema = z.object({
 })
 
 export const uploadPaymentSchema = z.object({
-  payment_method: z.literal('BANK_TRANSFER'),
+  payment_method: z.enum(['BANK_TRANSFER', 'QRIS']),
   promo_code: z.string().trim().max(50, 'Kode promo maksimal 50 karakter'),
+  transaction_id: z.string().trim().max(50, 'No. referensi maksimal 50 karakter').optional(),
   paymentProof: paymentProofSchema.nullable().refine(Boolean, 'Bukti pembayaran wajib diunggah'),
 })
 

@@ -1,4 +1,4 @@
-import { Trophy, Users, User, FileText, CreditCard, ShieldCheck } from 'lucide-react'
+import { Trophy, Users, User, FileText, CreditCard } from 'lucide-react'
 
 const BASE_REGISTRATION_STEPS = [
   {
@@ -23,17 +23,10 @@ const BASE_REGISTRATION_STEPS = [
   },
 ] as const
 
-export const getRegistrationSteps = (isOlympiad: boolean) => [
-  ...BASE_REGISTRATION_STEPS,
-  isOlympiad
-    ? {
-        id: 'payment',
-        name: 'Payment',
-        icon: CreditCard,
-      }
-    : {
-        id: 'validation',
-        name: 'Validation',
-        icon: ShieldCheck,
-      },
-] as const
+const PAYMENT_STEP = {
+  id: 'payment',
+  name: 'Payment',
+  icon: CreditCard,
+} as const
+
+export const getRegistrationSteps = (_isOlympiad?: boolean) => [...BASE_REGISTRATION_STEPS, PAYMENT_STEP] as const

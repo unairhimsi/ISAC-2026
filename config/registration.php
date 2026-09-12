@@ -1,8 +1,11 @@
 <?php
 
 return [
-    'payment_methods' => ['BANK_TRANSFER'],
+    'payment_methods' => ['BANK_TRANSFER', 'QRIS'],
     'payment_instructions' => env('REGISTRATION_PAYMENT_INSTRUCTIONS', 'Ikuti instruksi pembayaran resmi panitia ISAC.'),
+    'qris' => [
+        'image_url' => env('REGISTRATION_QR_IMAGE_URL'),
+    ],
     'promo' => [
         'code' => env('REGISTRATION_PROMO_CODE', 'ISAXOP'),
         'discount_percent' => (int) env('REGISTRATION_PROMO_DISCOUNT_PERCENT', 15),

@@ -31,7 +31,7 @@ class SendCompetitionAnnouncementJob implements ShouldQueue
         if ((bool) config('services.google_sheet.email_via_apps_script', true)) {
             $check = SpreadsheetIntegrationEvent::query()->where('event_id', $this->eventId)->first();
             $action = strtoupper((string) (data_get($check?->payload, 'action') ?? $check?->action ?? ''));
-            $emailable = ['VERIFY_TEAM','VERIFY_PAYMENT','VERIFY_TEAM_PAYMENT','ADVANCE_STAGE','ANNOUNCE_RESULT'];
+            $emailable = ['VERIFY_TEAM', 'VERIFY_PAYMENT', 'VERIFY_TEAM_PAYMENT', 'ADVANCE_STAGE', 'ANNOUNCE_RESULT'];
             if (in_array($action, $emailable, true)) {
                 // v1.3: SEMUA aksi operation sudah dikirim langsung via Apps Script GmailApp, skip Brevo
                 return;

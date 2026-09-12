@@ -22,7 +22,7 @@ test('team automatically receives the active batch when selecting OLIMPIADE', fu
     ]);
 
     $this->withToken($team->createToken('auth-token')->plainTextToken)
-        ->postJson('/api/registrations/me/selection', [
+        ->putJson('/api/registrations/me/selection', [
             'competition_id' => $competition->id,
         ])
         ->assertOk()
@@ -41,11 +41,12 @@ test('team automatically receives the active batch when selecting OLIMPIADE', fu
 });
 
 test('business competition keeps the latest active batch price without upfront payment', function (string $competitionType): void {
+    // UNIFIED: all competitions now UPFRONT, same as OLIMPIADE (no DB change but runtime unify)
     $team = Team::factory()->create();
     $competition = Competition::factory()->create([
         'status' => Competition::STATUS_REGISTRATION_OPEN,
         'type' => $competitionType,
-        'payment_flow' => Competition::PAYMENT_SEMIFINAL,
+        'payment_flow' => Competition::PAYMENT_UPFRONT,
     ]);
     $competition->batches()->create([
         'name' => 'Batch 1', 'slug' => 'batch-1',
@@ -61,22 +62,21 @@ test('business competition keeps the latest active batch price without upfront p
     ]);
 
     $this->withToken($team->createToken('auth-token')->plainTextToken)
-        ->postJson('/api/registrations/me/selection', [
+        ->putJson('/api/registrations/me/selection', [
             'competition_id' => $competition->id,
         ])
         ->assertOk()
-        ->assertJsonPath('data.context.registration.status', 'VERIFIED')
+        ->assertJsonPath('data.context.registration.status', 'WAITING_PAYMENT')
         ->assertJsonPath('data.context.registration.batch.id', $selectedBatch->id)
         ->assertJsonPath('data.context.registration.batch.price', '90000.00')
-        ->assertJsonPath('data.context.registration.paymentRequiredAt', null)
+        ->assertJsonPath('data.context.registration.paymentRequiredAt', fn ($value) => $value !== null)
         ->assertJsonPath('data.redirectTo', '/registration/team');
 
     $this->assertDatabaseHas('registrations', [
         'team_id' => $team->id,
         'competition_id' => $competition->id,
         'batch_id' => $selectedBatch->id,
-        'status' => 'VERIFIED',
-        'payment_required_at' => null,
+        'status' => 'WAITING_PAYMENT',
     ]);
 })->with([
     Competition::TYPE_BUSINESS_PLAN,
@@ -94,7 +94,7 @@ test('team cannot select competition when batch is full', function (): void {
     ]);
 
     $this->withToken($team->createToken('auth-token')->plainTextToken)
-        ->postJson('/api/registrations/me/selection', [
+        ->putJson('/api/registrations/me/selection', [
             'competition_id' => $competition->id,
         ])
         ->assertUnprocessable();
@@ -111,15 +111,15 @@ test('selecting the same competition is idempotent after its active batch is ass
     $payload = ['competition_id' => $competition->id];
     $token = $team->createToken('auth-token')->plainTextToken;
 
-    $this->withToken($token)->postJson('/api/registrations/me/selection', $payload)->assertOk();
-    $this->withToken($token)->postJson('/api/registrations/me/selection', $payload)->assertOk();
+    $this->withToken($token)->putJson('/api/registrations/me/selection', $payload)->assertOk();
+    $this->withToken($token)->putJson('/api/registrations/me/selection', $payload)->assertOk();
 
     expect($team->registration()->count())->toBe(1);
     expect($batch->fresh()->current_registrations)->toBe(1);
 });
 
 test('selection requires authentication', function (): void {
-    $this->postJson('/api/registrations/me/selection', [
+    $this->putJson('/api/registrations/me/selection', [
         'competition_id' => (string) Str::uuid(),
     ])->assertUnauthorized();
 });

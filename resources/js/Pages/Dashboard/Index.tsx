@@ -7,19 +7,21 @@ import {
   FileCheck2,
   FileText,
   LockKeyhole,
+  MessageCircle,
   Sparkles,
   Trophy,
   Users,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Seo } from '@/components/seo/Seo'
 import { useAuthSession } from '@/features/auth/context/AuthProvider'
 import { DashboardBackdrop } from '@/features/dashboard/components/DashboardBackdrop'
 import { DashboardError, DashboardLoading } from '@/features/dashboard/components/DashboardStates'
 import { useDashboard } from '@/features/dashboard/hooks/useDashboard'
 import type { DashboardExam } from '@/features/dashboard/types/dashboardTypes'
+import { WA_GROUP_LABELS, WA_GROUPS } from '@/constants/waGroups'
 import { formatDate } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
 
@@ -353,6 +355,70 @@ export default function DashboardIndex() {
           </div>
         </section>
 
+        {summary.team.status === 'VERIFIED' &&
+          competition?.type &&
+          WA_GROUPS[competition.type as keyof typeof WA_GROUPS] && (
+            <section aria-label="Grup WhatsApp Kompetisi">
+              <Card className="border border-emerald-500/20 bg-emerald-500/5 shadow-xl shadow-emerald-500/10 backdrop-blur-xl">
+                <CardHeader className="gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex gap-4">
+                    <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-500/25 bg-emerald-500/15 text-emerald-500">
+                      <MessageCircle className="size-5" />
+                    </div>
+
+                    <div>
+                      <CardTitle className="text-xl font-bold">
+                        Grup WhatsApp{' '}
+                        {WA_GROUP_LABELS[
+                          competition.type as keyof typeof WA_GROUP_LABELS
+                        ] ?? competition.name}
+                      </CardTitle>
+
+                      <CardDescription className="mt-1">
+                        Tim kamu telah terverifikasi. Gabung grup resmi untuk info terbaru, jadwal, dan koordinasi lomba.
+                      </CardDescription>
+                    </div>
+                  </div>
+
+                  <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20">
+                    Terverifikasi
+                  </Badge>
+                </CardHeader>
+
+                <CardContent className="space-y-3">
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Klik tombol di bawah untuk bergabung ke grup WhatsApp resmi{' '}
+                    {WA_GROUP_LABELS[
+                      competition.type as keyof typeof WA_GROUP_LABELS
+                    ] ?? competition.name}
+                    . Pastikan bergabung dengan akun WhatsApp aktif.
+                  </p>
+
+                  <a
+                    href={
+                      WA_GROUPS[
+                        competition.type as keyof typeof WA_GROUPS
+                      ]
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      buttonVariants({ size: 'lg' }),
+                      'w-full justify-between bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto',
+                    )}
+                  >
+                    Gabung Grup WhatsApp
+                    <ArrowRight />
+                  </a>
+
+                  <p className="text-xs text-muted-foreground">
+                    Link grup resmi ISAC 2026 — hanya untuk peserta terverifikasi {WA_GROUP_LABELS[competition.type as keyof typeof WA_GROUP_LABELS] ?? ''}.
+                  </p>
+                </CardContent>
+              </Card>
+            </section>
+          )}
+
         <section
           aria-labelledby="activity-heading"
           className="space-y-5"
@@ -530,25 +596,6 @@ export default function DashboardIndex() {
           className="grid gap-5 md:grid-cols-2"
           aria-label="Ringkasan Team"
         >
-          <Card className="border border-white/10 bg-card/45 backdrop-blur-xl">
-            <CardContent className="flex items-center gap-3 pt-6">
-              <Users className="size-5 text-secondary" />
-
-              <div>
-                <p className="text-xs text-muted-foreground">
-                  Jumlah peserta
-                </p>
-
-                <p className="mt-1 text-xl font-bold">
-                  {
-                    summary.team
-                      .memberCount
-                  }
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
           <Card className="border border-white/10 bg-card/45 backdrop-blur-xl">
             <CardContent className="flex items-center gap-3 pt-6">
               <FileText className="size-5 text-primary" />

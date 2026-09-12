@@ -20,7 +20,7 @@ export const TALKSHOW_INFO: TalkshowInfo = {
   description:
     'Talkshow ISAC 2026 menghadirkan sesi diskusi bertema "Cyber Ring" sebagai bagian dari rangkaian Information Systems Airlangga Competition yang diselenggarakan oleh HIMSI UNAIR. Talkshow ini akan dilaksanakan pada bulan September 2026 dan terbuka bagi siswa/siswi SMA/SMK/sederajat yang ingin memperluas wawasan seputar sistem informasi, teknologi, dan bisnis secara langsung dari praktisi di bidangnya.',
   contactPersonText: 'Contact Person',
-  contactPersonUrl: '#',
+  contactPersonUrl: 'https://api.whatsapp.com/send/?phone=62895613128295&text&type=phone_number&app_absent=0',
   registerText: 'Register',
   registerUrl: '/auth/register',
   image: '/images/Union.png',

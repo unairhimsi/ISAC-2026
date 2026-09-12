@@ -72,7 +72,7 @@ export type DocumentsPageData = { documentUrl: string | null; twibbonUrl: string
 export type PaymentMethod = 'BANK_TRANSFER' | 'QRIS'
 export type BankAccount = { bank: string; accountNumber: string; accountName: string }
 export type ExternalFile = { id: string; fileId: string; url: string; purpose?: string; name?: string }
-export type PaymentFormValues = { payment_proof_file_id: string; payment_method: PaymentMethod; promo_code?: string }
+export type PaymentFormValues = { payment_proof_file_id: string; payment_method: PaymentMethod; promo_code?: string; transaction_id?: string }
 export type PaymentQuoteData = {
   originalAmount: number; discountPercent: number; discountAmount: number; amount: number
   promoApplied: boolean; promoCode: string | null
@@ -81,6 +81,7 @@ export type PaymentPageData = {
   registrationId: string; originalAmount: number; amount: number; discountPercent: number
   discountAmount: number; promoApplied: boolean; promoCode: string | null
   paymentMethods: PaymentMethod[]; paymentInstructions: string | null
+  qrisImageUrl: string | null
   bankAccounts: BankAccount[]; paymentStatus: RegistrationStatus; existingProof: ExternalFile | null
   rejectionReason: string | null; paymentSubmittedAt: string | null; paymentForStage: { id: string; name: string } | null
 }

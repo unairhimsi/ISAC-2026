@@ -1,5 +1,6 @@
 import { AdminRole } from "@/features/admin/types/adminTypes"
 import {
+  Award,
   Banknote,
   BookOpenCheck,
   Boxes,
@@ -29,7 +30,7 @@ export const navigation: NavigationItem[] = [
   { label: 'Kelola Tahap Team', href: '/admin/team-stages', icon: Layers3, roles: ['super_admin', 'admin_registration'] },
   { label: 'Operasi', href: '/admin/operations', icon: FileSpreadsheet, roles: allRoles },
   { label: 'Buat Soal', href: '/admin/questions', icon: BookOpenCheck, roles: ['super_admin', 'judge'] },
-  { label: 'Penilaian', href: '/admin/judging', icon: BookOpenCheck, roles: ['super_admin', 'judge'], comingSoon: true },
+  { label: 'Penilaian', href: '/admin/judging', icon: Award, roles: ['super_admin', 'judge'] },
 ]
 
 export const adminRoleLabels: Record<AdminRole, string> = {

@@ -17,7 +17,7 @@ return new class extends Migration
             $table->dateTime('end_date');
             $table->integer('duration')->default(60);
             $table->integer('passing_score')->nullable();
-            $table->enum('type', ['multiple_choice', 'essay', 'mixed'])->default('multiple_choice');
+            $table->enum('type', ['multiple_choice', 'essay', 'mixed', 'OLIMPIADE', 'tryout'])->default('multiple_choice');
             $table->boolean('shuffle_questions')->default(false);
             $table->boolean('shuffle_options')->default(false);
             $table->boolean('show_result_immediately')->default(true);

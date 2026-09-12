@@ -98,14 +98,14 @@ test('payment revision redirects user dashboard to payment form', function (): v
         ->assertJsonPath('data.team.nextRedirect', '/registration/payment');
 });
 
-test('semifinal payment checkpoint remains on the unified dashboard', function (): void {
+test('upfront payment checkpoint redirects to payment for business competitions', function (): void {
     $competition = Competition::factory()->create([
         'type' => Competition::TYPE_BUSINESS_PLAN,
-        'payment_flow' => Competition::PAYMENT_SEMIFINAL,
+        'payment_flow' => Competition::PAYMENT_UPFRONT,
     ]);
     $batch = $competition->batches()->create([
-        'name' => 'Semifinal Checkpoint Batch',
-        'slug' => 'semifinal-checkpoint-batch',
+        'name' => 'Upfront Payment Batch',
+        'slug' => 'upfront-payment-batch',
         'start_date' => now(),
         'end_date' => now()->addMonth(),
         'price' => 175000,
@@ -119,14 +119,6 @@ test('semifinal payment checkpoint remains on the unified dashboard', function (
         'start_date' => now()->subWeek(),
         'end_date' => now()->addWeek(),
         'is_active' => true,
-    ]);
-    $paymentForStage = $competition->stages()->create([
-        'name' => 'Semifinal',
-        'type' => 'submission',
-        'order' => 2,
-        'start_date' => now()->addWeek(),
-        'end_date' => now()->addWeeks(2),
-        'is_active' => false,
     ]);
     $team = Team::factory()->create([
         'email_verified_at' => now(),
@@ -142,11 +134,10 @@ test('semifinal payment checkpoint remains on the unified dashboard', function (
         'members_completed_at' => now(),
         'documents_completed_at' => now(),
         'payment_required_at' => now(),
-        'payment_for_stage_id' => $paymentForStage->id,
     ]);
 
     $this->withToken($team->createToken('dashboard-guard')->plainTextToken)
         ->getJson('/api/auth/me')
         ->assertOk()
-        ->assertJsonPath('data.team.nextRedirect', '/dashboard');
+        ->assertJsonPath('data.team.nextRedirect', '/registration/payment');
 });

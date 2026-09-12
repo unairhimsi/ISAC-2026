@@ -15,7 +15,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'faq-2',
     question: 'Ada berapa gelombang (batch) pendaftaran dan berapa biayanya?',
     answer:
-      'Pendaftaran ISAC 2026 dibuka dalam 2 gelombang untuk seluruh cabang lomba: Batch 1 (23 Agustus – 12 September 2026) dan Batch 2 (13–23 September 2026), dengan Closing Registration pada 23 September 2026. Biaya per cabang naik di Batch 2: IS Olympiad Rp60.000 → Rp80.000, Business Plan Competition Rp70.000 → Rp90.000, dan Business IT Case Competition Rp80.000 → Rp100.000. Semakin cepat daftar, semakin murah biayanya.',
+      'Pendaftaran ISAC 2026 dibuka dalam 2 gelombang untuk seluruh cabang lomba: Batch 1 (26 Agustus – 20 September 2026) dan Batch 2 (21 September – 14 Oktober 2026), dengan Closing Registration pada 14 Oktober 2026. Biaya per cabang naik di Batch 2: IS Olympiad Rp60.000 → Rp80.000, Business Plan Competition Rp70.000 → Rp90.000, dan Business IT Case Competition Rp80.000 → Rp100.000. Semakin cepat daftar, semakin murah biayanya.',
   },
   {
     id: 'faq-3',

@@ -56,6 +56,17 @@ export function useRejectAdminTeam(teamId: string) {
   })
 }
 
+export function useUnverifyAdminTeam(teamId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (reason?: string) => adminApi.unverifyTeam(teamId, reason),
+    onSuccess: () => Promise.all([
+      client.invalidateQueries({ queryKey: [...adminKeys.all, 'teams'] }),
+      client.invalidateQueries({ queryKey: adminKeys.team(teamId) }),
+    ]),
+  })
+}
+
 export function useAdminCompetitions(filters: CompetitionFilters = {}) {
   return useQuery({ queryKey: adminKeys.competitions(filters), queryFn: () => adminApi.competitions(filters) })
 }
@@ -72,6 +83,14 @@ export function useUpdateCompetition() {
 
 export function useAdminStages(competitionId?: string) {
   return useQuery({ queryKey: adminKeys.stages(competitionId), queryFn: () => adminApi.stages(competitionId) })
+}
+
+export function useAdminStageScores(stageId?: string) {
+  return useQuery({
+    queryKey: [...adminKeys.all, 'stage-scores', stageId] as const,
+    queryFn: () => adminApi.stageScores(stageId as string),
+    enabled: Boolean(stageId),
+  })
 }
 
 export function useCreateStage() {
@@ -147,6 +166,17 @@ export function useRejectAdminPayment(registrationId: string) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (reason: string) => adminApi.rejectPayment(registrationId, reason),
+    onSuccess: () => Promise.all([
+      client.invalidateQueries({ queryKey: [...adminKeys.all, 'payments'] }),
+      client.invalidateQueries({ queryKey: adminKeys.payment(registrationId) }),
+    ]),
+  })
+}
+
+export function useUnverifyAdminPayment(registrationId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (reason: string) => adminApi.unverifyPayment(registrationId, reason),
     onSuccess: () => Promise.all([
       client.invalidateQueries({ queryKey: [...adminKeys.all, 'payments'] }),
       client.invalidateQueries({ queryKey: adminKeys.payment(registrationId) }),

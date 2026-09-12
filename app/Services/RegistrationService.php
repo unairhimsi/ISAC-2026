@@ -54,17 +54,14 @@ class RegistrationService
                 throw ValidationException::withMessages(['competition_id' => ['Belum ada Batch aktif dengan kuota tersedia untuk kompetisi ini.']]);
             }
 
-            $isOlympiad = $competition->type === Competition::TYPE_OLIMPIADE;
-            // A Team owns exactly one Registration. Repeating the save is
-            // idempotent and must never assign a different Batch or price.
-            // withTrashed is handled above; here we know no active registration exists.
+            // UNIFIED: semua lomba wajib bayar di awal, tanpa membedakan type/payment_flow. No DB schema change — payment_for_stage_id tetap ada tapi diabaikan.
             $registration = Registration::create([
                 'team_id' => $team->id,
                 'competition_id' => $competition->id,
                 'batch_id' => $batch->id,
-                'status' => $isOlympiad ? RegistrationStatus::WAITING_PAYMENT : RegistrationStatus::VERIFIED,
-                'payment_required_at' => $isOlympiad ? now() : null,
-                'payment_verified_at' => $isOlympiad ? null : now(),
+                'status' => RegistrationStatus::WAITING_PAYMENT,
+                'payment_required_at' => now(),
+                'payment_verified_at' => null,
             ]);
 
             $batch->increment('current_registrations');
@@ -294,12 +291,21 @@ class RegistrationService
         }
 
         DB::transaction(function () use ($team, $members, $registration): void {
+            $keptIds = [];
             foreach (array_values($members) as $index => $payload) {
+                $member = null;
                 if (! empty($payload['id'])) {
-                    if (! $team->members()->whereKey($payload['id'])->exists()) {
+                    $member = $team->members()->whereKey($payload['id'])->first();
+                    if ($member === null) {
                         throw ValidationException::withMessages(['members' => ['Anggota tidak dimiliki oleh Team ini.']]);
                     }
+                } else {
+                    $member = $team->members()->where('sort_order', $index + 1)->first();
                 }
+
+                $photoFileId = array_key_exists('photo_file_id', $payload)
+                    ? ($payload['photo_file_id'] ?: null)
+                    : $member?->photo_file_id;
 
                 $attributes = [
                     'name' => $payload['name'],
@@ -308,12 +314,19 @@ class RegistrationService
                     'major' => $payload['major'] ?? null,
                     'faculty' => $payload['faculty'] ?? null,
                     'student_id' => $payload['student_id'],
-                    'photo_file_id' => $payload['photo_file_id'] ?? null,
+                    'photo_file_id' => $photoFileId,
                     'sort_order' => $index + 1,
                 ];
 
-                $team->members()->updateOrCreate(['sort_order' => $index + 1], $attributes);
+                if ($member === null) {
+                    $member = $team->members()->create($attributes);
+                } else {
+                    $member->update($attributes);
+                }
+                $keptIds[] = $member->id;
             }
+
+            $team->members()->whereNotIn('id', $keptIds)->delete();
 
             $registration->update(['members_completed_at' => $registration->members_completed_at ?? now()]);
             $this->resolveDataRevision($team, 'MEMBERS');
@@ -336,11 +349,6 @@ class RegistrationService
                 'twibbon_url' => $data['twibbon_url'],
             ]);
             $registration->update(['documents_completed_at' => $registration->documents_completed_at ?? now()]);
-
-            if ($registration->competition->type !== Competition::TYPE_OLIMPIADE) {
-                $registration->update(['submitted_at' => $registration->submitted_at ?? now()]);
-                $team->update(['status' => Team::STATUS_WAITING_VERIFICATION]);
-            }
 
             $this->resolveDataRevision($team, 'DOCUMENTS');
         });
@@ -368,12 +376,14 @@ class RegistrationService
             throw ValidationException::withMessages(['payment' => ['Lengkapi seluruh data pendaftaran terlebih dahulu.']]);
         }
 
-        $paymentGateActive = $registration->competition->type === Competition::TYPE_OLIMPIADE || $registration->payment_for_stage_id !== null;
-        if (! $paymentGateActive || ! in_array($registration->status, [RegistrationStatus::WAITING_PAYMENT, RegistrationStatus::REVISION_REQUIRED], true)) {
+        if (! in_array($registration->status, [RegistrationStatus::WAITING_PAYMENT, RegistrationStatus::REVISION_REQUIRED], true)) {
             $requestedPromoCode = Str::upper(trim((string) ($data['promo_code'] ?? '')));
             $submittedPromoCode = Str::upper(trim((string) $registration->promo_code));
+            $requestedTransactionId = trim((string) ($data['transaction_id'] ?? ''));
             if ($registration->payment_submitted_at !== null
                 && $registration->payment_proof_file_id === $data['payment_proof_file_id']
+                && $registration->payment_method?->value === $data['payment_method']
+                && ($registration->transaction_id ?? '') === $requestedTransactionId
                 && $submittedPromoCode === $requestedPromoCode) {
                 return $this->getPaymentData($team);
             }
@@ -388,6 +398,7 @@ class RegistrationService
                 'payment_proof_file_id' => $data['payment_proof_file_id'],
                 'amount_paid' => $quote['amount'],
                 'payment_method' => $data['payment_method'],
+                'transaction_id' => isset($data['transaction_id']) ? trim((string) $data['transaction_id']) : null,
                 'promo_code' => $quote['promoCode'],
                 'discount_percent' => $quote['discountPercent'],
                 'discount_amount' => $quote['discountAmount'],
@@ -397,9 +408,7 @@ class RegistrationService
                 'submitted_at' => $registration->submitted_at ?? now(),
             ]);
 
-            if ($registration->payment_for_stage_id === null) {
-                $team->update(['status' => Team::STATUS_WAITING_VERIFICATION]);
-            }
+            $team->update(['status' => Team::STATUS_WAITING_VERIFICATION]);
         });
 
         return $team->fresh()->load('registration.batch', 'registration.paymentProofFile', 'registration.paymentForStage');
@@ -448,7 +457,7 @@ class RegistrationService
             }
         }
 
-        if ($registration->competition->type === Competition::TYPE_OLIMPIADE && $registration->payment_submitted_at === null) {
+        if ($registration->payment_submitted_at === null) {
             throw ValidationException::withMessages(['payment' => ['Lengkapi pembayaran terlebih dahulu.']]);
         }
 

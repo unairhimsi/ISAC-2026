@@ -1,16 +1,20 @@
 <?php
 
-use App\Http\Controllers\Api\AdminOperationController;
 use App\Http\Controllers\Api\AdminDashboardController;
+use App\Http\Controllers\Api\AdminExamAttemptController;
 use App\Http\Controllers\Api\AdminExamController;
-use App\Http\Controllers\Api\AdminStageController;
+use App\Http\Controllers\Api\AdminOperationController;
 use App\Http\Controllers\Api\AdminRegistrationController;
+use App\Http\Controllers\Api\AdminStageController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BatchController;
 use App\Http\Controllers\Api\CompetitionController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\ExamAttemptController;
 use App\Http\Controllers\Api\FileController;
+use App\Http\Controllers\Api\JudgingController;
 use App\Http\Controllers\Api\RegistrationController;
+use App\Http\Controllers\Api\SubmissionController;
 use App\Http\Controllers\Api\TeamController;
 use App\Http\Controllers\ImageKitAuthController;
 use Illuminate\Support\Facades\Route;
@@ -33,8 +37,18 @@ Route::get('/system/status', function () {
 
 Route::get('/dashboard/summary', [DashboardController::class, 'summary'])->middleware(['auth:sanctum', 'principal.team', 'team.verified']);
 Route::prefix('dashboard')->middleware(['auth:sanctum', 'principal.team', 'team.verified'])->group(function (): void {
+    Route::get('/stages/{stage}/submission', [SubmissionController::class, 'show'])->whereUuid('stage');
+    Route::post('/stages/{stage}/submission', [SubmissionController::class, 'upsert'])->whereUuid('stage');
+    Route::post('/stages/{stage}/submission/submit', [SubmissionController::class, 'submit'])->whereUuid('stage');
+    Route::post('/stages/{stage}/submission/unsubmit', [SubmissionController::class, 'unsubmit'])->whereUuid('stage');
     Route::get('/exams/{exam}', [DashboardController::class, 'exam'])->whereUuid('exam');
     Route::get('/stages/{stage}', [DashboardController::class, 'stage'])->whereUuid('stage');
+    Route::post('/exams/{exam}/attempts', [ExamAttemptController::class, 'start'])->whereUuid('exam');
+    Route::get('/exams/{exam}/attempts/{attempt}', [ExamAttemptController::class, 'show'])->whereUuid(['exam', 'attempt']);
+    Route::put('/exams/{exam}/attempts/{attempt}/answers', [ExamAttemptController::class, 'saveAnswers'])->whereUuid(['exam', 'attempt']);
+    Route::post('/exams/{exam}/attempts/{attempt}/events', [ExamAttemptController::class, 'storeEvents'])->whereUuid(['exam', 'attempt']);
+    Route::post('/exams/{exam}/attempts/{attempt}/submit', [ExamAttemptController::class, 'submit'])->whereUuid(['exam', 'attempt']);
+    Route::post('/exams/{exam}/attempts/{attempt}/heartbeat', [ExamAttemptController::class, 'heartbeat'])->whereUuid(['exam', 'attempt']);
 });
 
 Route::prefix('teams')->middleware(['auth:sanctum', 'principal.team', 'team.verified'])->group(function (): void {
@@ -61,11 +75,13 @@ Route::prefix('admin')->middleware(['auth:admins', 'principal.admin'])->group(fu
     Route::post('/teams/{team}/verify', [AdminRegistrationController::class, 'verifyTeam'])->whereUuid('team');
     Route::post('/teams/{team}/revision', [AdminRegistrationController::class, 'reviseTeam'])->whereUuid('team');
     Route::post('/teams/{team}/reject', [AdminRegistrationController::class, 'rejectTeam'])->whereUuid('team');
+    Route::post('/teams/{team}/unverify', [AdminRegistrationController::class, 'unverifyTeam'])->whereUuid('team');
     Route::get('/payments', [AdminRegistrationController::class, 'payments']);
     Route::get('/payments/{registration}', [AdminRegistrationController::class, 'payment'])->whereUuid('registration');
     Route::post('/registrations/{registration}/payment/verify', [AdminRegistrationController::class, 'verifyPayment'])->whereUuid('registration');
     Route::post('/registrations/{registration}/payment/revision', [AdminRegistrationController::class, 'revisePayment'])->whereUuid('registration');
     Route::post('/registrations/{registration}/payment/reject', [AdminRegistrationController::class, 'rejectPayment'])->whereUuid('registration');
+    Route::post('/registrations/{registration}/payment/unverify', [AdminRegistrationController::class, 'unverifyPayment'])->whereUuid('registration');
     Route::post('/teams/{team}/stages/{stage}/advance', [AdminRegistrationController::class, 'advanceStage'])->whereUuid(['team', 'stage']);
     Route::post('/competitions', [CompetitionController::class, 'store']);
     Route::patch('/competitions/{competition}', [CompetitionController::class, 'update']);
@@ -88,13 +104,22 @@ Route::prefix('admin')->middleware(['auth:admins', 'principal.admin'])->group(fu
         Route::get('/', [AdminStageController::class, 'index']);
         Route::post('/', [AdminStageController::class, 'store']);
         Route::get('/{stage}', [AdminStageController::class, 'show'])->whereUuid('stage');
+        Route::get('/{stage}/scores', [AdminStageController::class, 'scores'])->whereUuid('stage');
         Route::patch('/{stage}', [AdminStageController::class, 'update'])->whereUuid('stage');
         Route::delete('/{stage}', [AdminStageController::class, 'destroy'])->whereUuid('stage');
     });
 
     Route::get('/exams', [AdminExamController::class, 'exams']);
     Route::get('/exams/{exam}', [AdminExamController::class, 'show'])->whereUuid('exam');
+    Route::patch('/exams/{exam}', [AdminExamController::class, 'update'])->whereUuid('exam');
     Route::post('/exams/{exam}/questions', [AdminExamController::class, 'storeQuestion'])->whereUuid('exam');
+    Route::get('/exams/{exam}/attempts', [AdminExamAttemptController::class, 'index'])->whereUuid('exam');
+    Route::get('/exams/{exam}/attempts/{attempt}', [AdminExamAttemptController::class, 'show'])->whereUuid(['exam', 'attempt']);
+    Route::patch('/exams/{exam}/attempts/{attempt}/score', [AdminExamAttemptController::class, 'updateScore'])->whereUuid(['exam', 'attempt']);
+
+    Route::get('/stages/{stage}/submissions', [JudgingController::class, 'index'])->whereUuid('stage');
+    Route::get('/submissions/{submission}', [JudgingController::class, 'show'])->whereUuid('submission');
+    Route::post('/submissions/{submission}/review', [JudgingController::class, 'review'])->whereUuid('submission');
 });
 
 Route::prefix('registrations')->middleware(['auth:sanctum', 'principal.team', 'team.verified'])->group(function (): void {

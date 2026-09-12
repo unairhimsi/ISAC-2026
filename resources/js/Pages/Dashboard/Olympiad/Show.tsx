@@ -157,9 +157,14 @@ export default function OlympiadExamShell({
                 </div>
 
                 <div>
-                  <Badge variant="outline">
-                    {data.stage.name}
-                  </Badge>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">{data.stage.name}</Badge>
+                    {data.exam.type === 'tryout' ? (
+                      <Badge variant="secondary">Tryout — Hasil & kunci tersedia setelah selesai</Badge>
+                    ) : (
+                      <Badge>Olimpiade</Badge>
+                    )}
+                  </div>
 
                   <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
                     {data.exam.title}
@@ -169,6 +174,11 @@ export default function OlympiadExamShell({
                     {data.exam.description ??
                       'Pastikan Team memahami ketentuan dan jadwal pelaksanaan sebelum mengikuti ujian.'}
                   </p>
+                  {data.exam.type === 'tryout' && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Setelah submit, kamu bisa lihat skor, kunci jawaban, dan pembahasan.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -283,6 +293,21 @@ export default function OlympiadExamShell({
           </CardHeader>
 
           <CardContent>
+            {examStatus === 'AVAILABLE' && (
+              <div className="mb-6 flex flex-wrap gap-3">
+                <Link
+                  href={`/dashboard/olimpiade/${examId}/workspace`}
+                  className={cn(buttonVariants({ variant: 'default' }), 'shadow-lg')}
+                >
+                  {data.exam.type === 'tryout' ? 'Mulai Tryout' : 'Mulai Ujian'}
+                </Link>
+                <span className="self-center text-xs text-muted-foreground">
+                  {data.exam.type === 'tryout'
+                    ? 'Tryout bisa review kunci & pembahasan setelah selesai'
+                    : 'Olimpiade tidak menampilkan kunci — hasil diumumkan panitia'}
+                </span>
+              </div>
+            )}
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-2xl border border-white/10 bg-background/30 p-4">
                 <CalendarDays className="size-5 text-primary" />

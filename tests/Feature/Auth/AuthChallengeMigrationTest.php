@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AuthChallenge;
 use App\Models\Team;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 
@@ -18,7 +19,7 @@ test('password_reset_codes table is renamed to auth_challenges with new columns'
 test('auth challenge stores account_type and purpose', function (): void {
     $team = Team::factory()->create();
 
-    $challenge = \App\Models\AuthChallenge::create([
+    $challenge = AuthChallenge::create([
         'account_type' => 'TEAM',
         'account_id' => $team->id,
         'purpose' => 'VERIFY_EMAIL',

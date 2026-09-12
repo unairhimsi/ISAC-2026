@@ -36,4 +36,9 @@ class RegistrationPolicy
     {
         return $this->verifyPayment($admin, $registration);
     }
+
+    public function unverifyPayment(Admin $admin, Registration $registration): bool
+    {
+        return $admin->role === 'admin_payment';
+    }
 }
