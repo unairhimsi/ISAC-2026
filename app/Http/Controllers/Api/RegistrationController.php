@@ -60,7 +60,7 @@ class RegistrationController extends Controller
             throw ValidationException::withMessages(['registration' => ['Tim belum memilih kompetisi.']]);
         }
         $type = $team->registration->competition->type;
-        [$minimum, $maximum] = $type === Competition::TYPE_OLIMPIADE ? [1, 1] : [3, 3];
+        [$minimum, $maximum] = $type === Competition::TYPE_OLIMPIADE ? [1, 1] : [1, 3];
 
         return $this->success('Data anggota berhasil diambil.', [
             'competitionType' => $type,

@@ -32,4 +32,4 @@ docs: |-
   - **Database yang Terkena**: `teams` — SELECT; `members` — SELECT (eager load).
   - **Efek Samping**: Tidak ada.
   - **Response** (200): envelope dengan `MembersPageData`; Business Competition
-    mengembalikan minMembers=3 dan maxMembers=3, Olimpiade 1 dan 1.
+    mengembalikan minMembers=1 dan maxMembers=3, Olimpiade 1 dan 1.

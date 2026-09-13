@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { router } from '@inertiajs/react'
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import RegistrationLayout from '@/features/registrations/components/RegistrationLayout'
 import FormMember from '@/features/registrations/components/FormMember'
@@ -13,15 +13,17 @@ interface MemberSlot {
   label: string
 }
 
+const buildLabel = (competitionType: CompetitionType, index: number): string => {
+  if (competitionType === 'OLIMPIADE') return 'Peserta Olimpiade'
+  if (index === 0) return 'Ketua Tim'
+  return `Anggota ${index}`
+}
+
 const createSlots = (count: number, competitionType: CompetitionType): MemberSlot[] =>
   Array.from({ length: count }, (_, index) => ({
     key: index + 1,
     role: index === 0 ? 'LEADER' : 'MEMBER',
-    label: competitionType === 'OLIMPIADE'
-      ? 'Peserta Olimpiade'
-      : index === 0
-        ? 'Ketua Tim'
-        : `Anggota ${index}`,
+    label: buildLabel(competitionType, index),
   }))
 
 const Biodata = () => {
@@ -34,22 +36,27 @@ const Biodata = () => {
   const [validState, setValidState] = useState<Record<number, boolean>>({})
   const submitButtonRef = useRef<HTMLButtonElement>(null)
 
+  const minMembers = pageData?.minMembers ?? 1
+  const maxMembers = pageData?.maxMembers ?? 3
+  const isOlympiad = pageData?.competitionType === 'OLIMPIADE'
+
   useEffect(() => {
     if (!pageData) return
-    const count = pageData.maxMembers
-    const slots = createSlots(count, pageData.competitionType)
+    const existingCount = pageData.members.length
+    const initialCount = Math.max(minMembers, Math.min(maxMembers, existingCount || minMembers))
+    const slots = createSlots(initialCount, pageData.competitionType)
     const saved = Object.fromEntries(
       pageData.members.map((member, index) => [index + 1, {
         id: member.id, name: member.name, role: member.role, email: member.email,
         major: member.major, faculty: member.faculty, student_id: member.studentId,
         photo_file_id: member.photoFileId, sort_order: member.sortOrder,
-      }]),
+      }])
     )
     const valid = Object.fromEntries(slots.map((slot) => [slot.key, Boolean(saved[slot.key])]))
     setMembers(slots)
     setSavedData(saved)
     setValidState(valid)
-  }, [pageData])
+  }, [pageData, minMembers, maxMembers])
 
   const handleSave = (slot: MemberSlot) => (data: MemberFormValues) => {
     setSavedData((current) => ({ ...current, [slot.key]: data }))
@@ -61,6 +68,40 @@ const Biodata = () => {
   }
 
   const allMembersValid = members.length > 0 && members.every((member) => validState[member.key] && savedData[member.key])
+
+  const addMember = useCallback(() => {
+    if (!pageData) return
+    if (members.length >= maxMembers) return
+    setMembers((current) => {
+      const nextIndex = current.length
+      const nextKey = nextIndex + 1
+      return [...current, {
+        key: nextKey,
+        role: 'MEMBER',
+        label: buildLabel(pageData.competitionType, nextIndex),
+      }]
+    })
+    setActiveIndex(members.length)
+  }, [members.length, maxMembers, pageData])
+
+  const removeMember = useCallback((slot: MemberSlot) => {
+    if (!pageData) return
+    if (members.length <= minMembers) return
+    if (slot.role === 'LEADER' && !isOlympiad) {
+      toast.error('Ketua tim tidak dapat dihapus. Pilih ketua baru terlebih dahulu.')
+      return
+    }
+    setMembers((current) => current.filter((member) => member.key !== slot.key))
+    setSavedData((current) => {
+      const { [slot.key]: _, ...rest } = current
+      return rest
+    })
+    setValidState((current) => {
+      const { [slot.key]: _, ...rest } = current
+      return rest
+    })
+    setActiveIndex((current) => Math.max(0, current - 1))
+  }, [members.length, minMembers, pageData, isOlympiad])
 
   const handleComplete = useCallback(async () => {
     if (!allMembersValid) {
@@ -94,6 +135,8 @@ const Biodata = () => {
     }
   }
 
+  const memberCounter = useMemo(() => `${members.length}/${maxMembers} peserta`, [members.length, maxMembers])
+
   if (membersQuery.isLoading) {
     return <div className="py-12 text-center text-muted-foreground">Memuat biodata peserta...</div>
   }
@@ -102,8 +145,28 @@ const Biodata = () => {
     return <div className="py-12 text-center text-red-400">{membersQuery.error?.message ?? 'Data registrasi tidak tersedia.'}</div>
   }
 
+  const canAdd = members.length < maxMembers && !isOlympiad
+  const canRemove = (slot: MemberSlot) => members.length > minMembers && !(slot.role === 'LEADER' && !isOlympiad)
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4 text-center text-primary-foreground">
+      <div className="mb-6 flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-4">
+        <span className="rounded-full border border-border bg-card/60 px-4 py-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+          {memberCounter}
+        </span>
+        {!isOlympiad && (
+          <button
+            type="button"
+            onClick={addMember}
+            disabled={!canAdd}
+            className="inline-flex items-center gap-2 rounded-full border border-secondary/40 bg-secondary/15 px-4 py-1.5 text-sm font-medium text-secondary transition-all hover:border-secondary hover:bg-secondary/25 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Plus className="size-4" />
+            Tambah Peserta
+          </button>
+        )}
+      </div>
+
       <div className="hidden md:flex items-center justify-center gap-4">
         <button
           onClick={() => setActiveIndex((activeIndex - 1 + members.length) % members.length)}
@@ -123,7 +186,21 @@ const Biodata = () => {
               <div className="relative bg-background/80 backdrop-blur-md rounded-2xl p-6 border border-border/50 shadow-2xl shadow-secondary/10">
                 <span aria-hidden="true" className="header-border-track absolute inset-0 rounded-2xl pointer-events-none" />
                 <span aria-hidden="true" className="header-border-spin absolute inset-0 rounded-2xl pointer-events-none" />
-                <h3 className="text-xl font-semibold mb-4 relative z-10">{member.label}</h3>
+                <div className="mb-4 flex items-center justify-between gap-3 relative z-10">
+                  <h3 className="text-xl font-semibold">{member.label}</h3>
+                  {!isOlympiad && (
+                    <button
+                      type="button"
+                      onClick={() => removeMember(member)}
+                      disabled={!canRemove(member)}
+                      aria-label={`Hapus ${member.label}`}
+                      className="inline-flex items-center gap-1 rounded-full border border-destructive/40 px-3 py-1 text-xs font-medium text-destructive transition-all hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <Trash2 className="size-3.5" />
+                      Hapus
+                    </button>
+                  )}
+                </div>
                 <FormMember
                   memberId={member.key}
                   role={member.role}
@@ -153,7 +230,21 @@ const Biodata = () => {
           <div key={member.key} className="relative z-10 w-full rounded-xl border-0 bg-background/20 backdrop-blur-sm shadow-2xl">
             <span aria-hidden="true" className="auth-border-ribbon" />
             <span aria-hidden="true" className="auth-border-diamond" />
-            <h3 className="text-lg font-semibold mb-4 relative z-10">{member.label}</h3>
+            <div className="mb-4 flex items-center justify-between gap-3 relative z-10">
+              <h3 className="text-lg font-semibold">{member.label}</h3>
+              {!isOlympiad && (
+                <button
+                  type="button"
+                  onClick={() => removeMember(member)}
+                  disabled={!canRemove(member)}
+                  aria-label={`Hapus ${member.label}`}
+                  className="inline-flex items-center gap-1 rounded-full border border-destructive/40 px-3 py-1 text-xs font-medium text-destructive transition-all hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Trash2 className="size-3.5" />
+                  Hapus
+                </button>
+              )}
+            </div>
             <FormMember
               memberId={member.key}
               role={member.role}
@@ -184,7 +275,7 @@ const Biodata = () => {
 }
 
 Biodata.layout = (page: React.ReactNode) => (
-  <RegistrationLayout title="Biodata Peserta — Pendaftaran ISAC 2026" description="Lengkapi biodata ketua & anggota tim ISAC 2026 (NISN/NIM, jurusan, kontak darurat) — Olimpiade butuh 3 orang, Business Plan/IT Case 2–3 orang.">
+  <RegistrationLayout title="Biodata Peserta — Pendaftaran ISAC 2026" description="Lengkapi biodata ketua & anggota tim ISAC 2026 (NISN/NIM, jurusan, kontak darurat) — Olimpiade butuh 1 orang, Business Plan/IT Case 1–3 orang.">
     {page}
   </RegistrationLayout>
 )

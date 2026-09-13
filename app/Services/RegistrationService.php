@@ -106,7 +106,7 @@ class RegistrationService
         $competition = $registration->competition;
         [$minimum, $maximum] = match ($competition->type) {
             Competition::TYPE_OLIMPIADE => [1, 1],
-            Competition::TYPE_BUSINESS_PLAN, Competition::TYPE_BUSINESS_IT_CASE => [3, 3],
+            Competition::TYPE_BUSINESS_PLAN, Competition::TYPE_BUSINESS_IT_CASE => [1, 3],
             default => throw ValidationException::withMessages(['members' => ['Tipe kompetisi tidak valid.']]),
         };
 
@@ -241,7 +241,7 @@ class RegistrationService
         $competition = $registration->competition;
         [$minimum, $maximum] = match ($competition->type) {
             Competition::TYPE_OLIMPIADE => [1, 1],
-            Competition::TYPE_BUSINESS_PLAN, Competition::TYPE_BUSINESS_IT_CASE => [3, 3],
+            Competition::TYPE_BUSINESS_PLAN, Competition::TYPE_BUSINESS_IT_CASE => [1, 3],
             default => throw ValidationException::withMessages(['members' => ['Tipe kompetisi tidak valid.']]),
         };
 

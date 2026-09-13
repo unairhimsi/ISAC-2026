@@ -89,6 +89,27 @@ test('rejects more than 1 member for OLIMPIADE', function (): void {
         ->assertJsonPath('error.code', 'VALIDATION_ERROR');
 });
 
+test('rejects more than 3 members for business plan', function (): void {
+    $this->competition->update(['type' => Competition::TYPE_BUSINESS_PLAN]);
+
+    $member = fn (string $name, string $role, string $email, string $studentId): array => [
+        'name' => $name, 'role' => $role, 'email' => $email,
+        'student_id' => $studentId,
+    ];
+
+    $this->withToken($this->token)
+        ->putJson('/api/registrations/me/members', [
+            'members' => [
+                $member('A', 'LEADER', 'a@test.com', '1'),
+                $member('B', 'MEMBER', 'b@test.com', '2'),
+                $member('C', 'MEMBER', 'c@test.com', '3'),
+                $member('D', 'MEMBER', 'd@test.com', '4'),
+            ],
+        ])
+        ->assertUnprocessable()
+        ->assertJsonPath('error.details.members.0', 'Jumlah peserta harus 1 sampai 3 orang.');
+});
+
 test('requires exactly one leader for business plan', function (): void {
     $this->competition->update(['type' => Competition::TYPE_BUSINESS_PLAN]);
 
@@ -104,24 +125,29 @@ test('requires exactly one leader for business plan', function (): void {
         ->assertJsonPath('error.code', 'VALIDATION_ERROR');
 });
 
-test('business competitions require exactly three participants', function (): void {
+test('business competitions allow between one and three participants', function (): void {
     $this->competition->update(['type' => Competition::TYPE_BUSINESS_PLAN]);
 
     $this->withToken($this->token)
         ->getJson('/api/registrations/me/members')
         ->assertOk()
-        ->assertJsonPath('data.minMembers', 3)
+        ->assertJsonPath('data.minMembers', 1)
         ->assertJsonPath('data.maxMembers', 3);
 
     $this->withToken($this->token)
         ->putJson('/api/registrations/me/members', [
             'members' => [
                 ['name' => 'A', 'role' => 'LEADER', 'email' => 'a@test.com', 'student_id' => '001'],
-                ['name' => 'B', 'role' => 'MEMBER', 'email' => 'b@test.com', 'student_id' => '002'],
             ],
         ])
-        ->assertUnprocessable()
-        ->assertJsonPath('error.details.members.0', 'Jumlah peserta harus tepat 3 orang.');
+        ->assertOk()
+        ->assertJsonPath('data.context.progress.membersCompleted', true)
+        ->assertJsonPath('data.redirectTo', '/registration/documents');
+
+    expect($this->team->members()->count())->toBe(1);
+    expect($this->team->members()->first())
+        ->role->toBe('LEADER')
+        ->student_id->toBe('001');
 });
 
 test('business it case requires university biodata', function (): void {
@@ -159,7 +185,7 @@ test('business it case exposes university labels and accepts nim major and facul
         ->assertJsonPath('data.participantCategory', 'UNIVERSITY_STUDENT')
         ->assertJsonPath('data.identityLabel', 'NIM')
         ->assertJsonPath('data.showsLeaderRole', true)
-        ->assertJsonPath('data.minMembers', 3)
+        ->assertJsonPath('data.minMembers', 1)
         ->assertJsonPath('data.maxMembers', 3);
 
     $this->withToken($this->token)
@@ -169,20 +195,12 @@ test('business it case exposes university labels and accepts nim major and facul
                     'name' => 'A', 'role' => 'LEADER', 'email' => 'a@test.com',
                     'student_id' => '24001', 'major' => 'Informatika', 'faculty' => 'Teknik',
                 ],
-                [
-                    'name' => 'B', 'role' => 'MEMBER', 'email' => 'b@test.com',
-                    'student_id' => '24002', 'major' => 'Sistem Informasi', 'faculty' => 'Ilmu Komputer',
-                ],
-                [
-                    'name' => 'C', 'role' => 'MEMBER', 'email' => 'c@test.com',
-                    'student_id' => '24003', 'major' => 'Manajemen', 'faculty' => 'Ekonomi',
-                ],
             ],
         ])
         ->assertOk();
 
     expect($this->team->members()->orderBy('sort_order')->get())
-        ->toHaveCount(3)
+        ->toHaveCount(1)
         ->and($this->team->members()->first()->student_id)->toBe('24001');
 });
 

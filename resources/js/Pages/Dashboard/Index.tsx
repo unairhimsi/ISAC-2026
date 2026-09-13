@@ -6,7 +6,9 @@ import {
   Clock3,
   FileCheck2,
   FileText,
+  Home,
   LockKeyhole,
+  LogOut,
   MessageCircle,
   Sparkles,
   Trophy,
@@ -17,6 +19,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Seo } from '@/components/seo/Seo'
 import { useAuthSession } from '@/features/auth/context/AuthProvider'
+import { useLogout } from '@/features/auth/hooks/useAuth'
 import { DashboardBackdrop } from '@/features/dashboard/components/DashboardBackdrop'
 import { DashboardError, DashboardLoading } from '@/features/dashboard/components/DashboardStates'
 import { useDashboard } from '@/features/dashboard/hooks/useDashboard'
@@ -147,6 +150,13 @@ export default function DashboardIndex() {
     summary,
     summaryQuery,
   } = useDashboard()
+
+  const logoutMutation = useLogout()
+
+  const handleLogout = async () => {
+    await logoutMutation.mutateAsync().catch(() => undefined)
+    window.location.href = '/'
+  }
 
   useEffect(() => {
     if (isLoading) {
@@ -323,6 +333,33 @@ export default function DashboardIndex() {
                   {competition?.name ??
                     'Kompetisi ISAC 2026'}
                 </h1>
+
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Link
+                    href="/"
+                    aria-label="Kembali ke beranda"
+                    className={cn(
+                      buttonVariants({ variant: 'outline', size: 'sm' }),
+                      'gap-2 border-white/15 bg-background/40 text-foreground hover:bg-background/70',
+                    )}
+                  >
+                    <Home className="size-4" />
+                    Beranda
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={logoutMutation.isPending}
+                    aria-label="Logout dari dashboard"
+                    className={cn(
+                      buttonVariants({ variant: 'outline', size: 'sm' }),
+                      'gap-2 border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive',
+                    )}
+                  >
+                    <LogOut className="size-4" />
+                    {logoutMutation.isPending ? 'Memproses...' : 'Logout'}
+                  </button>
+                </div>
               </div>
 
               <div className="w-full rounded-3xl border border-secondary/20 bg-background/35 p-5 lg:w-72">

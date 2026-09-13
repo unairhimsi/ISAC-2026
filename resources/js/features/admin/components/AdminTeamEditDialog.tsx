@@ -80,6 +80,7 @@ export function AdminTeamEditDialog({
   const competitionType = data.registration?.competition.type
   const isOlympiad = competitionType === 'OLIMPIADE'
   const isUniversity = competitionType === 'BUSINESS_IT_CASE'
+  const minMembers = isOlympiad ? 1 : 1
   const maxMembers = isOlympiad ? 1 : 3
   const identityLabel = isUniversity ? 'NIM' : 'NISN'
 
@@ -132,6 +133,7 @@ export function AdminTeamEditDialog({
   }
 
   function removeMember(index: number) {
+    if (form.members.length <= minMembers) return
     setForm((current) => ({ ...current, members: current.members.filter((_, memberIndex) => memberIndex !== index) }))
     resetError()
   }
@@ -145,8 +147,11 @@ export function AdminTeamEditDialog({
       setLocalError('Provinsi, kota/kabupaten, dan alamat institusi wajib diisi.')
       return
     }
-    if (form.members.length !== maxMembers) {
-      setLocalError(`Jumlah member harus tepat ${maxMembers} orang.`)
+    if (form.members.length < minMembers || form.members.length > maxMembers) {
+      const rangeMessage = minMembers === maxMembers
+        ? `Jumlah member harus tepat ${maxMembers} orang.`
+        : `Jumlah member harus ${minMembers} sampai ${maxMembers} orang.`
+      setLocalError(rangeMessage)
       return
     }
 
@@ -217,7 +222,7 @@ export function AdminTeamEditDialog({
             <CardContent className="space-y-4">
               {form.members.map((member, index) => (
                 <div key={member.id ?? `new-${index}`} className="space-y-4 rounded-3xl border border-border/60 bg-background/30 p-4">
-                  <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-medium">Member {index + 1}</p><p className="text-xs text-muted-foreground">{member.photo_file_id ? 'Foto tersimpan dan dapat diganti.' : 'Foto peserta opsional.'}</p></div><Button type="button" variant="ghost" size="icon-sm" className="text-destructive" onClick={() => removeMember(index)} disabled={form.members.length <= 1} aria-label={`Hapus member ${index + 1}`}><Trash2 /></Button></div>
+                  <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-medium">Member {index + 1}</p><p className="text-xs text-muted-foreground">{member.photo_file_id ? 'Foto tersimpan dan dapat diganti.' : 'Foto peserta opsional.'}</p></div><Button type="button" variant="ghost" size="icon-sm" className="text-destructive" onClick={() => removeMember(index)} disabled={form.members.length <= minMembers} aria-label={`Hapus member ${index + 1}`}><Trash2 /></Button></div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <label className="space-y-1.5 text-sm">Nama lengkap<Input value={member.name} onChange={(event) => setMemberField(index, 'name', event.target.value)} aria-invalid={Boolean(fieldError(`members.${index}.name`))} />{fieldError(`members.${index}.name`) && <span className="text-xs text-destructive">{fieldError(`members.${index}.name`)}</span>}</label>
                     <label className="space-y-1.5 text-sm">Peran<select disabled={isOlympiad} value={isOlympiad ? 'LEADER' : member.role} onChange={(event) => setMemberField(index, 'role', event.target.value as AdminMemberUpdatePayload['role'])} className="h-9 w-full rounded-3xl border border-input bg-input/50 px-3 text-sm disabled:opacity-60"><option value="LEADER">Ketua</option><option value="MEMBER">Anggota</option></select></label>
