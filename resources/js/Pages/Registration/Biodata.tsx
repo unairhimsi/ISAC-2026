@@ -211,22 +211,6 @@ const Biodata = () => {
       </div>
 
       <div className="md:hidden space-y-6">
-          <div className="mb-6 flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-4 mt-8">
-            <span className="rounded-full border border-border bg-card/60 px-4 py-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
-              {memberCounter}
-            </span>
-            {!isOlympiad && (
-              <button
-                type="button"
-                onClick={addMember}
-                disabled={!canAdd}
-                className="inline-flex items-center cursor-pointer gap-2 rounded-full border border-secondary/40 bg-secondary/15 px-4 py-1.5 disabled:bg-black/20 text-sm font-medium text-secondary transition-all hover:border-secondary hover:bg-secondary/25 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Plus className="size-4" />
-                Tambah Peserta
-              </button>
-            )}
-          </div>
         {members.map((member, index) => (
           <div key={member.key} className="relative z-10 w-full rounded-xl border-0 bg-background/20 backdrop-blur-sm shadow-2xl">
             <span aria-hidden="true" className="auth-border-ribbon" />
@@ -269,6 +253,22 @@ const Biodata = () => {
             <span className="flex items-center gap-3"><Loader2 className="w-6 h-6 animate-spin" />Menyimpan...</span>
           ) : 'Simpan Semua Peserta'}
         </button>
+        <div className="mb-6 flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-4 mt-8">
+            <span className="rounded-full border border-border bg-card/60 px-4 py-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+              {memberCounter}
+            </span>
+            {!isOlympiad && (
+              <button
+                type="button"
+                onClick={addMember}
+                // disabled={!canAdd}
+                className="inline-flex items-center cursor-pointer gap-2 rounded-full border border-secondary/40 bg-secondary/15 px-4 py-1.5 disabled:bg-black/20 text-sm font-medium text-secondary transition-all hover:border-secondary hover:bg-secondary/25 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Plus className="size-4" />
+                Tambah Peserta
+              </button>
+            )}
+          </div>
       </div>
     </div>
   )
