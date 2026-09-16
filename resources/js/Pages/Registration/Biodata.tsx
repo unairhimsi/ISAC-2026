@@ -149,8 +149,8 @@ const Biodata = () => {
   const canRemove = (slot: MemberSlot) => members.length > minMembers && !(slot.role === 'LEADER' && !isOlympiad)
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 text-center text-primary-foreground">
-      <div className="mb-6 flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-4 mb-12 mt-8">
+    <div className="w-full max-w-7xl mx-auto px-4 text-center text-primary-foreground z-20">
+      <div className="mb-6 flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-4 mb-12 mt-8 z-20">
         <span className="rounded-full border border-border bg-card/60 px-4 py-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
           {memberCounter}
         </span>
