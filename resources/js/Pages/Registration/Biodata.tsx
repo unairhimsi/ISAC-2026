@@ -149,24 +149,7 @@ const Biodata = () => {
   const canRemove = (slot: MemberSlot) => members.length > minMembers && !(slot.role === 'LEADER' && !isOlympiad)
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 text-center text-primary-foreground z-20">
-      <div className="mb-6 flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-4 mb-12 mt-8 z-20">
-        <span className="rounded-full border border-border bg-card/60 px-4 py-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
-          {memberCounter}
-        </span>
-        {!isOlympiad && (
-          <button
-            type="button"
-            onClick={addMember}
-            disabled={!canAdd}
-            className="inline-flex items-center gap-2 rounded-full border border-secondary/40 bg-secondary/15 px-4 py-1.5 text-sm font-medium text-secondary transition-all hover:border-secondary hover:bg-secondary/25 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Plus className="size-4" />
-            Tambah Peserta
-          </button>
-        )}
-      </div>
-
+    <div className="w-full max-w-7xl mx-auto px-4 text-center text-primary-foreground">
       <div className="hidden md:flex items-center justify-center gap-4">
         <button
           onClick={() => setActiveIndex((activeIndex - 1 + members.length) % members.length)}
@@ -257,8 +240,23 @@ const Biodata = () => {
           </div>
         ))}
       </div>
-
-      <div className="relative z-20 mt-12 pb-8">
+            <div className="mb-6 flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-4 mt-8">
+        <span className="rounded-full border border-border bg-card/60 px-4 py-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+          {memberCounter}
+        </span>
+        {!isOlympiad && (
+          <button
+            type="button"
+            onClick={addMember}
+            disabled={!canAdd}
+            className="inline-flex items-center gap-2 rounded-full border border-secondary/40 bg-secondary/15 px-4 py-1.5 text-sm font-medium text-secondary transition-all hover:border-secondary hover:bg-secondary/25 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Plus className="size-4" />
+            Tambah Peserta
+          </button>
+        )}
+      </div>
+      <div className="relative z-20 mt-8 pb-8">
         <button
           ref={submitButtonRef}
           onClick={handleComplete}
