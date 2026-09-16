@@ -148,6 +148,8 @@ const Biodata = () => {
   const canAdd = members.length < maxMembers && !isOlympiad
   const canRemove = (slot: MemberSlot) => members.length > minMembers && !(slot.role === 'LEADER' && !isOlympiad)
 
+  console.log(canAdd, canRemove, members.length, minMembers, maxMembers, isOlympiad)
+
   return (
     <div className="w-full max-w-7xl mx-auto px-4 text-center text-primary-foreground">
       <div className="hidden md:flex items-center justify-center gap-4">
@@ -249,14 +251,14 @@ const Biodata = () => {
             type="button"
             onClick={addMember}
             disabled={!canAdd}
-            className="inline-flex items-center gap-2 rounded-full border border-secondary/40 bg-secondary/15 px-4 py-1.5 text-sm font-medium text-secondary transition-all hover:border-secondary hover:bg-secondary/25 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center cursor-pointer gap-2 rounded-full border border-secondary/40 bg-secondary/15 px-4 py-1.5 disabled:bg-black/20 text-sm font-medium text-secondary transition-all hover:border-secondary hover:bg-secondary/25 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Plus className="size-4" />
             Tambah Peserta
           </button>
         )}
       </div>
-      <div className="relative z-20 mt-8 pb-8">
+      <div className="relative z-20  pb-8">
         <button
           ref={submitButtonRef}
           onClick={handleComplete}
