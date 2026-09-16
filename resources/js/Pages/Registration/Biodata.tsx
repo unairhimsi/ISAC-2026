@@ -150,7 +150,7 @@ const Biodata = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 text-center text-primary-foreground">
-      <div className="mb-6 flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-4">
+      <div className="mb-6 flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-4 mt-8">
         <span className="rounded-full border border-border bg-card/60 px-4 py-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
           {memberCounter}
         </span>
@@ -159,7 +159,7 @@ const Biodata = () => {
             type="button"
             onClick={addMember}
             disabled={!canAdd}
-            className="inline-flex items-center gap-2 rounded-full border border-secondary/40 bg-secondary/15 px-4 py-1.5 text-sm font-medium text-secondary transition-all hover:border-secondary hover:bg-secondary/25 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex  items-center gap-2 rounded-full border border-secondary/40 bg-secondary/15 px-4 py-1.5 text-sm font-medium text-secondary transition-all hover:border-secondary hover:bg-secondary/25 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Plus className="size-4" />
             Tambah Peserta
