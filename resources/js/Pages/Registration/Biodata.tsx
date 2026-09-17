@@ -311,7 +311,7 @@ const Biodata = () => {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-3 text-center text-primary-foreground sm:px-4">
+    <div className="mx-auto w-full px-3 text-center text-primary-foreground sm:px-4">
       <div className="relative flex w-full items-center justify-center">
         <div
           className={[
@@ -320,7 +320,7 @@ const Biodata = () => {
             'px-8 sm:px-10 md:px-12',
             pageData.competitionType ===
             'BUSINESS_IT_CASE'
-              ? 'min-h-[900px] sm:min-h-[1020px] md:min-h-[1120px]'
+              ? 'min-h-[760px] sm:min-h-[900px] md:min-h-[1020px]'
               : 'min-h-[760px] sm:min-h-[820px] md:min-h-[900px]',
           ].join(' ')}
         >
