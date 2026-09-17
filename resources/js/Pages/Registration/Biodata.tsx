@@ -390,8 +390,8 @@ const Biodata = () => {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-3 text-center text-primary-foreground sm:px-4">
-      <div className="relative w-full mt-12 md:mt-16">
-        <div className="relative overflow-x-clip px-8 sm:px-10 md:px-12">
+      <div className="relative w-full mt-20 md:mt-24">
+        <div className="relative overflow-x-clip px-4 sm:px-8 md:px-12">
           <div className="grid w-full items-start">
             {members.map((member, index) => (
               <div
