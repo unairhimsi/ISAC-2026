@@ -316,9 +316,9 @@ const Biodata = () => {
         <div
           className={[
             'relative w-full min-w-0 overflow-hidden',
-            'perspective-110',
+            'perspective-[1000px]',
             'px-8 sm:px-10 md:px-12',
-            'min-h-100 sm:min-h-105 md:min-h-120',
+            'min-h-[760px] sm:min-h-[900px] md:min-h-[1020px]',
           ].join(' ')}
         >
           {members.map((member, index) => (
