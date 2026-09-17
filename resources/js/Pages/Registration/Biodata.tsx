@@ -318,10 +318,7 @@ const Biodata = () => {
             'relative w-full min-w-0 overflow-hidden',
             'perspective-[1000px]',
             'px-8 sm:px-10 md:px-12',
-            pageData.competitionType ===
-            'BUSINESS_IT_CASE'
-              ? 'min-h-[760px] sm:min-h-[900px] md:min-h-[1020px]'
-              : 'min-h-[760px] sm:min-h-[820px] md:min-h-[900px]',
+            'min-h-[760px] sm:min-h-[820px] md:min-h-[900px]',
           ].join(' ')}
         >
           {members.map((member, index) => (
