@@ -316,7 +316,7 @@ const Biodata = () => {
         <div
           className={[
             'relative w-full min-w-0 overflow-hidden',
-            'perspective-[400px]',
+            'perspective-110',
             'px-8 sm:px-10 md:px-12',
             'min-h-100 sm:min-h-105 md:min-h-120',
           ].join(' ')}
