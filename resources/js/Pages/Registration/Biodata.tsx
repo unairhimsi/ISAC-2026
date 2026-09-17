@@ -311,14 +311,14 @@ const Biodata = () => {
   }
 
   return (
-    <div className="mx-auto w-full px-3 text-center text-primary-foreground sm:px-4">
+    <div className="w-full px-3 text-center text-primary-foreground sm:px-4">
       <div className="relative flex w-full items-center justify-center">
         <div
           className={[
             'relative w-full min-w-0 overflow-hidden',
-            'perspective-[800px]',
+            'perspective-[400px]',
             'px-8 sm:px-10 md:px-12',
-            'min-h-[820px] sm:min-h-[900px] md:min-h-[1020px]',
+            'min-h-100 sm:min-h-105 md:min-h-120',
           ].join(' ')}
         >
           {members.map((member, index) => (
