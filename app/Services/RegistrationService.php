@@ -16,6 +16,10 @@ use Illuminate\Validation\ValidationException;
 
 class RegistrationService
 {
+    public function __construct(
+        private readonly DuplicateDetectionService $duplicateDetector,
+    ) {}
+
     public function selectCompetition(Team $team, array $data): Registration
     {
         return DB::transaction(function () use ($team, $data): Registration {
@@ -155,6 +159,8 @@ class RegistrationService
             throw ValidationException::withMessages($memberErrors);
         }
 
+        $this->assertNoCrossTeamDuplicates($team, $members);
+
         DB::transaction(function () use ($team, $teamData, $documentData, $members, $registration): void {
             $team->update(Arr::only($teamData, [
                 'name', 'phone', 'institution_name', 'institution_address',
@@ -289,6 +295,8 @@ class RegistrationService
         if ($memberErrors !== []) {
             throw ValidationException::withMessages($memberErrors);
         }
+
+        $this->assertNoCrossTeamDuplicates($team, $members);
 
         DB::transaction(function () use ($team, $members, $registration): void {
             $keptIds = [];
@@ -554,5 +562,59 @@ class RegistrationService
             'verification_note' => null,
             'revision_step' => null,
         ]);
+    }
+
+    /**
+     * Reject the request if any incoming member email or student_id
+     * already belongs to a different team. Also notify the existing
+     * team so both parties are aware of the conflict.
+     *
+     * @param  array<int, array<string, mixed>>  $incomingMembers
+     */
+    private function assertNoCrossTeamDuplicates(Team $team, array $incomingMembers): void
+    {
+        $duplicates = $this->duplicateDetector->findMemberDuplicates($team, $incomingMembers);
+
+        if ($duplicates['email'] === [] && $duplicates['student_id'] === []) {
+            return;
+        }
+
+        $errors = [];
+        $emailLabel = 'Email';
+        $studentIdLabel = 'Nomor identitas';
+
+        foreach ($incomingMembers as $index => $payload) {
+            $emailKey = strtolower(trim((string) ($payload['email'] ?? '')));
+            if ($emailKey !== '' && isset($duplicates['email'][$emailKey])) {
+                $existing = $duplicates['email'][$emailKey][0];
+                $errors["members.{$index}.email"] = [
+                    "{$emailLabel} ini sudah terdaftar pada tim {$existing['team_code']} ({$existing['team_name']}).",
+                ];
+                $this->duplicateDetector->notifyExistingTeamOfDuplicate(
+                    existingTeam: \App\Models\Team::query()->findOrFail($existing['team_id']),
+                    incomingTeam: $team,
+                    conflictKind: 'Email peserta',
+                    conflictValue: (string) $payload['email'],
+                );
+            }
+
+            $studentIdKey = Str::upper(trim((string) ($payload['student_id'] ?? '')));
+            if ($studentIdKey !== '' && isset($duplicates['student_id'][$studentIdKey])) {
+                $existing = $duplicates['student_id'][$studentIdKey][0];
+                $errors["members.{$index}.student_id"] = [
+                    "{$studentIdLabel} ini sudah terdaftar pada tim {$existing['team_code']} ({$existing['team_name']}).",
+                ];
+                $this->duplicateDetector->notifyExistingTeamOfDuplicate(
+                    existingTeam: \App\Models\Team::query()->findOrFail($existing['team_id']),
+                    incomingTeam: $team,
+                    conflictKind: 'Nomor identitas (NISN/NIM)',
+                    conflictValue: (string) $payload['student_id'],
+                );
+            }
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
     }
 }

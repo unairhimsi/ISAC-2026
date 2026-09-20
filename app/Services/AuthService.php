@@ -20,10 +20,13 @@ class AuthService
         private readonly AuthRepositoryInterface $authRepository,
         private readonly SecurityAuditService $audit,
         private readonly TransactionalMailService $mail,
+        private readonly DuplicateDetectionService $duplicateDetector,
     ) {}
 
     public function register(array $data): array
     {
+        $email = strtolower(trim((string) $data['email']));
+
         $team = DB::transaction(function () use ($data): Team {
             $team = $this->authRepository->createTeam([
                 'email' => $data['email'],
@@ -40,6 +43,8 @@ class AuthService
         $token = $team->createToken('auth-token');
         $this->audit->record('auth.registration_succeeded', $team);
 
+        $this->detectAmbiguousAccountAfterRegister($email);
+
         return [
             'token' => $token->plainTextToken,
             'tokenType' => 'Bearer',
@@ -47,6 +52,23 @@ class AuthService
             'team' => $team,
             'redirectTo' => '/auth/verify-email',
         ];
+    }
+
+    /**
+     * Detect and notify if the freshly-registered email already exists
+     * as an Admin. Form validation rules block Team+Team duplicates, but
+     * the admin collision can only be caught after the Team row exists.
+     */
+    private function detectAmbiguousAccountAfterRegister(string $email): void
+    {
+        $collision = $this->duplicateDetector->findAmbiguousAccount($email);
+        if ($collision['admin'] !== null) {
+            $this->audit->record('auth.registration_ambiguous', null, [
+                'reason' => 'TEAM_EMAIL_MATCHES_ADMIN',
+                'email' => $email,
+            ]);
+            $this->duplicateDetector->notifyAmbiguousAccount($email);
+        }
     }
 
     public function login(array $data): array
@@ -57,6 +79,7 @@ class AuthService
 
         if ($team !== null && $admin !== null) {
             $this->audit->record('auth.login_failed', null, ['reason' => 'AMBIGUOUS_ACCOUNT']);
+            $this->duplicateDetector->notifyAmbiguousAccount($email);
             throw new InvalidCredentialException('Akun ambigu. Gunakan email yang berbeda untuk Team dan Admin.', 409);
         }
 

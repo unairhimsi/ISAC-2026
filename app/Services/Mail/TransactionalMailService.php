@@ -2,6 +2,8 @@
 
 namespace App\Services\Mail;
 
+use App\Mail\AmbiguousAccountWarningMail;
+use App\Mail\DuplicateMemberWarningMail;
 use App\Mail\ResetPasswordMail;
 use App\Mail\VerifyEmailMail;
 use Illuminate\Mail\Mailable;
@@ -22,6 +24,30 @@ class TransactionalMailService
     public function sendResetPasswordCode(string $recipientEmail, string $code): void
     {
         $this->deliver($recipientEmail, new ResetPasswordMail($code));
+    }
+
+    public function sendDuplicateMemberWarning(
+        string $recipientEmail,
+        string $existingTeamCode,
+        string $existingTeamName,
+        string $incomingTeamCode,
+        string $incomingTeamName,
+        string $conflictKind,
+        string $conflictValue,
+    ): void {
+        $this->deliver($recipientEmail, new DuplicateMemberWarningMail(
+            existingTeamCode: $existingTeamCode,
+            existingTeamName: $existingTeamName,
+            incomingTeamCode: $incomingTeamCode,
+            incomingTeamName: $incomingTeamName,
+            conflictKind: $conflictKind,
+            conflictValue: $conflictValue,
+        ));
+    }
+
+    public function sendAmbiguousAccountWarning(string $recipientEmail): void
+    {
+        $this->deliver($recipientEmail, new AmbiguousAccountWarningMail(email: $recipientEmail));
     }
 
     private function deliver(string $recipientEmail, Mailable $mailable): void
