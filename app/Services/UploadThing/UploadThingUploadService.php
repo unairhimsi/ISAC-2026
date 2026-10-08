@@ -8,6 +8,7 @@ use App\Models\Team;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class UploadThingUploadService
 {
@@ -66,7 +67,7 @@ class UploadThingUploadService
         $registration = [
             'fileKeys' => array_column($presigned, 'key'),
             'metadata' => ['slug' => $slug, 'purpose' => $route['purpose'], 'principal' => $principal['type'], 'principalId' => $principal['id']],
-            'callbackUrl' => $this->callbackUrl($slug),
+            'callbackUrl' => $this->callbackUrl(),
             'slug' => $slug,
             'frontendPackage' => $frontendPackage,
         ];
@@ -88,6 +89,7 @@ class UploadThingUploadService
 
     public function complete(string $slug, array $payload): void
     {
+        $slug = (string) (($payload['metadata']['slug'] ?? null) ?: Str::before($slug, '?'));
         $token = UploadThingToken::fromConfig();
         $origin = (string) ($payload['origin'] ?? '');
         $file = $payload['file'] ?? null;
@@ -102,6 +104,7 @@ class UploadThingUploadService
         try {
             $registered = $this->register($token, $slug, $file, (array) ($payload['metadata'] ?? []));
         } catch (UploadThingException $e) {
+            Log::warning('UploadThing callback ditolak', ['key' => $key, 'slug' => $slug, 'reason' => $e->getMessage()]);
             $this->report($client, $origin, $key, null, $e->getMessage());
 
             return;
@@ -215,11 +218,9 @@ class UploadThingUploadService
         return (bool) config('uploadthing.is_dev') && app()->environment('local');
     }
 
-    private function callbackUrl(string $slug): string
+    private function callbackUrl(): string
     {
-        $base = config('uploadthing.callback_url') ?: rtrim((string) config('app.url'), '/').'/api/uploadthing/hook';
-
-        return $base.(str_contains($base, '?') ? '&' : '?').'slug='.rawurlencode($slug);
+        return (string) (config('uploadthing.callback_url') ?: rtrim((string) config('app.url'), '/').'/api/uploadthing/hook');
     }
 
     private function describeTypes(array $types): string

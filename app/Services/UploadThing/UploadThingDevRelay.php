@@ -7,6 +7,13 @@ use Symfony\Component\Process\PhpExecutableFinder;
 
 final class UploadThingDevRelay
 {
+    public static function forwardUrl(array $registration): string
+    {
+        $url = (string) $registration['callbackUrl'];
+
+        return $url.(str_contains($url, '?') ? '&' : '?').'slug='.rawurlencode((string) $registration['slug']);
+    }
+
     public function start(array $registration): void
     {
         $php = (new PhpExecutableFinder)->find(false);

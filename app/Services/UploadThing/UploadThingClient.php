@@ -49,7 +49,7 @@ final class UploadThingClient
 
     private function request(string $frontendPackage): PendingRequest
     {
-        return Http::timeout(15)->acceptJson()->withHeaders([
+        return Http::connectTimeout(5)->timeout(15)->acceptJson()->withHeaders([
             'x-uploadthing-api-key' => $this->token->apiKey,
             'x-uploadthing-version' => (string) config('uploadthing.client_version'),
             'x-uploadthing-be-adapter' => 'laravel',

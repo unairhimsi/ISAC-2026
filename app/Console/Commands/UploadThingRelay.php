@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\UploadThing\UploadThingDevRelay;
 use App\Services\UploadThing\UploadThingToken;
 use GuzzleHttp\Client;
 use Illuminate\Console\Command;
@@ -94,7 +95,7 @@ class UploadThingRelay extends Command
                 $buffer = substr($buffer, $position + 1);
 
                 if (is_array($line) && isset($line['payload'], $line['hook'])) {
-                    $this->forward((string) $registration['callbackUrl'], $line);
+                    $this->forward(UploadThingDevRelay::forwardUrl($registration), $line);
                     $pending--;
                 }
             }

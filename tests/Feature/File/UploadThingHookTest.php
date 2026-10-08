@@ -7,6 +7,7 @@ use App\Services\UploadThing\UploadThingSigner;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 uses(LazilyRefreshDatabase::class);
@@ -180,4 +181,39 @@ test('rich text keeps images served by this UploadThing app and drops everything
 
     expect($clean)->toContain('keep1')->toContain('keep2')
         ->not->toContain('drop1')->not->toContain('drop2')->not->toContain('drop3')->not->toContain('drop4');
+});
+
+test('the production webhook url that UploadThing builds with a doubled slug query still registers the file', function (): void {
+    $payload = callbackPayload($this->team);
+    $body = json_encode($payload);
+
+    $this->call('POST', '/api/uploadthing/hook?slug=paymentProof?slug=paymentProof', [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_UPLOADTHING_HOOK' => 'callback',
+        'HTTP_X_UPLOADTHING_SIGNATURE' => (new UploadThingSigner)->sign($body, HOOK_SECRET),
+    ], $body)->assertOk()->assertContent('null');
+
+    expect(File::query()->where('file_id', $payload['file']['key'])->exists())->toBeTrue();
+    Http::assertSent(fn (Request $request): bool => isset($request['callbackData']) && ! isset($request['error']));
+});
+
+test('the route is taken from the signed metadata and not from the query string', function (): void {
+    $payload = callbackPayload($this->team);
+    $body = json_encode($payload);
+
+    $this->call('POST', '/api/uploadthing/hook?slug=submission', [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_UPLOADTHING_HOOK' => 'callback',
+        'HTTP_X_UPLOADTHING_SIGNATURE' => (new UploadThingSigner)->sign($body, HOOK_SECRET),
+    ], $body)->assertOk();
+
+    expect(File::query()->where('file_id', $payload['file']['key'])->firstOrFail()->purpose)->toBe('PAYMENT_PROOF');
+});
+
+test('a rejected callback is logged with its reason', function (): void {
+    Log::spy();
+
+    hookCall($this, callbackPayload($this->team, [], ['purpose' => 'SUBMISSION']))->assertOk();
+
+    Log::shouldHaveReceived('warning')->withArgs(fn (string $message, array $context): bool => $message === 'UploadThing callback ditolak' && $context['reason'] === 'Rute upload tidak cocok.');
 });

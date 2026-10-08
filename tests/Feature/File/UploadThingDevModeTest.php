@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Team;
+use App\Services\UploadThing\UploadThingDevRelay;
 use Database\Seeders\DummyUploadTestSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -63,4 +64,11 @@ test('the dummy seeder creates verified accounts at the expected registration st
 
     $this->seed(DummyUploadTestSeeder::class);
     expect(Team::query()->where('email', 'like', 'dummy.%@isac.test')->count())->toBe(4);
+});
+
+test('the dev relay forwards to the hook url with the route as a query parameter', function (): void {
+    $forward = fn (string $url) => UploadThingDevRelay::forwardUrl(['callbackUrl' => $url, 'slug' => 'memberPhoto']);
+
+    expect($forward('http://nginx/api/uploadthing/hook'))->toBe('http://nginx/api/uploadthing/hook?slug=memberPhoto')
+        ->and($forward('http://nginx/hook?token=1'))->toBe('http://nginx/hook?token=1&slug=memberPhoto');
 });

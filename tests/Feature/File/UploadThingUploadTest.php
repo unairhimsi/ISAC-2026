@@ -65,7 +65,7 @@ test('a team receives a signed presigned url and the route metadata is registere
             && $request['fileKeys'] === [$item['key']]
             && $request['metadata'] === ['slug' => 'paymentProof', 'purpose' => 'PAYMENT_PROOF', 'principal' => 'team', 'principalId' => $this->team->id]
             && $request['isDev'] === false
-            && $request['callbackUrl'] === 'https://isac.example.test/api/uploadthing/hook?slug=paymentProof'
+            && $request['callbackUrl'] === 'https://isac.example.test/api/uploadthing/hook'
             && $request['callbackSlug'] === 'paymentProof'
             && $request['awaitServerData'] === true;
     });
