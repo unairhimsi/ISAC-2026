@@ -73,16 +73,9 @@ class Registration extends Model
 
     public function batch(): BelongsTo
     {
-        // withTrashed: batch yang di-soft-delete admin tetap menjadi catatan batch
-        // registrasi yang sudah membayar di dalamnya.
         return $this->belongsTo(Batch::class, 'batch_id', 'id')->withTrashed();
     }
 
-    /**
-     * Batch yang berlaku untuk registrasi ini. Sebelum tim mengirim pembayaran
-     * batch_id masih kosong, jadi yang dikembalikan adalah batch aktif saat ini
-     * (pratinjau harga). Setelah pembayaran dikirim, batch-nya sudah terkunci.
-     */
     public function effectiveBatch(): ?Batch
     {
         if ($this->batch_id !== null) {

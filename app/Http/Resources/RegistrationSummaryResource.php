@@ -19,6 +19,7 @@ class RegistrationSummaryResource extends JsonResource
         $this->resource->loadMissing('members.photoFile', 'registration.competition', 'registration.batch', 'currentStage');
 
         $registration = $this->resource->registration;
+        $batch = $registration?->effectiveBatch();
 
         $auditLogs = AdminAuditLog::query()
             ->where(function ($q) use ($registration): void {
@@ -59,7 +60,8 @@ class RegistrationSummaryResource extends JsonResource
                     'paymentRequiredAt' => $registration->payment_required_at?->toISOString(),
                     'paymentSubmittedAt' => $registration->payment_submitted_at?->toISOString(),
                     'competition' => new CompetitionResource($registration->competition),
-                    'batch' => $registration->batch === null ? null : new BatchResource($registration->batch),
+                    'batch' => $batch === null ? null : new BatchResource($batch),
+                    'batchLocked' => $registration->batch_id !== null,
                 ]
                 : null,
             'auditLogs' => $auditLogs,

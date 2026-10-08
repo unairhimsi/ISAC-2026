@@ -150,6 +150,9 @@ info "Rebuild cache"
 "$php_bin" artisan route:cache || yellow "route:cache skip"
 "$php_bin" artisan view:cache || yellow "view:cache skip"
 
+info "ImageKit URL rewrite"
+"$php_bin" artisan imagekit:rewrite-urls || yellow "imagekit:rewrite-urls tidak mengubah data (lihat pesan di atas)"
+
 info "Restart queue"
 "$php_bin" artisan queue:restart || true
 

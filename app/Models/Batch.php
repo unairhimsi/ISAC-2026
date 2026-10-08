@@ -55,13 +55,6 @@ class Batch extends Model
         ];
     }
 
-    /**
-     * Batch yang sedang menerima pembayaran pada saat query dijalankan:
-     * berstatus OPEN, dalam periode, dan kuotanya belum habis.
-     *
-     * @param  Builder<Batch>  $query
-     * @return Builder<Batch>
-     */
     public function scopePayableNow(Builder $query): Builder
     {
         return $query

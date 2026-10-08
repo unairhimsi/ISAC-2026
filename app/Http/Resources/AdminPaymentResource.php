@@ -24,7 +24,6 @@ class AdminPaymentResource extends JsonResource
         ]);
 
         $submitted = $this->payment_submitted_at !== null;
-        // Registrasi yang belum membayar belum punya batch (batch mengikuti waktu bayar).
         $originalAmount = $submitted
             ? (float) $this->amount_paid + (float) $this->discount_amount
             : (float) ($this->batch?->price ?? 0);

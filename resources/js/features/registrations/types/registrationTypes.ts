@@ -88,7 +88,7 @@ export type PaymentPageData = {
 }
 export type RegistrationSummary = {
   team: TeamProfile; members: MemberRecord[]
-  registration: null | { id: string; status: RegistrationStatus; competition: CompetitionSummary; batch: BatchSummary | null }
+  registration: null | { id: string; status: RegistrationStatus; competition: CompetitionSummary; batch: BatchSummary | null; batchLocked: boolean }
 }
 export type CompetitionQuery = { status?: CompetitionStatus }
 export type SelectCompetitionPayload = { competition_id: string }

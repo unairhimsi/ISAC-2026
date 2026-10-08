@@ -7,6 +7,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import Underline from '@tiptap/extension-underline'
 import { Bold, ImagePlus, Italic, List, ListOrdered, Loader2, Minus, Plus, RotateCcw, Underline as UnderlineIcon } from 'lucide-react'
 import { IKContext, IKUpload } from 'imagekitio-react'
+import { deliveryUrl } from '@/features/files/utils/imagekitUrl'
 import { Button } from '@/components/ui/button'
 import { useFileUpload } from '@/features/files/hooks/useFileUpload'
 import { cn } from '@/lib/utils'
@@ -76,8 +77,9 @@ function ImageUploadButton({ onUpload }: { onUpload: (url: string, name?: string
         onError={() => setUploading(false)}
         onSuccess={async (result: any) => {
           try {
-            await registerFile({ file_id: result.fileId, url: result.url, purpose: 'EXAM_IMAGE' })
-            onUpload(result.url, result.name)
+            const url = deliveryUrl(result)
+            await registerFile({ file_id: result.fileId, url, purpose: 'EXAM_IMAGE' })
+            onUpload(url, result.name)
           } finally {
             setUploading(false)
           }

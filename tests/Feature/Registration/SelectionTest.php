@@ -33,7 +33,6 @@ test('selecting OLIMPIADE does not bind a batch or consume quota', function (): 
         ->assertJsonPath('data.context.registration.batch', null)
         ->assertJsonPath('data.redirectTo', '/registration/team');
 
-    // Batch baru ditetapkan saat tim membayar, bukan saat memilih lomba.
     $this->assertDatabaseHas('registrations', [
         'team_id' => $team->id,
         'competition_id' => $competition->id,

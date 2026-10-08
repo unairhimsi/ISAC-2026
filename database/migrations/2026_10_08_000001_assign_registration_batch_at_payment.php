@@ -7,20 +7,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Batch ditentukan oleh waktu pembayaran, bukan waktu pendaftaran.
-     *
-     * Registrasi lama langsung di-bind ke batch saat tim memilih lomba dan
-     * kuota batch langsung terpakai. Sekarang batch_id kosong sampai tim
-     * mengirim pembayaran. Registrasi yang belum membayar dilepas dari batch
-     * lamanya dan kuota yang sudah terlanjur terpakai dikembalikan.
-     *
-     * Registrasi yang sudah mengirim pembayaran TIDAK diubah: nominal yang
-     * sudah ditransfer tim mengikuti harga batch lama, jadi memindahkan batch
-     * secara otomatis akan membuat harga batch dan jumlah bayar tidak cocok.
-     * Gunakan `php artisan registrations:audit-batches` untuk melihat yang
-     * pembayarannya jatuh di luar periode batch-nya.
-     */
     public function up(): void
     {
         Schema::table('registrations', function (Blueprint $table): void {

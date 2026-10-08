@@ -14,8 +14,6 @@ class PaymentFormResource extends JsonResource
     {
         $this->resource->loadMissing('registration.batch', 'registration.paymentProofFile', 'registration.paymentForStage');
         $registration = $this->resource->registration;
-        // Batch mengikuti waktu pembayaran. Sebelum tim membayar, ini hanya
-        // pratinjau batch yang sedang aktif; setelah bayar, batch-nya terkunci.
         $batch = $registration?->effectiveBatch();
         $originalAmount = $batch?->price === null ? null : (float) $batch->price;
         $hasSubmittedPayment = $registration?->payment_submitted_at !== null;

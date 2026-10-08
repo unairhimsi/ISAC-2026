@@ -21,7 +21,6 @@ beforeEach(function (): void {
         'status' => Competition::STATUS_REGISTRATION_OPEN,
         'type' => Competition::TYPE_OLIMPIADE,
     ]);
-    // Early Bird berlaku sekarang s/d 5 hari lagi; Reguler baru mulai 6 hari lagi.
     $this->batch1 = $this->competition->batches()->create([
         'name' => 'Early Bird', 'slug' => 'early-bird',
         'start_date' => now()->subDay(), 'end_date' => now()->addDays(5),
@@ -34,7 +33,6 @@ beforeEach(function (): void {
     ]);
 });
 
-/** Daftar lewat API lalu lengkapi data tim sampai tahap pembayaran. */
 function registerUpToPayment($test): Registration
 {
     $test->withToken($test->token)
@@ -149,7 +147,6 @@ test('repeating the same payment does not consume quota twice', function (): voi
     payNow($this, $proof)->assertOk();
     expect($this->batch1->fresh()->current_registrations)->toBe(1);
 
-    // Bukti lain setelah pembayaran terkirim ditolak dan juga tidak menambah kuota.
     payNow($this)->assertUnprocessable();
     expect($this->batch1->fresh()->current_registrations)->toBe(1);
 });
@@ -175,7 +172,6 @@ test('payment is refused and nothing changes when no batch is active at payment 
 
 test('a batch that filled up before payment is skipped until the next batch opens', function (): void {
     $registration = registerUpToPayment($this);
-    // Kursi Early Bird diambil tim lain yang membayar lebih dulu.
     $this->batch1->update(['current_registrations' => 10]);
 
     payNow($this)->assertUnprocessable();
@@ -186,14 +182,16 @@ test('a batch that filled up before payment is skipped until the next batch open
     expect($registration->fresh()->batch_id)->toBe($this->batch2->id);
 });
 
-test('read endpoints work for a team that has not paid yet and has no batch', function (): void {
+test('read endpoints work for a team that has not paid yet', function (): void {
     $registration = registerUpToPayment($this);
     $headers = ['Authorization' => 'Bearer '.$this->token];
 
     $this->withHeaders($headers)->getJson('/api/registrations/me/context')
         ->assertOk()->assertJsonPath('data.registration.batch', null);
     $this->withHeaders($headers)->getJson('/api/registrations/me/summary')
-        ->assertOk()->assertJsonPath('data.registration.batch', null);
+        ->assertOk()
+        ->assertJsonPath('data.registration.batch.name', 'Early Bird')
+        ->assertJsonPath('data.registration.batchLocked', false);
     $this->withHeaders($headers)->getJson('/api/dashboard/summary')
         ->assertOk()->assertJsonPath('data.payment.originalAmount', 100000);
 
@@ -204,6 +202,45 @@ test('read endpoints work for a team that has not paid yet and has no batch', fu
     $this->withToken($adminToken)->getJson('/api/admin/payments/'.$registration->id)
         ->assertOk()->assertJsonPath('data.batch', null);
     $this->withToken($adminToken)->getJson('/api/admin/teams')->assertOk();
+});
+
+test('summary shows the batch active right now for an unpaid team and follows the batch boundary', function (): void {
+    registerUpToPayment($this);
+    $summary = fn () => $this->withToken($this->token)->getJson('/api/registrations/me/summary')->assertOk();
+
+    $summary()
+        ->assertJsonPath('data.registration.batch.name', 'Early Bird')
+        ->assertJsonPath('data.registration.batch.price', '100000.00')
+        ->assertJsonPath('data.registration.batchLocked', false);
+
+    $this->travelTo(now()->addDays(10));
+
+    $summary()
+        ->assertJsonPath('data.registration.batch.name', 'Reguler')
+        ->assertJsonPath('data.registration.batch.price', '150000.00')
+        ->assertJsonPath('data.registration.batchLocked', false);
+});
+
+test('summary stays on the batch the team paid in', function (): void {
+    registerUpToPayment($this);
+    payNow($this)->assertOk();
+
+    $this->travelTo(now()->addDays(10));
+
+    $this->withToken($this->token)->getJson('/api/registrations/me/summary')
+        ->assertOk()
+        ->assertJsonPath('data.registration.batch.name', 'Early Bird')
+        ->assertJsonPath('data.registration.batchLocked', true);
+});
+
+test('summary has no batch when none is accepting payment', function (): void {
+    registerUpToPayment($this);
+    $this->travelTo(now()->addDays(40));
+
+    $this->withToken($this->token)->getJson('/api/registrations/me/summary')
+        ->assertOk()
+        ->assertJsonPath('data.registration.batch', null)
+        ->assertJsonPath('data.registration.batchLocked', false);
 });
 
 test('migration releases batch and quota of registrations that have not paid, and leaves paid ones alone', function (): void {
@@ -232,7 +269,6 @@ test('audit command reports payments that fall outside their batch period and ch
         ->expectsOutputToContain('Semua pembayaran jatuh di dalam periode batch-nya.')
         ->assertSuccessful();
 
-    // Daftar di Early Bird, tapi bukti bayar masuk setelah Early Bird berakhir (bug lama).
     Registration::query()->create([
         'competition_id' => $this->competition->id, 'batch_id' => $this->batch1->id, 'team_id' => $this->team->id,
         'status' => RegistrationStatus::WAITING_VERIFICATION, 'payment_required_at' => now(),

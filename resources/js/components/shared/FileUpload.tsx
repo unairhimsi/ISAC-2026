@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { IKContext, IKUpload } from 'imagekitio-react'
 import { useFileUpload } from '@/features/files/hooks/useFileUpload'
+import { deliveryUrl } from '@/features/files/utils/imagekitUrl'
 import type { FilePurpose, FileReference } from '@/features/files/types/fileTypes'
 
 export type UploadedFile = FileReference | null
@@ -134,7 +135,7 @@ export function FileUpload({
           try {
             const response = await registerFile({
               file_id: res.fileId,
-              url: res.url,
+              url: deliveryUrl(res),
               purpose,
             })
 
