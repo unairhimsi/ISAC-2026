@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -52,6 +53,22 @@ class Batch extends Model
             'current_registrations' => 'integer',
             'status' => BatchStatus::class,
         ];
+    }
+
+    /**
+     * Batch yang sedang menerima pembayaran pada saat query dijalankan:
+     * berstatus OPEN, dalam periode, dan kuotanya belum habis.
+     *
+     * @param  Builder<Batch>  $query
+     * @return Builder<Batch>
+     */
+    public function scopePayableNow(Builder $query): Builder
+    {
+        return $query
+            ->where('status', BatchStatus::OPEN)
+            ->where('start_date', '<=', now())
+            ->where('end_date', '>=', now())
+            ->where(fn (Builder $quota) => $quota->whereNull('quota')->orWhereColumn('current_registrations', '<', 'quota'));
     }
 
     public function competition(): BelongsTo

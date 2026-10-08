@@ -89,7 +89,7 @@ export type AdminTeamRegistration = {
   paymentSubmittedAt: string | null
   paymentAvailable: boolean
   competition: AdminCompetition
-  batch: AdminBatch
+  batch: AdminBatch | null
 }
 
 export type AdminAuditNote = {
@@ -264,7 +264,7 @@ export type AdminPayment = {
   canBeReviewed: boolean
   team: AdminPaymentTeam
   competition: AdminPaymentCompetition
-  batch: AdminPaymentBatch
+  batch: AdminPaymentBatch | null
   payment: AdminPaymentDetail
 }
 

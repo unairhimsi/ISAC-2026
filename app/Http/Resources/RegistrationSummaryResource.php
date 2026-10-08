@@ -59,7 +59,7 @@ class RegistrationSummaryResource extends JsonResource
                     'paymentRequiredAt' => $registration->payment_required_at?->toISOString(),
                     'paymentSubmittedAt' => $registration->payment_submitted_at?->toISOString(),
                     'competition' => new CompetitionResource($registration->competition),
-                    'batch' => new BatchResource($registration->batch),
+                    'batch' => $registration->batch === null ? null : new BatchResource($registration->batch),
                 ]
                 : null,
             'auditLogs' => $auditLogs,

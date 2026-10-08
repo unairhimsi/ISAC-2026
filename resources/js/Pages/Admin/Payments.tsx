@@ -129,7 +129,7 @@ export default function AdminPayments() {
                     <TableCell>
                       <div>
                         <p>{item.competition.name}</p>
-                        <p className="text-xs text-muted-foreground">{item.batch.name}</p>
+                        <p className="text-xs text-muted-foreground">{item.batch?.name ?? 'Belum ditentukan'}</p>
                       </div>
                     </TableCell>
                     <TableCell><AdminStatusBadge status={item.status} /></TableCell>

@@ -173,7 +173,7 @@ export default function AdminTeamShow({ teamId }: { teamId: string }) {
             <CardContent className="space-y-4 text-sm">
               <div><p className="text-xs text-muted-foreground">Status</p><div className="mt-1">{data.registration ? <AdminStatusBadge status={data.registration.status} /> : '—'}</div></div>
               <div><p className="text-xs text-muted-foreground">Kompetisi</p><p>{display(data.registration?.competition.name)}</p></div>
-              <div><p className="text-xs text-muted-foreground">Batch</p><p>{display(data.registration?.batch.name)}</p></div>
+              <div><p className="text-xs text-muted-foreground">Batch</p><p>{display(data.registration?.batch?.name)}</p></div>
               <div><p className="text-xs text-muted-foreground">Dikirim</p><p>{formatDate(data.registration?.submittedAt)}</p></div>
               {(data.verificationNote ?? data.team.verificationNote) && (
                 <div className="rounded-2xl border border-amber-400/25 bg-amber-400/10 p-3 text-amber-100">

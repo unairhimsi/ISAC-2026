@@ -75,7 +75,7 @@ export default function AdminTeamsIndex() {
                   <TableRow key={item.team.id}>
                     <TableCell><div><p className="font-medium text-foreground">{item.team.name ?? 'Belum dilengkapi'}</p><p className="text-xs text-muted-foreground">{item.team.code}</p></div></TableCell>
                     <TableCell className="max-w-52 whitespace-normal text-muted-foreground">{item.team.institutionName ?? '—'}</TableCell>
-                    <TableCell><div><p>{item.registration?.competition.name ?? '—'}</p><p className="text-xs text-muted-foreground">{item.registration?.batch.name ?? 'Belum memilih batch'}</p></div></TableCell>
+                    <TableCell><div><p>{item.registration?.competition.name ?? '—'}</p><p className="text-xs text-muted-foreground">{item.registration?.batch?.name ?? 'Belum membayar'}</p></div></TableCell>
                     <TableCell><AdminStatusBadge status={item.team.status} /></TableCell>
                     <TableCell>{item.registration ? <AdminStatusBadge status={item.registration.status} /> : '—'}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{formatDate(item.registration?.submittedAt)}</TableCell>

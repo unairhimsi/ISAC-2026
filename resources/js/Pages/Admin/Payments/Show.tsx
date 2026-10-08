@@ -157,8 +157,8 @@ export default function AdminPaymentShow({ registrationId }: { registrationId: s
             <CardContent className="grid gap-4 text-sm sm:grid-cols-2">
               <div><p className="text-xs text-muted-foreground">Kompetisi</p><p className="mt-1 font-medium">{competition.name}</p></div>
               <div><p className="text-xs text-muted-foreground">Tipe</p><p className="mt-1">{competition.type.replace(/_/g, ' ')}</p></div>
-              <div><p className="text-xs text-muted-foreground">Batch</p><p className="mt-1">{batch.name}</p></div>
-              <div><p className="text-xs text-muted-foreground">Harga batch</p><p className="mt-1">{formatCurrency(batch.price)}</p></div>
+              <div><p className="text-xs text-muted-foreground">Batch</p><p className="mt-1">{batch?.name ?? 'Belum ditentukan (belum membayar)'}</p></div>
+              <div><p className="text-xs text-muted-foreground">Harga batch</p><p className="mt-1">{batch ? formatCurrency(batch.price) : '-'}</p></div>
               <div><p className="text-xs text-muted-foreground">Konteks pembayaran</p><p className="mt-1">{paymentContextLabels[data.paymentContext] ?? data.paymentContext}</p></div>
               {payment.targetStage && (
                 <div className="flex items-center gap-2"><ArrowRight className="size-4 shrink-0 text-secondary" /><div><p className="text-xs text-muted-foreground">Target tahapan</p><p className="mt-1">{payment.targetStage.name}</p></div></div>

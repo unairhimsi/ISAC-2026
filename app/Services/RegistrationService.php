@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Batch;
-use App\Models\BatchStatus;
 use App\Models\Competition;
 use App\Models\File;
 use App\Models\Registration;
@@ -41,36 +40,29 @@ class RegistrationService
                 throw ValidationException::withMessages(['competition_id' => ['Pendaftaran kompetisi belum dibuka.']]);
             }
 
-            // Batch is resolved at the exact registration time on the server.
-            // The latest valid opening is selected, so client input can never
-            // bind a Team to a closed, full, or unrelated Batch.
-            $batch = Batch::query()
+            // Memilih lomba TIDAK menentukan batch dan tidak memakai kuota. Batch
+            // baru ditetapkan saat tim mengirim pembayaran (lihat claimPaymentBatch),
+            // jadi tim yang mendaftar di Batch 1 tapi membayar di Batch 2 masuk
+            // Batch 2. Pengecekan ini hanya mencegah tim mendaftar ketika memang
+            // tidak ada batch yang bisa menerima pembayaran sama sekali.
+            $hasPayableBatch = Batch::query()
                 ->where('competition_id', $competition->id)
-                ->where('status', BatchStatus::OPEN)
-                ->where('start_date', '<=', now())
-                ->where('end_date', '>=', now())
-                ->where(fn ($query) => $query->whereNull('quota')->orWhereColumn('current_registrations', '<', 'quota'))
-                ->orderByDesc('start_date')
-                ->lockForUpdate()
-                ->first();
+                ->payableNow()
+                ->exists();
 
-            if ($batch === null) {
+            if (! $hasPayableBatch) {
                 throw ValidationException::withMessages(['competition_id' => ['Belum ada Batch aktif dengan kuota tersedia untuk kompetisi ini.']]);
             }
 
-            // UNIFIED: semua lomba wajib bayar di awal, tanpa membedakan type/payment_flow. No DB schema change — payment_for_stage_id tetap ada tapi diabaikan.
-            $registration = Registration::create([
+            // UNIFIED: semua lomba wajib bayar di awal, tanpa membedakan type/payment_flow. payment_for_stage_id tetap ada tapi diabaikan.
+            return Registration::create([
                 'team_id' => $team->id,
                 'competition_id' => $competition->id,
-                'batch_id' => $batch->id,
+                'batch_id' => null,
                 'status' => RegistrationStatus::WAITING_PAYMENT,
                 'payment_required_at' => now(),
                 'payment_verified_at' => null,
             ]);
-
-            $batch->increment('current_registrations');
-
-            return $registration;
         });
     }
 
@@ -384,25 +376,33 @@ class RegistrationService
             throw ValidationException::withMessages(['payment' => ['Lengkapi seluruh data pendaftaran terlebih dahulu.']]);
         }
 
-        if (! in_array($registration->status, [RegistrationStatus::WAITING_PAYMENT, RegistrationStatus::REVISION_REQUIRED], true)) {
-            $requestedPromoCode = Str::upper(trim((string) ($data['promo_code'] ?? '')));
-            $submittedPromoCode = Str::upper(trim((string) $registration->promo_code));
-            $requestedTransactionId = trim((string) ($data['transaction_id'] ?? ''));
-            if ($registration->payment_submitted_at !== null
-                && $registration->payment_proof_file_id === $data['payment_proof_file_id']
-                && $registration->payment_method?->value === $data['payment_method']
-                && ($registration->transaction_id ?? '') === $requestedTransactionId
-                && $submittedPromoCode === $requestedPromoCode) {
+        if (! $this->isPayable($registration)) {
+            if ($this->isSamePaymentSubmission($registration, $data)) {
                 return $this->getPaymentData($team);
             }
             throw ValidationException::withMessages(['payment' => ['Pembayaran tidak tersedia pada tahap ini.']]);
         }
 
         $this->assertOwnedFile($team, $data['payment_proof_file_id'], 'PAYMENT_PROOF', 'payment_proof_file_id');
-        $quote = $this->paymentQuote($registration, $data['promo_code'] ?? null);
 
-        DB::transaction(function () use ($team, $data, $registration, $quote): void {
-            $registration->update([
+        DB::transaction(function () use ($team, $data, $registration): void {
+            // Registrasi dikunci dulu supaya dua request bersamaan dari tim yang
+            // sama (double submit) tidak sama-sama menetapkan batch dan memakai
+            // kuota dua kali.
+            $locked = Registration::query()->lockForUpdate()->findOrFail($registration->id);
+            if (! $this->isPayable($locked)) {
+                if ($this->isSamePaymentSubmission($locked, $data)) {
+                    return;
+                }
+                throw ValidationException::withMessages(['payment' => ['Pembayaran tidak tersedia pada tahap ini.']]);
+            }
+
+            // Batch mengikuti waktu pembayaran: ditetapkan sekarang, saat tim mengirim bukti bayar.
+            $batch = $this->claimPaymentBatch($locked);
+            $quote = $this->paymentQuote($locked, $data['promo_code'] ?? null, $batch);
+
+            $locked->update([
+                'batch_id' => $batch->id,
                 'payment_proof_file_id' => $data['payment_proof_file_id'],
                 'amount_paid' => $quote['amount'],
                 'payment_method' => $data['payment_method'],
@@ -413,7 +413,7 @@ class RegistrationService
                 'payment_submitted_at' => now(),
                 'payment_rejection_reason' => null,
                 'status' => RegistrationStatus::WAITING_VERIFICATION,
-                'submitted_at' => $registration->submitted_at ?? now(),
+                'submitted_at' => $locked->submitted_at ?? now(),
             ]);
 
             $team->update(['status' => Team::STATUS_WAITING_VERIFICATION]);
@@ -422,12 +422,76 @@ class RegistrationService
         return $team->fresh()->load('registration.batch', 'registration.paymentProofFile', 'registration.paymentForStage');
     }
 
+    private function isPayable(Registration $registration): bool
+    {
+        return in_array($registration->status, [RegistrationStatus::WAITING_PAYMENT, RegistrationStatus::REVISION_REQUIRED], true);
+    }
+
+    /** @param  array<string, mixed>  $data */
+    private function isSamePaymentSubmission(Registration $registration, array $data): bool
+    {
+        $requestedPromoCode = Str::upper(trim((string) ($data['promo_code'] ?? '')));
+        $submittedPromoCode = Str::upper(trim((string) $registration->promo_code));
+        $requestedTransactionId = trim((string) ($data['transaction_id'] ?? ''));
+
+        return $registration->payment_submitted_at !== null
+            && $registration->payment_proof_file_id === $data['payment_proof_file_id']
+            && $registration->payment_method?->value === $data['payment_method']
+            && ($registration->transaction_id ?? '') === $requestedTransactionId
+            && $submittedPromoCode === $requestedPromoCode;
+    }
+
+    /**
+     * Tetapkan batch registrasi berdasarkan waktu pembayaran dan pakai satu
+     * kuotanya. Harus dipanggil di dalam transaksi dengan registrasi terkunci.
+     *
+     * Pembayaran pertama memilih batch yang sedang aktif. Kirim ulang bukti bayar
+     * setelah revisi memakai batch yang sama dan tidak memakai kuota lagi,
+     * karena tim sudah membayar dan batch-nya tidak boleh berpindah.
+     */
+    private function claimPaymentBatch(Registration $registration): Batch
+    {
+        if ($registration->batch_id !== null) {
+            return Batch::query()->withTrashed()->findOrFail($registration->batch_id);
+        }
+
+        $batch = Batch::query()
+            ->where('competition_id', $registration->competition_id)
+            ->payableNow()
+            ->orderByDesc('start_date')
+            ->lockForUpdate()
+            ->first();
+
+        if ($batch === null) {
+            throw ValidationException::withMessages(['payment' => ['Belum ada Batch aktif dengan kuota tersedia untuk pembayaran saat ini.']]);
+        }
+
+        $batch->increment('current_registrations');
+
+        return $batch;
+    }
+
+    /**
+     * Batch yang dipakai untuk menghitung harga: batch yang sudah terkunci
+     * (pembayaran sudah pernah dikirim), atau batch aktif saat ini.
+     */
+    private function quoteBatch(Registration $registration): Batch
+    {
+        $batch = $registration->effectiveBatch();
+        if ($batch === null) {
+            throw ValidationException::withMessages(['payment' => ['Belum ada Batch aktif dengan kuota tersedia untuk pembayaran saat ini.']]);
+        }
+
+        return $batch;
+    }
+
     /**
      * @return array{originalAmount: float, discountPercent: int, discountAmount: float, amount: float, promoApplied: bool, promoCode: ?string}
      */
-    private function paymentQuote(Registration $registration, ?string $promoCode): array
+    private function paymentQuote(Registration $registration, ?string $promoCode, ?Batch $batch = null): array
     {
-        $originalAmount = round((float) $registration->batch->price, 2);
+        $batch ??= $this->quoteBatch($registration);
+        $originalAmount = round((float) $batch->price, 2);
         $normalizedPromoCode = Str::upper(trim((string) $promoCode));
         $configuredPromoCode = Str::upper(trim((string) config('registration.promo.code')));
         $promoApplied = $normalizedPromoCode !== ''

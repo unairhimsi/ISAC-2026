@@ -27,7 +27,7 @@ export type RegistrationContext = {
     verificationNote: string | null
   }
   registration: null | {
-    id: string; status: RegistrationStatus; competition: CompetitionSummary; batch: BatchSummary
+    id: string; status: RegistrationStatus; competition: CompetitionSummary; batch: BatchSummary | null
     paymentRequiredAt: string | null; paymentSubmittedAt: string | null; paymentRejectionReason: string | null
     paymentForStage: StageSummary | null
   }
@@ -77,8 +77,9 @@ export type PaymentQuoteData = {
   originalAmount: number; discountPercent: number; discountAmount: number; amount: number
   promoApplied: boolean; promoCode: string | null
 }
+export type PaymentBatch = { id: string; name: string; price: number; endAt: string | null }
 export type PaymentPageData = {
-  registrationId: string; originalAmount: number; amount: number; discountPercent: number
+  registrationId: string; batch: PaymentBatch | null; batchLocked: boolean; originalAmount: number; amount: number; discountPercent: number
   discountAmount: number; promoApplied: boolean; promoCode: string | null
   paymentMethods: PaymentMethod[]; paymentInstructions: string | null
   qrisImageUrl: string | null
@@ -87,7 +88,7 @@ export type PaymentPageData = {
 }
 export type RegistrationSummary = {
   team: TeamProfile; members: MemberRecord[]
-  registration: null | { id: string; status: RegistrationStatus; competition: CompetitionSummary; batch: BatchSummary }
+  registration: null | { id: string; status: RegistrationStatus; competition: CompetitionSummary; batch: BatchSummary | null }
 }
 export type CompetitionQuery = { status?: CompetitionStatus }
 export type SelectCompetitionPayload = { competition_id: string }

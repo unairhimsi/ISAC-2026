@@ -111,7 +111,7 @@ export default function RegistrationCompetition() {
 
         <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">
           {selectedCompetitionId
-            ? 'Pilihan kompetisi sudah tersimpan bersama Batch pendaftaran dan tidak dapat diubah.'
+            ? 'Pilihan kompetisi sudah tersimpan dan tidak dapat diubah. Batch ditentukan saat Anda mengirim pembayaran.'
             : 'Pilih salah satu kompetisi ISAC 2026 untuk melanjutkan pendaftaran.'}
         </p>
       </header>

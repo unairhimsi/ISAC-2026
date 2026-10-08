@@ -293,7 +293,7 @@ export default function AdminTeamStages() {
                     <TableRow key={item.team.id} className={cn(checked && "bg-primary/5", eligible===false && targetStage && "opacity-60")}>
                       <TableCell><input type="checkbox" checked={checked} onChange={()=>toggleSelect(item.team.id)} className="size-4 accent-primary" /></TableCell>
                       <TableCell><div><p className="font-medium">{item.team.name ?? '—'}</p><p className="text-xs text-muted-foreground">{item.team.code} · {item.team.email}</p></div></TableCell>
-                      <TableCell><div><p className="text-sm">{item.registration?.competition.name ?? '—'}</p><p className="text-xs text-muted-foreground">{item.registration?.batch.name ?? '—'}</p></div></TableCell>
+                      <TableCell><div><p className="text-sm">{item.registration?.competition.name ?? '—'}</p><p className="text-xs text-muted-foreground">{item.registration?.batch?.name ?? '—'}</p></div></TableCell>
                       <TableCell>
                         {item.currentStage ? <span className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs"><Layers3 className="size-3" />Tahap {item.currentStage.order}: {item.currentStage.name}</span> : <span className="text-xs text-muted-foreground">Belum ada (REGISTRATION)</span>}
                       </TableCell>

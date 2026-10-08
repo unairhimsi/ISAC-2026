@@ -25,7 +25,7 @@ const TeamAccount = () => {
         <div className="relative z-10 rounded-[inherit] bg-background/20 backdrop-blur-sm p-6">
           <TeamDetail data={{
             name: summary.team.name ?? '-', phone: summary.team.phone ?? '-', institutionName: summary.team.institutionName ?? '-',
-            competitionType: registration?.competition.type ?? 'OLIMPIADE', batchName: registration?.batch.name ?? '-',
+            competitionType: registration?.competition.type ?? 'OLIMPIADE', batchName: registration?.batch?.name ?? 'Ditentukan saat pembayaran',
           }} accent={accentColors[0]} />
         </div>
       </div>
@@ -33,7 +33,7 @@ const TeamAccount = () => {
       {registration && (
         <div className="grid gap-4 rounded-2xl border border-white/10 bg-card/45 p-5 backdrop-blur-md sm:grid-cols-3">
           <div><p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Competition</p><p className="mt-2 font-semibold text-foreground">{registration.competition.name}</p></div>
-          <div><p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Batch terpilih</p><p className="mt-2 font-semibold text-foreground">{registration.batch.name} · {formatCurrency(registration.batch.price)}</p></div>
+          <div><p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Batch</p><p className="mt-2 font-semibold text-foreground">{registration.batch ? `${registration.batch.name} · ${formatCurrency(registration.batch.price)}` : 'Ditentukan saat pembayaran dikirim'}</p></div>
           <div><p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Waktu pembayaran</p><p className="mt-2 font-semibold text-foreground">{registration.competition.paymentFlow === 'UPFRONT' ? 'Saat pendaftaran' : 'Jika lolos Semifinal'}</p></div>
         </div>
       )}

@@ -8,12 +8,14 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { FileUpload } from '@/components/shared/FileUpload'
 import { uploadPaymentSchema, type UploadPaymentInput } from '../schemas/uploadPayment'
-import type { BankAccount, ExternalFile, PaymentFormValues, PaymentMethod, PaymentQuoteData } from '../types/registrationTypes'
+import type { BankAccount, ExternalFile, PaymentBatch, PaymentFormValues, PaymentMethod, PaymentQuoteData } from '../types/registrationTypes'
 import { usePaymentQuote } from '../hooks/useRegistration'
 import { ApiClientError } from '@/lib/api'
 import { formatCurrency } from '@/lib/formatters'
 
 type Props = {
+  batch: PaymentBatch | null
+  batchLocked: boolean
   bankAccounts: BankAccount[]
   paymentMethods: PaymentMethod[]
   qrisImageUrl: string | null
@@ -32,6 +34,8 @@ type Props = {
 const formatAccountNumber = (value: string) => value.replace(/(\d{4})(?=\d)/g, '$1 ')
 
 const FormPayment = ({
+  batch,
+  batchLocked,
   bankAccounts,
   paymentMethods,
   qrisImageUrl,
@@ -235,6 +239,9 @@ const FormPayment = ({
               <div className="inline-block rounded-full bg-primary px-8 py-3">
                 <span className="text-2xl font-bold text-primary-foreground">{formatCurrency(pricing.amount)}</span>
               </div>
+              {batch
+                ? <p className="mt-3 text-sm text-muted-foreground">{batchLocked ? `Batch Anda: ${batch.name}.` : `Batch saat ini: ${batch.name}. Batch Anda ditetapkan saat bukti pembayaran dikirim, sesuai waktu pengiriman.`}</p>
+                : <p className="mt-3 text-sm text-destructive">Belum ada batch yang menerima pembayaran. Coba lagi saat batch berikutnya dibuka.</p>}
               {instructions && <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">{instructions}</p>}
             </div>
 

@@ -14,6 +14,7 @@ class DashboardSummaryResource extends JsonResource
     {
         $registration = $this->resource->registration;
         $context = (new RegistrationContextResource($this->resource))->toArray($request);
+        $listPrice = (float) ($registration?->effectiveBatch()?->price ?? 0);
 
         return [
             ...$context,
@@ -33,9 +34,9 @@ class DashboardSummaryResource extends JsonResource
             'payment' => $registration === null ? null : [
                 'status' => $registration->status?->value,
                 'amount' => $registration->payment_submitted_at === null
-                    ? (float) $registration->batch->price
+                    ? $listPrice
                     : (float) $registration->amount_paid,
-                'originalAmount' => (float) $registration->batch->price,
+                'originalAmount' => $listPrice,
                 'promoCode' => $registration->promo_code,
                 'discountPercent' => (float) $registration->discount_percent,
                 'discountAmount' => (float) $registration->discount_amount,
