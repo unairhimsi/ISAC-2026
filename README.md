@@ -227,7 +227,7 @@ User provides:
 
 1. User selects payment method: `BANK_TRANSFER` or `QRIS`
 2. Optional: enter promo code → `POST /registrations/me/payment/quote` → see discounted price
-3. User uploads proof of payment (image) → uploaded to ImageKit
+3. User uploads proof of payment (image) → uploaded to UploadThing
 4. `POST /registrations/me/payment` → submission complete
 
 **Backend:** `RegistrationService::submitPayment()`
@@ -489,7 +489,7 @@ POST   /admin/registrations/{registration}/payment/reject   — Reject payment
 - **Styling:** Tailwind CSS
 - **Database:** MySQL 8.4
 - **Auth:** Laravel Sanctum
-- **File Upload:** ImageKit (via signed upload auth)
+- **File Upload:** UploadThing (presigned upload issued by a Laravel route, files registered from a signed callback)
 - **Server:** Nginx + PHP-FPM
 - **Infra:** Docker Compose Watch
 

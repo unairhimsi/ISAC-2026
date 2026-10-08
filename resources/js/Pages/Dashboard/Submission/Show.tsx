@@ -339,7 +339,7 @@ export default function SubmissionShell({
             </CardTitle>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
               {canSubmit
-                ? 'Isi judul, deskripsi, dan upload file karya. File akan di-upload ke ImageKit lalu dicatat sebagai submission. Tidak ada form pembayaran di sini.'
+                ? 'Isi judul, deskripsi, dan upload file karya. File akan di-upload lalu dicatat sebagai submission. Tidak ada form pembayaran di sini.'
                 : data.window.isOverdue
                   ? 'Periode telah berakhir, pengumpulan ditutup.'
                   : 'Pengumpulan belum dibuka atau tidak tersedia untuk team ini.'}
@@ -374,14 +374,13 @@ export default function SubmissionShell({
                   value={file}
                   onChange={setFile}
                   disabled={!canSubmit}
-                  folder={`/submissions/${stageId}`}
                   accept="application/pdf,image/png,image/jpeg,image/webp"
                   maxSizeMB={20}
                   label="Upload File Karya"
                   subLabel="PDF / PNG / JPG max 20mb — langsung tanpa bayar"
                   purpose="SUBMISSION"
                 />
-                <p className="text-xs text-muted-foreground">File di-upload langsung ke ImageKit (signed), lalu `file_id` akan dipakai saat menyimpan submission.</p>
+                <p className="text-xs text-muted-foreground">File di-upload langsung ke penyimpanan (UploadThing), lalu dipakai saat menyimpan submission.</p>
               </div>
             </div>
 

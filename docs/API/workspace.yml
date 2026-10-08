@@ -15,8 +15,6 @@ collections:
     path: "collections/Team"
   - name: "File"
     path: "collections/File"
-  - name: "ImageKit"
-    path: "collections/ImageKit"
   - name: "Competitions"
     path: "collections/Competitions"
   - name: "Registration"

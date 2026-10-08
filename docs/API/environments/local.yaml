@@ -17,5 +17,3 @@ vars:
   stage_id: ""
   file_id: ""
   payment_proof_file_id: ""
-  imagekit_file_id: ""
-  imagekit_url: ""

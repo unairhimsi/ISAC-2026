@@ -1,10 +1,8 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { FileCheck2, FileText, Loader2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { IKContext, IKUpload } from 'imagekitio-react'
-import { useFileUpload } from '@/features/files/hooks/useFileUpload'
-import { deliveryUrl } from '@/features/files/utils/imagekitUrl'
+import { useAppUpload } from '@/features/files/hooks/useAppUpload'
 import type { FilePurpose, FileReference } from '@/features/files/types/fileTypes'
 
 export type UploadedFile = FileReference | null
@@ -13,7 +11,6 @@ interface FileUploadProps {
   value: UploadedFile
   onChange: (value: UploadedFile) => void
   disabled?: boolean
-  folder?: string
   accept?: string
   maxSizeMB?: number
   label?: string
@@ -25,26 +22,19 @@ export function FileUpload({
   value,
   onChange,
   disabled,
-  folder = '/uploads',
   accept = 'image/png,image/jpeg,image/webp,application/pdf',
   maxSizeMB = 10,
   label = 'Bukti Upload',
   subLabel,
   purpose,
 }: FileUploadProps) {
-  const { authenticate, registerFile, isRegistering } = useFileUpload()
   const inputRef = useRef<HTMLInputElement>(null)
-  const [status, setStatus] = useState<'idle' | 'uploading' | 'error'>('idle')
-  const [progress, setProgress] = useState(0)
-  const [pendingName, setPendingName] = useState<string | null>(null)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
-
-  const reset = () => {
-    if (inputRef.current) inputRef.current.value = ''
-    setStatus('idle')
-    setProgress(0)
-    setPendingName(null)
-  }
+  const { status, progress, pendingName, errorMessage, upload, reset } = useAppUpload({
+    purpose,
+    accept,
+    maxSizeMB,
+    onUploaded: (file) => onChange(file),
+  })
 
   if (value) {
     return (
@@ -73,11 +63,7 @@ export function FileUpload({
   }
 
   return (
-    <IKContext
-      urlEndpoint={import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT}
-      publicKey={import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY}
-      authenticator={authenticate}
-    >
+    <>
       <div
         role="button"
         tabIndex={0}
@@ -87,7 +73,7 @@ export function FileUpload({
         }}
         className={cn(
           'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-white/20 bg-white/5 px-4 py-6 text-center transition-colors hover:bg-white/10',
-          (status === 'uploading' || isRegistering || disabled) && 'pointer-events-none opacity-70',
+          (status === 'uploading' || disabled) && 'pointer-events-none opacity-70',
         )}
       >
         {status === 'uploading' ? (
@@ -108,52 +94,18 @@ export function FileUpload({
         )}
       </div>
 
-      <IKUpload
+      <input
         ref={inputRef}
+        type="file"
         hidden
         accept={accept}
-        folder={folder}
-        useUniqueFileName
-        checks={`"file.size" < "${maxSizeMB}mb"`}
-        onChange={(e:any) => {
-          setErrorMsg(null)
-          setPendingName(e.target.files?.[0]?.name ?? null)
-        }}
-        onUploadStart={() => {
-          setStatus('uploading')
-          setProgress(0)
-        }}
-        onUploadProgress={(e:any) => {
-          setProgress(Math.round((e.loaded / e.total) * 100))
-        }}
-        onError={() => {
-          setErrorMsg('Upload gagal, coba lagi')
-          setStatus('error')
-          reset()
-        }}
-        onSuccess={async (res:any) => {
-          try {
-            const response = await registerFile({
-              file_id: res.fileId,
-              url: deliveryUrl(res),
-              purpose,
-            })
-
-            onChange({
-              id: response.data.id,
-              fileId: response.data.fileId,
-              url: response.data.url,
-              name: res.name,
-            })
-            setStatus('idle')
-          } catch {
-            setErrorMsg('File terupload, tetapi gagal dicatat ke database')
-            setStatus('error')
-            reset()
-          }
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          e.target.value = ''
+          if (file) void upload(file)
         }}
       />
-      {errorMsg && <p className="mt-1 text-sm text-red-400">{errorMsg}</p>}
-    </IKContext>
+      {errorMessage && <p className="mt-1 text-sm text-red-400">{errorMessage}</p>}
+    </>
   )
 }

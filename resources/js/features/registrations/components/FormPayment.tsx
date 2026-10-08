@@ -299,7 +299,6 @@ const FormPayment = ({
                   <FileUpload
                     value={field.value}
                     onChange={field.onChange}
-                    folder="/payment-proofs"
                     purpose="PAYMENT_PROOF"
                     label="Upload Bukti Pembayaran"
                     subLabel="PDF, JPG, PNG, atau WebP maksimal 10 MB"

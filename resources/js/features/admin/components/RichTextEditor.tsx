@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
 import { NodeSelection } from '@tiptap/pm/state'
 import StarterKit from '@tiptap/starter-kit'
@@ -6,10 +6,9 @@ import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
 import Underline from '@tiptap/extension-underline'
 import { Bold, ImagePlus, Italic, List, ListOrdered, Loader2, Minus, Plus, RotateCcw, Underline as UnderlineIcon } from 'lucide-react'
-import { IKContext, IKUpload } from 'imagekitio-react'
-import { deliveryUrl } from '@/features/files/utils/imagekitUrl'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { useFileUpload } from '@/features/files/hooks/useFileUpload'
+import { useAppUpload } from '@/features/files/hooks/useAppUpload'
 import { cn } from '@/lib/utils'
 
 type RichTextEditorProps = { value: string; onChange: (value: string) => void; placeholder: string; className?: string }
@@ -57,35 +56,35 @@ function ImageResizeControls({ width, onResize }: { width: number; onResize: (wi
 }
 
 function ImageUploadButton({ onUpload }: { onUpload: (url: string, name?: string) => void }) {
-  const inputRef = useRef<any>(null)
-  const { authenticate, registerFile, isRegistering } = useFileUpload()
-  const [uploading, setUploading] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const { isUploading, upload, errorMessage } = useAppUpload({
+    purpose: 'EXAM_IMAGE',
+    accept: 'image/png,image/jpeg,image/webp',
+    maxSizeMB: 5,
+    onUploaded: (file) => onUpload(file.url, file.name),
+  })
+
+  useEffect(() => {
+    if (errorMessage) toast.error(errorMessage)
+  }, [errorMessage])
 
   return (
-    <IKContext urlEndpoint={import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT} publicKey={import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY} authenticator={authenticate}>
-      <Button type="button" size="icon-sm" variant="ghost" disabled={uploading || isRegistering} onClick={() => inputRef.current?.click()} aria-label="Sisipkan gambar">
-        {uploading ? <Loader2 className="animate-spin" /> : <ImagePlus />}
+    <>
+      <Button type="button" size="icon-sm" variant="ghost" disabled={isUploading} onClick={() => inputRef.current?.click()} aria-label="Sisipkan gambar">
+        {isUploading ? <Loader2 className="animate-spin" /> : <ImagePlus />}
       </Button>
-      <IKUpload
+      <input
         ref={inputRef}
+        type="file"
         hidden
         accept="image/png,image/jpeg,image/webp"
-        folder="/isac-2026/exams"
-        useUniqueFileName
-        checks={'"file.size" < "5mb"'}
-        onUploadStart={() => setUploading(true)}
-        onError={() => setUploading(false)}
-        onSuccess={async (result: any) => {
-          try {
-            const url = deliveryUrl(result)
-            await registerFile({ file_id: result.fileId, url, purpose: 'EXAM_IMAGE' })
-            onUpload(url, result.name)
-          } finally {
-            setUploading(false)
-          }
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          e.target.value = ''
+          if (file) void upload(file)
         }}
       />
-    </IKContext>
+    </>
   )
 }
 

@@ -45,12 +45,6 @@ return [
         'sandbox' => (bool) env('BREVO_SANDBOX', false),
     ],
 
-    'imagekit' => [
-        'private_key' => env('IMAGEKIT_PRIVATE_KEY'),
-        'url_endpoint' => env('IMAGEKIT_URL_ENDPOINT', env('VITE_IMAGEKIT_URL_ENDPOINT')),
-        'legacy_url_endpoint' => env('IMAGEKIT_LEGACY_URL_ENDPOINT'),
-    ],
-
     'google_sheet' => [
         'url' => env('GOOGLE_SHEET_API_URL'),
         'key' => env('GOOGLE_SHEET_API_KEY'),

@@ -16,7 +16,7 @@ use App\Http\Controllers\Api\JudgingController;
 use App\Http\Controllers\Api\RegistrationController;
 use App\Http\Controllers\Api\SubmissionController;
 use App\Http\Controllers\Api\TeamController;
-use App\Http\Controllers\ImageKitAuthController;
+use App\Http\Controllers\Api\UploadThingController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/system/status', function () {
@@ -57,12 +57,13 @@ Route::prefix('teams')->middleware(['auth:sanctum', 'principal.team', 'team.veri
 });
 
 Route::prefix('files')->middleware(['auth:sanctum', 'upload.principal'])->group(function (): void {
-    Route::post('/', [FileController::class, 'store']);
     Route::get('/{file}', [FileController::class, 'show'])->name('files.show');
 });
 
-Route::get('/imagekit-auth', [ImageKitAuthController::class, 'auth'])
-    ->middleware(['auth:sanctum', 'upload.principal']);
+Route::get('/uploadthing', [UploadThingController::class, 'config']);
+Route::post('/uploadthing/hook', [UploadThingController::class, 'hook']);
+Route::post('/uploadthing', [UploadThingController::class, 'upload'])
+    ->middleware(['auth:sanctum', 'upload.principal', 'throttle:60,1']);
 
 Route::get('/competitions', [CompetitionController::class, 'index']);
 Route::get('/competitions/open', [CompetitionController::class, 'open']);

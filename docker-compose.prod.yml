@@ -3,8 +3,6 @@ name: ${COMPOSE_PROJECT_NAME:-isac-2026-prod}
 x-frontend-build-args: &frontend-build-args
   VITE_APP_NAME: ${VITE_APP_NAME:-ISAC 2026}
   VITE_APP_URL: ${VITE_APP_URL:-}
-  VITE_IMAGEKIT_PUBLIC_KEY: ${VITE_IMAGEKIT_PUBLIC_KEY:-}
-  VITE_IMAGEKIT_URL_ENDPOINT: ${VITE_IMAGEKIT_URL_ENDPOINT:-}
 
 x-app-runtime: &app-runtime
   build:

@@ -159,7 +159,7 @@ export default function AdminQuestions() {
   return (
     <>
       <Seo title="Buat Soal" description="Penyusunan soal ujian ISAC melalui editor rich text." canonical="/admin/questions" noindex />
-      <AdminPageHeader title="Buat Soal" description="Susun pertanyaan, jawaban, gambar ImageKit, dan pembahasan dalam satu alur." />
+      <AdminPageHeader title="Buat Soal" description="Susun pertanyaan, jawaban, gambar, dan pembahasan dalam satu alur." />
       <div className="space-y-6">
         <Card className="border-border/60 bg-card/70"><CardHeader><CardTitle>Form soal</CardTitle><CardDescription>Pilih konteks ujian, lalu susun pertanyaan dan jawabannya. Konten HTML dibersihkan server sebelum disimpan.</CardDescription></CardHeader><CardContent className="space-y-5">
           <div className="grid gap-4 md:grid-cols-3">

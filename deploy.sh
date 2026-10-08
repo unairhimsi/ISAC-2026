@@ -100,6 +100,21 @@ else
   COMPOSER_EXTRA_ARGS=""
 fi
 
+info "Preflight check: ext-bcmath atau ext-gmp"
+if ! "$php_bin" -m 2>/dev/null | grep -qiE "^(bcmath|gmp)$"; then
+  red "ERROR: ext-bcmath dan ext-gmp sama-sama TIDAK AKTIF pada $php_bin"
+  echo "  Library sqids (pembuat key upload UploadThing) wajib memakai salah satunya."
+  echo "  Tanpa ini upload bukti bayar, foto, dan karya akan gagal."
+  echo ""
+  yellow "FIX:"
+  echo "  1. Login cPanel -> 'Select PHP Version' -> pilih versi PHP yang dipakai deploy"
+  echo "  2. Centang ekstensi 'bcmath' -> Save"
+  echo "  3. Verifikasi SSH: $php_bin -m | grep -E 'bcmath|gmp'"
+  echo "  4. Jalankan ulang ./deploy.sh"
+  exit 1
+fi
+green "OK: ekstensi matematika untuk sqids aktif pada $php_bin"
+
 if ! "$php_bin" -r 'exit(version_compare(PHP_VERSION, "8.2.0", ">=") ? 0 : 1);'; then
   red "ERROR: PHP version < 8.2, but composer.json requires ^8.2 (Laravel 12). Upgrade alt-php."
   exit 1
@@ -149,9 +164,6 @@ info "Rebuild cache"
 "$php_bin" artisan config:cache || yellow "config:cache skip (mungkin .env belum lengkap)"
 "$php_bin" artisan route:cache || yellow "route:cache skip"
 "$php_bin" artisan view:cache || yellow "view:cache skip"
-
-info "ImageKit URL rewrite"
-"$php_bin" artisan imagekit:rewrite-urls || yellow "imagekit:rewrite-urls tidak mengubah data (lihat pesan di atas)"
 
 info "Restart queue"
 "$php_bin" artisan queue:restart || true

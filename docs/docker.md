@@ -59,7 +59,7 @@ curl -f http://localhost:8080/up
 
 ## Menyiapkan production
 
-Salin template environment. Ganti domain, credential mail, ImageKit, dan seluruh password. `APP_KEY` dibuat pada langkah setelahnya:
+Salin template environment. Ganti domain, credential mail, `UPLOADTHING_TOKEN`, dan seluruh password. `APP_KEY` dibuat pada langkah setelahnya:
 
 ```bash
 cp .env.production.example .env.production
@@ -142,7 +142,7 @@ Untuk rollback aplikasi, deploy kembali image/tag versi sebelumnya. Migration da
 - `APP_ENV=production`, `APP_DEBUG=false`, dan `APP_KEY` unik sudah terisi.
 - `APP_URL`, cookie secure, dan daftar domain Sanctum sesuai domain HTTPS.
 - Password MySQL kuat dan berbeda untuk user aplikasi serta root.
-- Credential mail dan ImageKit valid.
+- Credential mail dan `UPLOADTHING_TOKEN` valid.
 - Backup database terjadwal dan restore pernah diuji.
 - TLS, firewall, log collection, disk monitoring, dan alert health endpoint tersedia di host/platform.
 - Image dipindai dan dependency diperbarui secara berkala.

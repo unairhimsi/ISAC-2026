@@ -1,8 +1,11 @@
-import type { ApiResponse } from '@/types/api'
-
 export type FilePurpose = 'PAYMENT_PROOF' | 'MEMBER_PHOTO' | 'BATCH_MODULE' | 'EXAM_IMAGE' | 'SUBMISSION'
 export type FileReference = { id: string; fileId: string; url: string; purpose?: FilePurpose; name?: string }
-export type ImageKitAuth = { token: string; expire: number; signature: string }
-export type RegisterFilePayload = { file_id: string; url: string; purpose: FilePurpose }
-export type ImageKitAuthResponse = ApiResponse<ImageKitAuth>
-export type RegisterFileResponse = ApiResponse<FileReference>
+export type UploadedServerData = { id?: string; fileId?: string; url?: string; purpose?: FilePurpose }
+
+export const uploadRoutes: Record<FilePurpose, string> = {
+  PAYMENT_PROOF: 'paymentProof',
+  MEMBER_PHOTO: 'memberPhoto',
+  SUBMISSION: 'submission',
+  BATCH_MODULE: 'batchModule',
+  EXAM_IMAGE: 'examImage',
+}

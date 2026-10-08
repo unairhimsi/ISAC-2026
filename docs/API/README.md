@@ -78,9 +78,9 @@ Status penting: `401` unauthenticated, `403` policy/principal salah, `404`
 resource tidak ditemukan, `409` account ambigu, `422` validasi/domain, `429`
 rate limit, dan `503 EMAIL_DELIVERY_FAILED` ketika provider email gagal.
 
-## Daftar endpoint lengkap (52)
+## Daftar endpoint lengkap (53)
 
-### System, dashboard, Team, file, dan ImageKit
+### System, dashboard, Team, file, dan UploadThing
 
 | Method | Endpoint | Auth | Fungsi |
 |---|---|---|---|
@@ -88,9 +88,10 @@ rate limit, dan `503 EMAIL_DELIVERY_FAILED` ketika provider email gagal.
 | GET | `/api/dashboard/summary` | Team | Summary dashboard dan status registrasi |
 | GET | `/api/teams/me` | Team | Profil Team aktif |
 | PATCH | `/api/teams/me` | Team | Update parsial profil Team |
-| POST | `/api/files` | Team/Admin | Daftarkan metadata file ImageKit |
 | GET | `/api/files/{file}` | Team/Admin | Ambil metadata file sesuai ownership |
-| GET | `/api/imagekit-auth` | Team/Admin | Signature upload langsung ke ImageKit |
+| GET | `/api/uploadthing` | Public | Konfigurasi route upload (slug, tipe, batas ukuran) |
+| POST | `/api/uploadthing?actionType=upload&slug={route}` | Team/Admin | Presigned URL untuk upload langsung ke UploadThing |
+| POST | `/api/uploadthing/hook?slug={route}` | UploadThing | Callback bertanda tangan HMAC; membuat record file |
 
 ### Authentication
 
@@ -204,13 +205,18 @@ string non-kosong: `province`, `city`, dan `address`.
 
 ### File dan pembayaran
 
-File di-upload langsung ke ImageKit setelah mengambil signature. Metadata hasil
-upload kemudian didaftarkan:
+File di-upload langsung ke UploadThing memakai `@uploadthing/react` yang memanggil
+`/api/uploadthing`. Route yang tersedia: `paymentProof`, `memberPhoto`, `submission`,
+`batchModule`, `examImage`. Server memvalidasi principal, tipe, dan ukuran file, lalu
+mengembalikan presigned URL. Setelah upload selesai UploadThing memanggil
+`/api/uploadthing/hook` (bertanda tangan HMAC) dan record file dibuat di server.
+Respons upload membawa `serverData` yang dipakai sebagai referensi file:
 
 ```json
 {
-  "file_id": "imagekit-provider-id",
-  "url": "https://ik.imagekit.io/account/payment.png",
+  "id": "uuid-file",
+  "fileId": "uploadthing-file-key",
+  "url": "https://APP_ID.ufs.sh/f/uploadthing-file-key",
   "purpose": "PAYMENT_PROOF"
 }
 ```
@@ -298,7 +304,7 @@ Team baru:
 1. Register, simpan token, verifikasi OTP.
 2. Ambil Competition open dan Batch open, isi UUID environment.
 3. Selection → Team profile → members → documents.
-4. Olimpiade: quote payment → ImageKit auth/upload → register file → submit payment.
+4. Olimpiade: quote payment → upload ke UploadThing → submit payment.
 5. Ambil summary dan dashboard. `redirectTo` harus mengikuti current step aktual.
 
 Admin:
