@@ -6,6 +6,7 @@ $adminRoles = ['super_admin', 'admin_registration', 'judge'];
 return [
     'token' => env('UPLOADTHING_TOKEN'),
     'callback_url' => env('UPLOADTHING_CALLBACK_URL'),
+    'is_dev' => (bool) env('UPLOADTHING_IS_DEV', false),
     'client_version' => '7.7.4',
     'presigned_ttl' => 3600,
     'routes' => [

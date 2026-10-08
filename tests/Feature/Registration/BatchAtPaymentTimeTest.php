@@ -190,7 +190,8 @@ test('read endpoints work for a team that has not paid yet', function (): void {
         ->assertOk()->assertJsonPath('data.registration.batch', null);
     $this->withHeaders($headers)->getJson('/api/registrations/me/summary')
         ->assertOk()
-        ->assertJsonPath('data.registration.batch.name', 'Early Bird')
+        ->assertJsonPath('data.registration.batch', null)
+        ->assertJsonPath('data.registration.activeBatch.name', 'Early Bird')
         ->assertJsonPath('data.registration.batchLocked', false);
     $this->withHeaders($headers)->getJson('/api/dashboard/summary')
         ->assertOk()->assertJsonPath('data.payment.originalAmount', 100000);
@@ -209,15 +210,17 @@ test('summary shows the batch active right now for an unpaid team and follows th
     $summary = fn () => $this->withToken($this->token)->getJson('/api/registrations/me/summary')->assertOk();
 
     $summary()
-        ->assertJsonPath('data.registration.batch.name', 'Early Bird')
-        ->assertJsonPath('data.registration.batch.price', '100000.00')
+        ->assertJsonPath('data.registration.batch', null)
+        ->assertJsonPath('data.registration.activeBatch.name', 'Early Bird')
+        ->assertJsonPath('data.registration.activeBatch.price', '100000.00')
         ->assertJsonPath('data.registration.batchLocked', false);
 
     $this->travelTo(now()->addDays(10));
 
     $summary()
-        ->assertJsonPath('data.registration.batch.name', 'Reguler')
-        ->assertJsonPath('data.registration.batch.price', '150000.00')
+        ->assertJsonPath('data.registration.batch', null)
+        ->assertJsonPath('data.registration.activeBatch.name', 'Reguler')
+        ->assertJsonPath('data.registration.activeBatch.price', '150000.00')
         ->assertJsonPath('data.registration.batchLocked', false);
 });
 
@@ -230,6 +233,7 @@ test('summary stays on the batch the team paid in', function (): void {
     $this->withToken($this->token)->getJson('/api/registrations/me/summary')
         ->assertOk()
         ->assertJsonPath('data.registration.batch.name', 'Early Bird')
+        ->assertJsonPath('data.registration.activeBatch', null)
         ->assertJsonPath('data.registration.batchLocked', true);
 });
 
@@ -240,6 +244,7 @@ test('summary has no batch when none is accepting payment', function (): void {
     $this->withToken($this->token)->getJson('/api/registrations/me/summary')
         ->assertOk()
         ->assertJsonPath('data.registration.batch', null)
+        ->assertJsonPath('data.registration.activeBatch', null)
         ->assertJsonPath('data.registration.batchLocked', false);
 });
 

@@ -17,6 +17,7 @@ const TeamAccount = () => {
 
   const summary = summaryQuery.data.data
   const registration = summary.registration
+  const batch = registration?.batch ?? registration?.activeBatch ?? null
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6 p-4 ">
@@ -25,7 +26,7 @@ const TeamAccount = () => {
         <div className="relative z-10 rounded-[inherit] bg-background/20 backdrop-blur-sm p-6">
           <TeamDetail data={{
             name: summary.team.name ?? '-', phone: summary.team.phone ?? '-', institutionName: summary.team.institutionName ?? '-',
-            competitionType: registration?.competition.type ?? 'OLIMPIADE', batchName: registration?.batch?.name ?? 'Belum ada batch aktif',
+            competitionType: registration?.competition.type ?? 'OLIMPIADE', batchName: batch?.name ?? 'Belum ada batch aktif',
           }} accent={accentColors[0]} />
         </div>
       </div>
@@ -33,7 +34,7 @@ const TeamAccount = () => {
       {registration && (
         <div className="grid gap-4 rounded-2xl border border-white/10 bg-card/45 p-5 backdrop-blur-md sm:grid-cols-3">
           <div><p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Competition</p><p className="mt-2 font-semibold text-foreground">{registration.competition.name}</p></div>
-          <div><p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{registration.batchLocked ? 'Batch' : 'Batch aktif saat ini'}</p><p className="mt-2 font-semibold text-foreground">{registration.batch ? `${registration.batch.name} · ${formatCurrency(registration.batch.price)}` : 'Belum ada batch aktif'}</p></div>
+          <div><p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{registration.batchLocked ? 'Batch' : 'Batch aktif saat ini'}</p><p className="mt-2 font-semibold text-foreground">{batch ? `${batch.name} · ${formatCurrency(batch.price)}` : 'Belum ada batch aktif'}</p></div>
           <div><p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Waktu pembayaran</p><p className="mt-2 font-semibold text-foreground">{registration.competition.paymentFlow === 'UPFRONT' ? 'Saat pendaftaran' : 'Jika lolos Semifinal'}</p></div>
         </div>
       )}

@@ -63,13 +63,25 @@ class UploadThingUploadService
             ];
         }, $files);
 
-        (new UploadThingClient($token))->registerRouteMetadata(
-            array_column($presigned, 'key'),
-            ['slug' => $slug, 'purpose' => $route['purpose'], 'principal' => $principal['type'], 'principalId' => $principal['id']],
-            $this->callbackUrl($slug),
-            $slug,
-            $frontendPackage,
-        );
+        $registration = [
+            'fileKeys' => array_column($presigned, 'key'),
+            'metadata' => ['slug' => $slug, 'purpose' => $route['purpose'], 'principal' => $principal['type'], 'principalId' => $principal['id']],
+            'callbackUrl' => $this->callbackUrl($slug),
+            'slug' => $slug,
+            'frontendPackage' => $frontendPackage,
+        ];
+
+        if ($this->isDevelopment()) {
+            (new UploadThingDevRelay)->start($registration);
+        } else {
+            (new UploadThingClient($token))->registerRouteMetadata(
+                $registration['fileKeys'],
+                $registration['metadata'],
+                $registration['callbackUrl'],
+                $registration['slug'],
+                $registration['frontendPackage'],
+            );
+        }
 
         return $presigned;
     }
@@ -196,6 +208,11 @@ class UploadThingUploadService
         } catch (UploadThingException $e) {
             Log::warning('UploadThing callback result gagal dikirim', ['key' => $key, 'reason' => $e->getMessage()]);
         }
+    }
+
+    private function isDevelopment(): bool
+    {
+        return (bool) config('uploadthing.is_dev') && app()->environment('local');
     }
 
     private function callbackUrl(string $slug): string
