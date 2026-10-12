@@ -44,7 +44,6 @@ export default function AdminTeamStages() {
   const scoreEntries = scoresQuery.data?.data.scores ?? []
   const scoreByTeam = useMemo(() => new Map(scoreEntries.map(e => [e.teamId, e])), [scoreEntries])
 
-  // filter by stage & search client-side (since API belum support filter current_stage)
   const filteredTeams = useMemo(() => {
     let list = teams
     if (stageFilter) {
@@ -71,7 +70,6 @@ export default function AdminTeamStages() {
     return teamCurrent.order + 1 === target.order
   }
 
-  // also must be VERIFIED (team & registration)
   function canAdvance(team: typeof filteredTeams[number]): boolean {
     if (!targetStage) return false
     const teamOk = team.team.status === 'VERIFIED'
@@ -153,7 +151,6 @@ export default function AdminTeamStages() {
       toast.warning(`${ineligibleSelected} tim tidak eligible akan di-SKIP / FAILED. Hanya ${eligibleSelected.length} yang akan diproses.`)
     }
 
-    // template otomatis untuk advance stage — backend akan pakai defaultAnnouncementMessage
     const announcementTitle = `Selamat! Lolos ke ${targetStage.name}`
     const announcementMessage = `Selamat, Team Anda berhasil lolos ke tahap ${targetStage.name} ISAC 2026. Silakan cek dashboard untuk jadwal dan petunjuk selanjutnya.`
 

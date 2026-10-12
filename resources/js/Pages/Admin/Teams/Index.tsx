@@ -33,7 +33,7 @@ export default function AdminTeamsIndex() {
   }
 
   function resetFilters() {
-    setFilters({ page: 1, per_page: 15 })
+    setFilters({ page: 1, per_page: 1000 })
   }
 
   return (

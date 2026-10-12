@@ -46,7 +46,7 @@ export default function AdminPayments() {
   }
 
   function resetFilters() {
-    setFilters({ page: 1, per_page: 15 })
+    setFilters({ page: 1, per_page: 10000 })
   }
 
   return (

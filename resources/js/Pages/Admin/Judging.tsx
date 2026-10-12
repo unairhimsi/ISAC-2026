@@ -56,7 +56,7 @@ export default function AdminJudging() {
       if (flagged !== 'all') params.set('flagged', flagged === 'flagged' ? '1' : '0')
       if (search) params.set('search', search)
       params.set('page', String(page))
-      params.set('per_page', '15')
+      params.set('per_page', '1000')
       return getJson<Response<Paginated<Attempt>>>('/api/admin/exams/' + examId + '/attempts?' + params.toString())
     },
     enabled: Boolean(examId),
