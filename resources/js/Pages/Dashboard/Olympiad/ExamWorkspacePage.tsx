@@ -379,8 +379,8 @@ export default function ExamWorkspacePage({ examId }: { examId: string }) {
     return results[item.id]?.isCorrect ? 'correct' : 'wrong'
   }
   const reviewCount = (status: ReviewStatus) => questions.filter((item) => reviewStatus(item) === status).length
-  const pointsLabel = (id: string) => {
-    const score = results[id]?.score
+  const pointsLabel = (id: string, fallback?: number) => {
+    const score = results[id]?.score ?? fallback
     return score == null ? '' : ` · ${score > 0 ? '+' : ''}${score} poin`
   }
 
@@ -515,7 +515,7 @@ export default function ExamWorkspacePage({ examId }: { examId: string }) {
             {{
               correct: <Badge className="bg-emerald-500/20 text-emerald-300">Benar{pointsLabel(q.id)}</Badge>,
               wrong: <Badge className="bg-red-500/20 text-red-300">Salah{pointsLabel(q.id)}</Badge>,
-              empty: <Badge variant="outline">Tidak dijawab{pointsLabel(q.id)}</Badge>,
+              empty: <Badge variant="outline">Tidak dijawab{pointsLabel(q.id, q.emptyScore)}</Badge>,
               essay: <Badge className="bg-sky-500/20 text-sky-300">Esai · dinilai panitia</Badge>,
             }[reviewStatus(q)]}
             <Badge variant="outline">{typeLabel[q.type] ?? q.type}</Badge>
