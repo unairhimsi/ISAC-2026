@@ -47,7 +47,7 @@ test('can update team data with registration progress', function (): void {
     ]);
 
     $this->withToken($this->token)
-        ->patchJson('/api/registrations/me/team', [
+        ->putJson('/api/registrations/me/team', [
             'name' => 'Tim Baru', 'phone' => '0811111111', 'institution_name' => 'SMA Baru',
             'institution_address' => $this->institutionAddress,
         ])
@@ -66,7 +66,7 @@ test('can update team data with registration progress', function (): void {
 
 test('requires all team fields', function (): void {
     $response = $this->withToken($this->token)
-        ->patchJson('/api/registrations/me/team', [])
+        ->putJson('/api/registrations/me/team', [])
         ->assertUnprocessable();
 
     $details = $response->json('error.details');
@@ -87,7 +87,7 @@ test('institution address must be a complete json string', function (): void {
     ]);
 
     $this->withToken($this->token)
-        ->patchJson('/api/registrations/me/team', [
+        ->putJson('/api/registrations/me/team', [
             'name' => 'Tim Baru', 'phone' => '0811111111', 'institution_name' => 'SMA Baru',
             'institution_address' => '{"province":"Jawa Timur"}',
         ])
@@ -111,7 +111,7 @@ test('institution must match the selected competition participant category', fun
     ]);
 
     $this->withToken($this->token)
-        ->patchJson('/api/registrations/me/team', [
+        ->putJson('/api/registrations/me/team', [
             'name' => 'Tim Kampus', 'phone' => '0811111111', 'institution_name' => 'SMA Negeri 1',
             'institution_address' => $this->institutionAddress,
         ])
@@ -122,7 +122,7 @@ test('institution must match the selected competition participant category', fun
         );
 
     $this->withToken($this->token)
-        ->patchJson('/api/registrations/me/team', [
+        ->putJson('/api/registrations/me/team', [
             'name' => 'Tim Kampus', 'phone' => '0811111111', 'institution_name' => 'Universitas Indonesia',
             'institution_address' => $this->institutionAddress,
         ])
@@ -131,5 +131,5 @@ test('institution must match the selected competition participant category', fun
 
 test('team data requires authentication', function (): void {
     $this->getJson('/api/registrations/me/team')->assertUnauthorized();
-    $this->patchJson('/api/registrations/me/team', [])->assertUnauthorized();
+    $this->putJson('/api/registrations/me/team', [])->assertUnauthorized();
 });

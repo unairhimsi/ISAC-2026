@@ -86,6 +86,10 @@ class UploadThingController extends Controller
             'reason' => $e->getMessage(),
         ]);
 
-        return response()->json(['message' => $e->getMessage()], $e->status);
+        $message = $e->status === 500
+            ? 'Layanan upload sedang bermasalah. Hubungi panitia jika berlanjut.'
+            : $e->getMessage();
+
+        return response()->json(['message' => $message], $e->status);
     }
 }

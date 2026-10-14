@@ -13,6 +13,7 @@ use App\Models\Stage;
 use App\Services\RichTextSanitizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
@@ -161,7 +162,10 @@ class AdminExamController extends Controller
             $payload['passing_score'] = $data['passingScore'];
         }
 
-        if (isset($payload['start_date']) && isset($payload['end_date']) && $payload['start_date'] > $payload['end_date']) {
+        $start = isset($payload['start_date']) ? Carbon::parse($payload['start_date']) : $exam->start_date;
+        $end = isset($payload['end_date']) ? Carbon::parse($payload['end_date']) : $exam->end_date;
+
+        if ($start !== null && $end !== null && $end->lessThanOrEqualTo($start)) {
             throw ValidationException::withMessages(['end_date' => ['Waktu selesai harus setelah waktu mulai.']]);
         }
 

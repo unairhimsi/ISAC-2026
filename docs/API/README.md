@@ -241,10 +241,9 @@ dan disimpan sebagai snapshot. Client tidak mengirim nominal atau ID transaksi.
 ### Admin pembayaran
 
 **Payment gate eligibility:**
-- Competition tipe `UPFRONT`: seluruh Registration masuk antrean.
-- Competition tipe `SEMIFINAL`: hanya Registration dengan `payment_required_at`
-  terisi yang masuk antrean. Business yang belum mencapai gate semifinal tidak
-  dianggap "belum bayar".
+- Competition dengan payment flow `UPFRONT` (seluruh kompetisi hasil seed): seluruh Registration masuk antrean.
+- Competition dengan payment flow `SEMIFINAL` (legacy, deprecated): hanya Registration dengan `payment_required_at`
+  terisi yang masuk antrean. Nilai ini hanya tersisa untuk baris lama dan tidak lagi dibuat oleh seeder.
 
 **Role matrix:**
 
@@ -278,7 +277,7 @@ stateDiagram-v2
 ```
 
 **Response detail (`GET /api/admin/payments/{registration}`) — AdminPaymentResource:**
-- `registrationId`, `status`, `paymentContext` (REGISTRATION/SEMIFINAL).
+- `registrationId`, `status`, `paymentContext` (`REGISTRATION`; `SEMIFINAL` hanya untuk baris legacy).
 - `isSubmitted`, `canBeReviewed` — status kelengkapan dan eligibility review.
 - `team` — id, code, name, email, phone, institutionName.
 - `competition` — id, name, type, category.

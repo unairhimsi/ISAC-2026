@@ -41,7 +41,7 @@ test('admin seeder refuses to create an admin outside local without a configured
     $this->app->detectEnvironment(fn (): string => 'production');
     config(['admin.seed.email' => 'admin@isac.com', 'admin.seed.password' => null]);
 
-    $this->seed(AdminSeeder::class);
+    app(AdminSeeder::class)->run();
 
     expect(Admin::query()->count())->toBe(0);
 });
@@ -51,7 +51,7 @@ test('admin seeder uses the configured credentials in production', function (): 
     $this->app->detectEnvironment(fn (): string => 'production');
     config(['admin.seed.email' => 'ketua@isac.test', 'admin.seed.password' => 'Rahasia-Kuat-2026!']);
 
-    $this->seed(AdminSeeder::class);
+    app(AdminSeeder::class)->run();
 
     $admin = Admin::query()->where('email', 'ketua@isac.test')->firstOrFail();
     expect(Hash::check('Rahasia-Kuat-2026!', $admin->password))->toBeTrue()

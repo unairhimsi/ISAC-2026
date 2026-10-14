@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Testing\TestResponse;
 
 uses(LazilyRefreshDatabase::class);
@@ -139,13 +140,16 @@ test('a failing or unreachable UploadThing makes the request fail cleanly', func
         ->assertJsonPath('message', 'Layanan upload tidak dapat dihubungi. Coba lagi.');
 });
 
-test('a missing token is reported as a server configuration error', function (): void {
+test('a missing token fails with a generic message and keeps the reason in the log', function (): void {
     config()->set('uploadthing.token', null);
     Http::fake();
+    Log::spy();
 
     uploadRequest($this, $this->teamToken, 'paymentProof', [pdfFile()])
         ->assertStatus(500)
-        ->assertJsonPath('message', 'Konfigurasi UploadThing belum lengkap.');
+        ->assertJsonPath('message', 'Layanan upload sedang bermasalah. Hubungi panitia jika berlanjut.');
+
+    Log::shouldHaveReceived('log')->withArgs(fn (string $level, string $message, array $context): bool => $level === 'error' && ($context['reason'] ?? null) === 'Konfigurasi UploadThing belum lengkap.');
 });
 
 test('the route config is public and lists every route with its limits', function (): void {

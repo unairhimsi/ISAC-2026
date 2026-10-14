@@ -538,11 +538,14 @@ const Biodata = () => {
                       valid,
                     ) =>
                       setValidState(
-                        (current) => ({
-                          ...current,
-                          [member.key]:
-                            valid,
-                        }),
+                        (current) =>
+                          current[member.key] === valid
+                            ? current
+                            : {
+                                ...current,
+                                [member.key]:
+                                  valid,
+                              },
                       )
                     }
                   />

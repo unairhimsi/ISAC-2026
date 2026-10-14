@@ -107,3 +107,44 @@ test('objective question keeps configurable penalty weights per difficulty', fun
         ->assertJsonPath('data.emptyScore', -5)
         ->assertJsonPath('data.difficulty', 'hard');
 });
+
+test('exam update rejects an end time that is not after the start time', function (): void {
+    [, $token, $exam] = createQuestionExamContext();
+    $start = $exam->start_date->copy();
+
+    $this->withToken($token)
+        ->patchJson("/api/admin/exams/{$exam->id}", ['end_date' => $start->copy()->subMinute()->toDateTimeString()])
+        ->assertUnprocessable()
+        ->assertJsonStructure(['error' => ['details' => ['end_date']]]);
+
+    $this->withToken($token)
+        ->patchJson("/api/admin/exams/{$exam->id}", ['start_date' => $exam->end_date->copy()->addMinute()->toDateTimeString()])
+        ->assertUnprocessable()
+        ->assertJsonStructure(['error' => ['details' => ['end_date']]]);
+
+    $this->withToken($token)
+        ->patchJson("/api/admin/exams/{$exam->id}", [
+            'start_date' => '2026-10-20 08:00:00',
+            'end_date' => '2026-10-20 08:00:00',
+        ])
+        ->assertUnprocessable();
+
+    expect($exam->fresh()->end_date->equalTo($exam->end_date))->toBeTrue();
+});
+
+test('exam update accepts a valid window and a partial update that stays consistent', function (): void {
+    [, $token, $exam] = createQuestionExamContext();
+
+    $this->withToken($token)
+        ->patchJson("/api/admin/exams/{$exam->id}", [
+            'start_date' => '2026-10-20 08:00:00',
+            'end_date' => '2026-10-20 10:00:00',
+        ])
+        ->assertOk();
+
+    $this->withToken($token)
+        ->patchJson("/api/admin/exams/{$exam->id}", ['end_date' => '2026-10-20 12:00:00'])
+        ->assertOk();
+
+    expect($exam->fresh()->end_date->format('Y-m-d H:i'))->toBe('2026-10-20 12:00');
+});

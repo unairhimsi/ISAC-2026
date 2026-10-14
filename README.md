@@ -505,7 +505,12 @@ After containers are running:
 ```bash
 docker compose exec app php artisan key:generate
 docker compose exec app php artisan migrate
+docker compose exec app php artisan db:seed
 ```
+
+The seed creates the three competitions (all `UPFRONT`), their batches, stages, and exams, plus one super admin.
+The admin email comes from `ADMIN_SEED_EMAIL` (default `admin@isac.com`). Locally, an empty `ADMIN_SEED_PASSWORD` falls back to a
+development-only password. Outside `local`, the admin is not created unless `ADMIN_SEED_PASSWORD` is set, and an existing admin is never modified.
 
 ### URLs
 
@@ -530,6 +535,14 @@ docker compose exec mysql mysql -uisac -pisac_password isac2026
 cp .env.production.example .env.production
 # Edit .env.production with real values
 env PROD_ENV_FILE=.env.production docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+```
+
+Exams whose time is up are submitted automatically by the scheduled command `exam:auto-submit-expired` (every minute).
+`docker-compose.prod.yml` runs it in the `scheduler` service. On a host without Docker (for example cPanel with `deploy.sh`),
+add this cron entry:
+
+```cron
+* * * * * cd /path/to/isac-app && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 See [`docs/docker.md`](docs/docker.md) for full architecture, deployment, backup, and troubleshooting.

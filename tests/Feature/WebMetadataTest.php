@@ -11,10 +11,10 @@ test('legacy login and register pages redirect to canonical auth routes', functi
 test('web shell exposes ISAC metadata and the official logo', function (): void {
     $this->get('/')
         ->assertOk()
-        ->assertSee('Platform resmi pendaftaran kompetisi ISAC 2026', false)
+        ->assertSee('Kompetisi informatika tahunan HIMSI Universitas Airlangga bertema Symphony of System', false)
         ->assertSee('property="og:image"', false)
-        ->assertSee('/logo.png', false)
-        ->assertSee('rel="icon" type="image/png" href="/logo.png"', false)
+        ->assertSee('/images/og-isac-2026.jpg', false)
+        ->assertSee('rel="icon" href="/favicon.svg"', false)
         ->assertDontSee('todo, autentikasi, dan dashboard operasional', false);
 });
 
