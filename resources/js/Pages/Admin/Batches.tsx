@@ -14,9 +14,10 @@ import { ConfirmActionDialog } from '@/features/admin/components/ConfirmActionDi
 import { useAdminBatches, useAdminCompetitions, useDeleteBatch } from '@/features/admin/hooks/useAdmin'
 import type { AdminBatch } from '@/features/admin/types/adminTypes'
 import { useAuthSession } from '@/features/auth/context/AuthProvider'
+import { formatDate as formatDateTime } from '@/lib/formatters'
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(new Date(value))
+  return formatDateTime(value, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 function formatCurrency(value: string) {

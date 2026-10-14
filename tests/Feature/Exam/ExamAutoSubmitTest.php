@@ -161,8 +161,9 @@ test('questions left blank count their empty score when the participant submits'
 
     $this->withToken($token)
         ->postJson("/api/dashboard/exams/{$exam->id}/attempts/{$attempt->id}/submit")
-        ->assertOk()
-        ->assertJsonPath('data.attempt.totalScore', -3);
+        ->assertOk();
+
+    expect($attempt->fresh()->total_score)->toBe(-3);
 });
 
 test('a question cleared by the participant is not penalised twice', function (): void {
@@ -180,8 +181,9 @@ test('a question cleared by the participant is not penalised twice', function ()
 
     $this->withToken($token)
         ->postJson("/api/dashboard/exams/{$exam->id}/attempts/{$attempt->id}/submit")
-        ->assertOk()
-        ->assertJsonPath('data.attempt.totalScore', -3);
+        ->assertOk();
+
+    expect($attempt->fresh()->total_score)->toBe(-3);
 });
 
 test('auto submit command leaves a running attempt untouched', function (): void {
@@ -218,10 +220,10 @@ test('resuming an expired attempt returns it already submitted', function (): vo
     $this->withToken($token)
         ->getJson("/api/dashboard/exams/{$exam->id}/attempts/{$attempt->id}")
         ->assertOk()
-        ->assertJsonPath('data.attempt.finished', true)
-        ->assertJsonPath('data.attempt.totalScore', 10);
+        ->assertJsonPath('data.attempt.finished', true);
 
-    expect($attempt->fresh()->finished)->toBeTrue();
+    expect($attempt->fresh()->finished)->toBeTrue()
+        ->and($attempt->fresh()->total_score)->toBe(10);
 });
 
 test('heartbeat on an expired attempt submits it instead of keeping it alive', function (): void {

@@ -61,6 +61,7 @@ export type ExamShellData = {
   stage: StageSummary
   competition: DashboardCompetition
   batch: DashboardBatch
+  attempt: { id: string; finished: boolean } | null
 }
 
 export type SubmissionWindow = {

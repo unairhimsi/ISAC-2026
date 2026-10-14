@@ -17,6 +17,25 @@ export function formatCurrency(value: number | string | null | undefined): strin
     }).format(amount);
 }
 
+export function toDateTimeInputValue(value: string | null | undefined): string {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+
+    return new Intl.DateTimeFormat('sv-SE', {
+        timeZone: 'Asia/Jakarta',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23',
+    })
+        .format(date)
+        .replace(' ', 'T');
+}
+
 export function formatDate(
     value: string | null | undefined,
     options: Intl.DateTimeFormatOptions = { dateStyle: 'long' },

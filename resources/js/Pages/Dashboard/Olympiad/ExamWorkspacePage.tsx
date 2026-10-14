@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from '@inertiajs/react'
-import { ArrowLeft, ChevronLeft, ChevronRight, Clock3, Eraser, Flag, Send } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Eraser, Flag, Send } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,7 +12,7 @@ import { useExamShell } from '@/features/dashboard/hooks/useDashboard'
 import { ApiClientError, getJson, postJson, putJson } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
-type Attempt = { id: string; finished: boolean; totalScore: number; maxPossibleScore: number; endTime: string | null }
+type Attempt = { id: string; finished: boolean; totalScore: number | null; maxPossibleScore: number | null; endTime: string | null }
 type Question = { id: string; question: string; type: string; options: { id: string; content: string }[] | null; correctAnswer?: string | null; explanation?: string | null; correctScore?: number; wrongScore?: number; emptyScore?: number }
 type Result = { isCorrect: boolean | null; score: number | null }
 type SaveState = 'saving' | 'saved' | 'error'
@@ -80,6 +80,7 @@ export default function ExamWorkspacePage({ examId }: { examId: string }) {
   const [remaining, setRemaining] = useState<string>('')
   const [autoSubmitted, setAutoSubmitted] = useState(false)
   const [timeUpId, setTimeUpId] = useState<string | null>(null)
+  const [resumeSettled, setResumeSettled] = useState(false)
   const saveChain = useRef<Record<string, Promise<void>>>({})
   const essayTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const clockSkew = useRef(0)
@@ -184,10 +185,14 @@ export default function ExamWorkspacePage({ examId }: { examId: string }) {
     return () => clearInterval(id)
   }, [attempt?.id, attempt?.finished, exam?.type])
 
+  const serverAttemptId = shell.data?.data.attempt?.id
+
   useEffect(() => {
-    const storedId = store.get(attemptKey(examId))
-    if (storedId) void loadAttempt(storedId, true)
-  }, [examId])
+    if (shell.isLoading || attempt) return
+    const id = serverAttemptId ?? store.get(attemptKey(examId))
+    if (id) void loadAttempt(id, true)
+    else setResuming(false)
+  }, [examId, shell.isLoading, serverAttemptId])
 
   function syncClock(serverTime: unknown) {
     const server = typeof serverTime === 'string' ? Date.parse(serverTime) : NaN
@@ -250,7 +255,10 @@ export default function ExamWorkspacePage({ examId }: { examId: string }) {
         setError(e.message ?? 'Gagal memulihkan sesi ujian')
       }
     } finally {
-      if (isResume) setResuming(false)
+      if (isResume) {
+        setResuming(false)
+        setResumeSettled(true)
+      }
     }
   }
 
@@ -365,6 +373,7 @@ export default function ExamWorkspacePage({ examId }: { examId: string }) {
   if (shell.error || !exam) return <DashboardError message={shell.error?.message ?? 'Ujian tidak tersedia'} retry={() => shell.refetch()} />
 
   const isTryout = exam.type === 'tryout'
+  const waitingResume = resuming || (!attempt && !resumeSettled && Boolean(serverAttemptId))
   const finished = Boolean(attempt?.finished)
   const review = finished && isTryout && canViewResult
   const total = questions.length
@@ -383,6 +392,9 @@ export default function ExamWorkspacePage({ examId }: { examId: string }) {
     const score = results[id]?.score ?? fallback
     return score == null ? '' : ` · ${score > 0 ? '+' : ''}${score} poin`
   }
+  const minutesLeft = remaining ? Number(remaining.split(':')[0]) : null
+  const timerTone = minutesLeft === null ? '' : minutesLeft < 5 ? 'border-red-400/60 bg-red-400/10 text-red-200' : minutesLeft < 10 ? 'border-amber-400/60 bg-amber-400/10 text-amber-200' : ''
+  const progress = total ? (answeredCount / total) * 100 : 0
 
   const boxStyle = (item: Question, index: number) => {
     const state = review
@@ -412,7 +424,12 @@ export default function ExamWorkspacePage({ examId }: { examId: string }) {
               {review ? `${reviewCount('correct')} benar · ${reviewCount('wrong')} salah` : `${answeredCount}/${total} terjawab`}
             </span>
           </div>
-          <div role="group" aria-label="Navigasi soal" className="grid max-h-[50vh] grid-cols-5 gap-2 overflow-y-auto p-1 sm:grid-cols-8 lg:grid-cols-5">
+          {!review && (
+            <div role="progressbar" aria-label="Progres pengerjaan" aria-valuemin={0} aria-valuemax={total} aria-valuenow={answeredCount} className="h-1.5 overflow-hidden rounded-full bg-white/10">
+              <div className="h-full rounded-full bg-primary transition-[width] duration-300" style={{ width: `${progress}%` }} />
+            </div>
+          )}
+          <div role="group" aria-label="Navigasi soal" className="question-scroll grid max-h-[50vh] grid-cols-5 gap-2 overflow-y-auto p-1 sm:grid-cols-8 lg:grid-cols-5">
             {questions.map((item, index) => (
               <button key={item.id} type="button" onClick={() => goTo(index)} aria-label={boxLabel(item, index)} aria-current={index === active ? 'step' : undefined} className={boxStyle(item, index)}>
                 {index + 1}
@@ -430,8 +447,8 @@ export default function ExamWorkspacePage({ examId }: { examId: string }) {
               <div className="space-y-2 rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-xs">
                 <p>
                   {answeredCount === total && doubtfulCount === 0
-                    ? 'Semua soal sudah dijawab. Kirim jawaban sekarang?'
-                    : `${total - answeredCount} soal belum dijawab · ${doubtfulCount} ditandai ragu-ragu. Kirim jawaban sekarang?`}
+                    ? 'Semua soal sudah dijawab. Kirim jawaban sekarang? Jawaban tidak dapat diubah setelah dikirim.'
+                    : `${total - answeredCount} soal belum dijawab · ${doubtfulCount} ditandai ragu-ragu. Kirim jawaban sekarang? Jawaban tidak dapat diubah setelah dikirim.`}
                 </p>
                 <div className="flex gap-2">
                   <Button type="button" size="sm" variant="outline" onClick={() => setConfirming(false)} disabled={submitting}>Kembali</Button>
@@ -566,6 +583,33 @@ export default function ExamWorkspacePage({ examId }: { examId: string }) {
     </Card>
   )
 
+  const submittedPane = (
+    <div className="flex flex-col items-center gap-6 py-6 text-center">
+      <div className="flex size-16 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300 ring-8 ring-emerald-500/5">
+        <CheckCircle2 className="size-9" />
+      </div>
+      <div className="space-y-2">
+        <h2 className="text-xl font-bold">Jawaban kamu sudah terkirim</h2>
+        <p className="mx-auto max-w-md text-sm leading-6 text-muted-foreground">
+          {autoSubmitted && 'Waktu habis, jawaban dikirim otomatis. '}Nilai dan kunci jawaban tidak ditampilkan pada ujian ini. Hasil akan diumumkan panitia.
+        </p>
+      </div>
+      <dl className="grid w-full max-w-md grid-cols-3 gap-3 text-sm">
+        {[['Soal', total], ['Terjawab', answeredCount], ['Kosong', total - answeredCount]].map(([label, value]) => (
+          <div key={label} className="rounded-2xl border border-white/10 bg-background/30 p-3">
+            <dt className="text-xs text-muted-foreground">{label}</dt>
+            <dd className="mt-1 text-lg font-semibold tabular-nums">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <Link href="/dashboard" className={buttonVariants()}>Kembali ke Dashboard</Link>
+        {exam.maxAttempts > 1 && <Button type="button" variant="outline" onClick={() => void start()} disabled={loading}>{loading ? 'Memulai...' : 'Mulai percobaan baru'}</Button>}
+      </div>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  )
+
   return (
     <main className="error-portal-shell relative min-h-screen overflow-hidden px-4 pb-24 pt-28 sm:px-6 sm:pt-32">
       <Seo title={`Pengerjaan — ${exam.title}`} description={`Pengerjaan ${exam.title} ${isTryout ? 'Tryout' : 'Olimpiade'}`} canonical={`/dashboard/olimpiade/${examId}/workspace`} noindex />
@@ -579,29 +623,46 @@ export default function ExamWorkspacePage({ examId }: { examId: string }) {
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <CardTitle className="flex items-center gap-2">{exam.title} {isTryout ? <Badge variant="secondary">Tryout</Badge> : <Badge>Olimpiade</Badge>}</CardTitle>
-              {review && attempt ? (
+              {review && attempt && attempt.totalScore !== null ? (
                 <Badge variant="secondary">Skor {attempt.totalScore}/{attempt.maxPossibleScore}</Badge>
               ) : attempt && !finished ? (
-                <Badge variant="outline" className="gap-1"><Clock3 className="size-3" />{remaining || '—'} · {exam.duration} menit</Badge>
+                <Badge variant="outline" role="timer" className={cn('gap-1 tabular-nums transition-colors', timerTone)}><Clock3 className="size-3" />{remaining || '—'} · {exam.duration} menit</Badge>
               ) : null}
             </div>
           </CardHeader>
           <CardContent>
-            {resuming ? (
+            {waitingResume ? (
               <p className="text-sm text-muted-foreground">Memulihkan sesi ujian…</p>
             ) : !attempt ? (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">Durasi {exam.duration} menit · Maks {exam.maxAttempts}x percobaan · {isTryout ? 'Tryout bisa review kunci & pembahasan setelah selesai' : 'Olimpiade tidak menampilkan kunci'}</p>
+              <div className="space-y-5">
+                <dl className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    ['Durasi', `${exam.duration} menit`],
+                    ['Percobaan', `Maks. ${exam.maxAttempts}x`],
+                    ['Hasil', isTryout ? 'Kunci & pembahasan setelah selesai' : 'Nilai & kunci tidak ditampilkan, diumumkan panitia'],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-2xl border border-white/10 bg-background/30 p-4">
+                      <dt className="text-xs text-muted-foreground">{label}</dt>
+                      <dd className="mt-1 text-sm font-semibold">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
+                  <li>Jawaban tersimpan otomatis setiap kali kamu memilih atau selesai mengetik.</li>
+                  <li>Waktu berjalan di server. Saat waktu habis, jawaban dikirim otomatis.</li>
+                  <li>Tandai soal ragu-ragu dan lompat antarsoal lewat daftar nomor di sisi kiri.</li>
+                  {!isTryout && <li>Berpindah tab atau jendela, salin/tempel, klik kanan, dan membuka alat pengembang dicatat selama ujian.</li>}
+                </ul>
                 <Button onClick={start} disabled={loading}>{loading ? 'Memulai...' : isTryout ? 'Mulai Tryout' : 'Mulai Ujian'}</Button>
                 {error && <p className="text-xs text-destructive">{error}</p>}
               </div>
+            ) : finished && !review && !isTryout ? (
+              submittedPane
             ) : finished && !review ? (
               <Card className="border-white/10 bg-muted/20"><CardContent className="space-y-3 p-6 text-sm text-muted-foreground">
                 <p>
                   {autoSubmitted && 'Waktu habis, jawaban dikirim otomatis. '}
-                  {isTryout
-                    ? `Tryout selesai. Skor ${attempt.totalScore}/${attempt.maxPossibleScore}.`
-                    : `Ujian Olimpiade selesai. Skor ${attempt.totalScore}/${attempt.maxPossibleScore} — pembahasan & kunci tidak ditampilkan. Hasil diumumkan panitia.`}
+                  Tryout selesai.{attempt.totalScore !== null && ` Skor ${attempt.totalScore}/${attempt.maxPossibleScore}.`}
                 </p>
                 {exam.maxAttempts > 1 && <Button type="button" size="sm" variant="outline" onClick={() => void start()} disabled={loading}>{loading ? 'Memulai...' : 'Mulai percobaan baru'}</Button>}
                 {error && <p className="text-xs text-destructive">{error}</p>}

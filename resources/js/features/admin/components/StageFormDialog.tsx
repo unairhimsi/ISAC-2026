@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { ApiClientError } from '@/lib/api'
+import { toDateTimeInputValue } from '@/lib/formatters'
 import { useCreateStage, useUpdateStage } from '../hooks/useAdmin'
 import type { AdminCompetition, AdminStage, StagePayload, StageType } from '../types/adminTypes'
 
@@ -17,13 +18,6 @@ const stageTypes: Array<{ value: StageType; label: string }> = [
   { value: 'announcement', label: 'Pengumuman' },
   { value: 'final', label: 'Final' },
 ]
-
-function dateTimeValue(value: string | null | undefined) {
-  if (!value) return ''
-  const date = new Date(value)
-  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
-  return localDate.toISOString().slice(0, 16)
-}
 
 function emptyForm(competitionId: string, order: number): StagePayload {
   return {
@@ -59,6 +53,7 @@ export function StageFormDialog({
   const update = useUpdateStage()
   const mutation = stage ? update : create
   const apiError = mutation.error instanceof ApiClientError ? mutation.error : null
+  const resetMutation = mutation.reset
 
   useEffect(() => {
     if (!open) return
@@ -68,13 +63,13 @@ export function StageFormDialog({
       type: stage.type,
       description: stage.description ?? '',
       order: stage.order,
-      start_date: dateTimeValue(stage.startDate),
-      end_date: dateTimeValue(stage.endDate),
+      start_date: toDateTimeInputValue(stage.startDate),
+      end_date: toDateTimeInputValue(stage.endDate),
       is_active: stage.isActive,
     } : emptyForm(defaultCompetitionId, defaultOrder))
     setLocalError('')
-    mutation.reset()
-  }, [defaultCompetitionId, defaultOrder, mutation, open, stage])
+    resetMutation()
+  }, [defaultCompetitionId, defaultOrder, resetMutation, open, stage])
 
   function setField<K extends keyof StagePayload>(key: K, value: StagePayload[K]) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -142,8 +137,8 @@ export function StageFormDialog({
             {fieldError('order') && <span className="text-xs text-destructive">{fieldError('order')}</span>}
           </label>
           <label className="flex items-end gap-3 pb-2 text-sm"><input type="checkbox" checked={form.is_active} onChange={(event) => setField('is_active', event.target.checked)} className="size-4 accent-primary" />Tahap aktif</label>
-          <label className="space-y-1.5 text-sm">Mulai (opsional)<Input type="datetime-local" value={form.start_date ?? ''} onChange={(event) => setField('start_date', event.target.value)} /></label>
-          <label className="space-y-1.5 text-sm">Selesai (opsional)<Input type="datetime-local" value={form.end_date ?? ''} onChange={(event) => setField('end_date', event.target.value)} aria-invalid={Boolean(fieldError('end_date'))} /></label>
+          <label className="space-y-1.5 text-sm">Mulai (opsional)<Input type="datetime-local" step={1} value={form.start_date ?? ''} onChange={(event) => setField('start_date', event.target.value)} /></label>
+          <label className="space-y-1.5 text-sm">Selesai (opsional)<Input type="datetime-local" step={1} value={form.end_date ?? ''} onChange={(event) => setField('end_date', event.target.value)} aria-invalid={Boolean(fieldError('end_date'))} /></label>
           <label className="space-y-1.5 text-sm sm:col-span-2">Deskripsi (opsional)<Textarea value={form.description ?? ''} onChange={(event) => setField('description', event.target.value)} placeholder="Jelaskan tujuan atau instruksi tahap." /></label>
         </div>
 

@@ -12,13 +12,14 @@ class ExamAttemptResource extends JsonResource
     {
         $metadata = $this->metadata ?? [];
         $questionOrder = $metadata['questionOrder'] ?? $metadata['question_order'] ?? null;
+        $exposeScore = $request->user() instanceof Admin || $this->exam?->type === 'tryout';
 
         $data = [
             'id' => $this->id,
             'examId' => $this->exam_id,
             'teamId' => $this->team_id,
             'reviewedBy' => $this->reviewed_by,
-            'totalScore' => $this->total_score,
+            'totalScore' => $exposeScore ? $this->total_score : null,
             'maxPossibleScore' => $this->max_possible_score,
             'startTime' => $this->start_time?->toISOString(),
             'endTime' => $this->end_time?->toISOString(),

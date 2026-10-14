@@ -1203,3 +1203,37 @@
     transition: opacity 0.35s ease;
   }
 }
+
+.question-scroll {
+  scrollbar-gutter: stable both-edges;
+  overscroll-behavior: contain;
+}
+
+@supports selector(::-webkit-scrollbar) {
+  .question-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .question-scroll::-webkit-scrollbar-track {
+    background: transparent;
+    margin-block: 4px;
+  }
+
+  .question-scroll::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--primary) 45%, transparent);
+    border-radius: 9999px;
+    transition: background-color 150ms ease;
+  }
+
+  .question-scroll::-webkit-scrollbar-thumb:hover,
+  .question-scroll::-webkit-scrollbar-thumb:active {
+    background: var(--primary);
+  }
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .question-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--primary) 55%, transparent) transparent;
+  }
+}

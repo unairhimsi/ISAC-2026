@@ -5,15 +5,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { ApiClientError } from '@/lib/api'
+import { toDateTimeInputValue } from '@/lib/formatters'
 import { useCreateBatch, useUpdateBatch } from '../hooks/useAdmin'
 import type { AdminBatch, AdminCompetition, BatchPayload } from '../types/adminTypes'
 
 const emptyForm: BatchPayload = {
   competition_id: '', name: '', slug: '', description: '', start_date: '', end_date: '', price: 0, module_file_id: null, quota: null, status: 'DRAFT',
-}
-
-function dateTimeValue(value: string | null | undefined) {
-  return value ? value.slice(0, 16) : ''
 }
 
 export function BatchFormDialog({ open, onOpenChange, batch, competitions }: { open: boolean; onOpenChange: (open: boolean) => void; batch: AdminBatch | null; competitions: AdminCompetition[] }) {
@@ -31,8 +28,8 @@ export function BatchFormDialog({ open, onOpenChange, batch, competitions }: { o
       name: batch.name,
       slug: batch.slug,
       description: batch.description ?? '',
-      start_date: dateTimeValue(batch.startAt),
-      end_date: dateTimeValue(batch.endAt),
+      start_date: toDateTimeInputValue(batch.startAt),
+      end_date: toDateTimeInputValue(batch.endAt),
       price: Number(batch.price),
       module_file_id: batch.moduleFileId,
       quota: batch.quota,
@@ -80,8 +77,8 @@ export function BatchFormDialog({ open, onOpenChange, batch, competitions }: { o
           <label className="space-y-1.5 text-sm sm:col-span-2">Kompetisi<select disabled={Boolean(batch)} value={form.competition_id} onChange={(event) => setField('competition_id', event.target.value)} className="h-9 w-full rounded-3xl border border-input bg-input/50 px-3 disabled:opacity-60"><option value="">Pilih kompetisi</option>{competitions.map((competition) => <option key={competition.id} value={competition.id}>{competition.name}</option>)}</select>{fieldError('competition_id') && <span className="text-xs text-destructive">{fieldError('competition_id')}</span>}</label>
           <label className="space-y-1.5 text-sm">Nama batch<Input value={form.name} onChange={(event) => setField('name', event.target.value)} aria-invalid={Boolean(fieldError('name'))} />{fieldError('name') && <span className="text-xs text-destructive">{fieldError('name')}</span>}</label>
           <label className="space-y-1.5 text-sm">Slug<Input value={form.slug} onChange={(event) => setField('slug', event.target.value.toLowerCase().replace(/\s+/g, '-'))} aria-invalid={Boolean(fieldError('slug'))} />{fieldError('slug') && <span className="text-xs text-destructive">{fieldError('slug')}</span>}</label>
-          <label className="space-y-1.5 text-sm">Tanggal mulai<Input type="datetime-local" value={form.start_date} onChange={(event) => setField('start_date', event.target.value)} /></label>
-          <label className="space-y-1.5 text-sm">Tanggal selesai<Input type="datetime-local" value={form.end_date} onChange={(event) => setField('end_date', event.target.value)} /></label>
+          <label className="space-y-1.5 text-sm">Tanggal mulai<Input type="datetime-local" step={1} value={form.start_date} onChange={(event) => setField('start_date', event.target.value)} /></label>
+          <label className="space-y-1.5 text-sm">Tanggal selesai<Input type="datetime-local" step={1} value={form.end_date} onChange={(event) => setField('end_date', event.target.value)} /></label>
           <label className="space-y-1.5 text-sm">Harga<Input type="number" min={0} value={form.price} onChange={(event) => setField('price', Number(event.target.value))} aria-invalid={Boolean(fieldError('price'))} /></label>
           <label className="space-y-1.5 text-sm">Kuota<Input type="number" min={1} value={form.quota ?? ''} onChange={(event) => setField('quota', event.target.value ? Number(event.target.value) : null)} placeholder="Tanpa batas" /></label>
           <label className="space-y-1.5 text-sm">Status<select value={form.status} onChange={(event) => setField('status', event.target.value as BatchPayload['status'])} className="h-9 w-full rounded-3xl border border-input bg-input/50 px-3"><option value="DRAFT">Draft</option><option value="OPEN">Dibuka</option><option value="CLOSED">Ditutup</option><option value="FULL">Penuh</option></select></label>

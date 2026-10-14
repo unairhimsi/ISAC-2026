@@ -304,7 +304,7 @@ export default function OlympiadExamShell({
                 <span className="self-center text-xs text-muted-foreground">
                   {data.exam.type === 'tryout'
                     ? 'Tryout bisa review kunci & pembahasan setelah selesai'
-                    : 'Olimpiade tidak menampilkan kunci — hasil diumumkan panitia'}
+                    : 'Olimpiade tidak menampilkan kunci maupun nilai — hasil diumumkan panitia'}
                 </span>
               </div>
             )}

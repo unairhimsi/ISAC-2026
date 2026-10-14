@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Competition;
 use App\Models\Exam;
+use App\Models\ExamAttempt;
 use App\Models\RegistrationStatus;
 use App\Models\Stage;
 use App\Models\Submission;
@@ -45,6 +46,13 @@ class DashboardService
             throw new AuthorizationException('Ujian tidak tersedia untuk tahap Team ini.');
         }
 
+        $attempt = ExamAttempt::query()
+            ->where('team_id', $team->id)
+            ->where('exam_id', $exam->id)
+            ->orderBy('finished')
+            ->latest('created_at')
+            ->first();
+
         return [
             'exam' => $this->examMetadata($exam),
             'stage' => $this->stageMetadata($exam->stage),
@@ -57,6 +65,10 @@ class DashboardService
                 'id' => $registration->batch->id,
                 'name' => $registration->batch->name,
                 'price' => (float) $registration->batch->price,
+            ],
+            'attempt' => $attempt === null ? null : [
+                'id' => $attempt->id,
+                'finished' => (bool) $attempt->finished,
             ],
         ];
     }
