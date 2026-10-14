@@ -114,6 +114,7 @@ Route::prefix('admin')->middleware(['auth:admins', 'principal.admin'])->group(fu
     Route::get('/exams/{exam}', [AdminExamController::class, 'show'])->whereUuid('exam');
     Route::patch('/exams/{exam}', [AdminExamController::class, 'update'])->whereUuid('exam');
     Route::post('/exams/{exam}/questions', [AdminExamController::class, 'storeQuestion'])->whereUuid('exam');
+    Route::delete('/exams/{exam}/questions/{question}', [AdminExamController::class, 'destroyQuestion'])->whereUuid(['exam', 'question']);
     Route::get('/exams/{exam}/attempts', [AdminExamAttemptController::class, 'index'])->whereUuid('exam');
     Route::get('/exams/{exam}/attempts/{attempt}', [AdminExamAttemptController::class, 'show'])->whereUuid(['exam', 'attempt']);
     Route::patch('/exams/{exam}/attempts/{attempt}/score', [AdminExamAttemptController::class, 'updateScore'])->whereUuid(['exam', 'attempt']);

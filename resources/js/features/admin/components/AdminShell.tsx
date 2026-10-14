@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Toaster } from '@/components/ui/sonner'
 import { cn } from '@/lib/utils'
 import { useLogout } from '@/features/auth/hooks/useAuth'
 import { useAuthSession } from '@/features/auth/context/AuthProvider'
@@ -158,6 +159,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </header>
         <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
       </div>
+      <Toaster position="top-right" />
     </div>
   )
 }

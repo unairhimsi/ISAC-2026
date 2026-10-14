@@ -8,13 +8,17 @@ use App\Http\Requests\Admin\UpdateExamRequest;
 use App\Models\Admin;
 use App\Models\Competition;
 use App\Models\Exam;
+use App\Models\ExamAttempt;
 use App\Models\ExamQuestion;
 use App\Models\Stage;
 use App\Services\RichTextSanitizer;
+use App\Services\SecurityAuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AdminExamController extends Controller
@@ -108,6 +112,50 @@ class AdminExamController extends Controller
         ]);
 
         return $this->success('Soal berhasil dibuat.', $this->questionData($created));
+    }
+
+    public function destroyQuestion(Request $request, Exam $exam, ExamQuestion $question): JsonResponse
+    {
+        $this->authorize($request);
+        $this->ensureOlympiadExam($exam);
+        abort_unless($question->exam_id === $exam->id, 404);
+
+        if (ExamAttempt::query()->where('exam_id', $exam->id)->exists()) {
+            throw ValidationException::withMessages([
+                'question' => ['Soal tidak dapat dihapus karena ujian ini sudah pernah dikerjakan peserta.'],
+            ]);
+        }
+
+        $admin = $request->user();
+
+        DB::transaction(function () use ($question, $exam, $admin, $request): void {
+            DB::table('admin_audit_logs')->insert([
+                'id' => (string) Str::uuid(),
+                'admin_id' => $admin->id,
+                'action' => 'exam.question_deleted',
+                'subject_type' => ExamQuestion::class,
+                'subject_id' => $question->id,
+                'before_data' => json_encode([
+                    'exam_id' => $exam->id,
+                    'order' => $question->order,
+                    'type' => $question->type,
+                    'preview' => Str::limit(trim(strip_tags((string) $question->question)), 200),
+                ]),
+                'after_data' => null,
+                'reason' => null,
+                'request_id' => $request->header('X-Request-ID'),
+                'created_at' => now(),
+            ]);
+
+            $question->delete();
+        });
+
+        app(SecurityAuditService::class)->record('exam.question_deleted', $admin, [
+            'exam_id' => $exam->id,
+            'question_id' => $question->id,
+        ]);
+
+        return $this->success('Soal berhasil dihapus.', null);
     }
 
     public function update(UpdateExamRequest $request, Exam $exam): JsonResponse

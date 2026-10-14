@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Save, Sparkles } from 'lucide-react'
+import { Plus, Save, Sparkles, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,7 +12,8 @@ import { Seo } from '@/components/seo/Seo'
 import { AdminPageHeader } from '@/features/admin/components/AdminPageHeader'
 import { adminPageLayout } from '@/features/admin/components/AdminShell'
 import { useAdminCompetitions } from '@/features/admin/hooks/useAdmin'
-import { getJson, patchJson, postJson } from '@/lib/api'
+import { deleteJson, getJson, patchJson, postJson } from '@/lib/api'
+import { ConfirmActionDialog } from '@/features/admin/components/ConfirmActionDialog'
 import { RichTextEditor } from '@/features/admin/components/RichTextEditor'
 
 type Stage = { id: string; competition_id: string; name: string; order: number }
@@ -134,6 +136,22 @@ export default function AdminQuestions() {
     },
   })
 
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; number: number } | null>(null)
+
+  const deleteQuestion = useMutation({
+    mutationFn: (questionId: string) => deleteJson('/api/admin/exams/' + examId + '/questions/' + questionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'exam', examId] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'exams', stageId] })
+      toast.success('Soal berhasil dihapus.')
+      setPendingDelete(null)
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Soal gagal dihapus.')
+      setPendingDelete(null)
+    },
+  })
+
   const competitionRows = (competitions.data?.data ?? []).filter((item: any) => item.type === 'OLIMPIADE')
   const stageRows = stages.data?.data ?? []
   const examRows = exams.data?.data ?? []
@@ -218,8 +236,17 @@ export default function AdminQuestions() {
             {createQuestion.isError && <p className="text-sm text-destructive">Soal gagal disimpan. Periksa seluruh field lalu coba lagi.</p>}
           </>}
         </CardContent></Card>
-        <Card className="border-border/60 bg-card/70"><CardHeader><CardTitle>Daftar soal</CardTitle><CardDescription>{activeExam ? `${activeExam.questions.length} soal pada ${activeExam.title}` : 'Pilih ujian untuk melihat seluruh soal dan pilihan jawabannya.'}</CardDescription></CardHeader><CardContent className="space-y-4">{!examId ? <div className="rounded-2xl bg-muted/40 p-6 text-sm text-muted-foreground"><Sparkles className="mb-2 size-5 text-primary" />Daftar soal akan tampil setelah ujian dipilih.</div> : activeExam?.questions.length ? activeExam.questions.map((item, index) => <article key={item.id} className="rounded-3xl border border-border bg-background/30 p-4 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-3"><span className="font-medium">Soal {index + 1}</span><span className="flex flex-wrap items-center gap-2"><Badge variant="secondary">{questionTypeLabel[item.type as keyof typeof questionTypeLabel] ?? item.type}</Badge><Badge variant="outline">{difficultyLabel[item.difficulty] ?? item.difficulty}</Badge></span></div><div className="prose prose-sm mt-3 max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: item.question }} /><p className="mt-2 text-xs text-muted-foreground">Bobot: benar {item.correctScore} · salah {item.wrongScore} · kosong {item.emptyScore}</p>{item.type === 'essay' ? <div className="mt-4 rounded-2xl border border-accent/25 bg-accent/5 p-3"><p className="mb-2 text-sm font-medium text-accent">Pedoman jawaban</p>{item.correctAnswer ? <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: item.correctAnswer }} /> : <p className="text-sm text-muted-foreground">Belum ada pedoman jawaban.</p>}</div> : item.options?.length ? <ol className="mt-4 grid gap-2">{item.options.map((option, optionIndex) => { const isCorrect = option.id === item.correctAnswer; return <li key={option.id} className={isCorrect ? 'rounded-2xl border border-accent/30 bg-accent/10 p-3' : 'rounded-2xl border border-border/70 bg-muted/20 p-3'}><div className="flex items-start gap-3"><span className={isCorrect ? 'flex size-6 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground' : 'flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground'}>{String.fromCharCode(65 + optionIndex)}</span><div className="min-w-0 flex-1"><div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: option.content }} />{isCorrect && <p className="mt-2 text-xs font-semibold text-accent">Jawaban benar</p>}</div></div></li> })}</ol> : null}{item.explanation && <details className="mt-4 rounded-2xl bg-muted/40 px-4 py-3"><summary className="cursor-pointer text-sm font-medium">Lihat pembahasan</summary><div className="prose prose-sm mt-3 max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: item.explanation }} /></details>}</article>) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">Belum ada soal pada ujian ini. Gunakan form di atas untuk menambahkan soal pertama.</div>}</CardContent></Card>
+        <Card className="border-border/60 bg-card/70"><CardHeader><CardTitle>Daftar soal</CardTitle><CardDescription>{activeExam ? `${activeExam.questions.length} soal pada ${activeExam.title}` : 'Pilih ujian untuk melihat seluruh soal dan pilihan jawabannya.'}</CardDescription></CardHeader><CardContent className="space-y-4">{!examId ? <div className="rounded-2xl bg-muted/40 p-6 text-sm text-muted-foreground"><Sparkles className="mb-2 size-5 text-primary" />Daftar soal akan tampil setelah ujian dipilih.</div> : activeExam?.questions.length ? activeExam.questions.map((item, index) => <article key={item.id} className="rounded-3xl border border-border bg-background/30 p-4 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-3"><span className="font-medium">Soal {index + 1}</span><span className="flex flex-wrap items-center gap-2"><Badge variant="secondary">{questionTypeLabel[item.type as keyof typeof questionTypeLabel] ?? item.type}</Badge><Badge variant="outline">{difficultyLabel[item.difficulty] ?? item.difficulty}</Badge><Button type="button" size="xs" variant="ghost" className="text-destructive hover:text-destructive" aria-label={`Hapus soal ${index + 1}`} onClick={() => setPendingDelete({ id: item.id, number: index + 1 })}><Trash2 />Hapus</Button></span></div><div className="prose prose-sm mt-3 max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: item.question }} /><p className="mt-2 text-xs text-muted-foreground">Bobot: benar {item.correctScore} · salah {item.wrongScore} · kosong {item.emptyScore}</p>{item.type === 'essay' ? <div className="mt-4 rounded-2xl border border-accent/25 bg-accent/5 p-3"><p className="mb-2 text-sm font-medium text-accent">Pedoman jawaban</p>{item.correctAnswer ? <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: item.correctAnswer }} /> : <p className="text-sm text-muted-foreground">Belum ada pedoman jawaban.</p>}</div> : item.options?.length ? <ol className="mt-4 grid gap-2">{item.options.map((option, optionIndex) => { const isCorrect = option.id === item.correctAnswer; return <li key={option.id} className={isCorrect ? 'rounded-2xl border border-accent/30 bg-accent/10 p-3' : 'rounded-2xl border border-border/70 bg-muted/20 p-3'}><div className="flex items-start gap-3"><span className={isCorrect ? 'flex size-6 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground' : 'flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground'}>{String.fromCharCode(65 + optionIndex)}</span><div className="min-w-0 flex-1"><div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: option.content }} />{isCorrect && <p className="mt-2 text-xs font-semibold text-accent">Jawaban benar</p>}</div></div></li> })}</ol> : null}{item.explanation && <details className="mt-4 rounded-2xl bg-muted/40 px-4 py-3"><summary className="cursor-pointer text-sm font-medium">Lihat pembahasan</summary><div className="prose prose-sm mt-3 max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: item.explanation }} /></details>}</article>) : <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">Belum ada soal pada ujian ini. Gunakan form di atas untuk menambahkan soal pertama.</div>}</CardContent></Card>
       </div>
+      <ConfirmActionDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => { if (!open) setPendingDelete(null) }}
+        title={`Hapus soal ${pendingDelete?.number ?? ''}?`}
+        description="Soal akan dihapus dari ujian ini dan tidak dapat dikembalikan dari panel admin. Soal pada ujian yang sudah dikerjakan peserta tidak dapat dihapus."
+        confirmLabel="Hapus soal"
+        pending={deleteQuestion.isPending}
+        onConfirm={() => { if (pendingDelete) deleteQuestion.mutate(pendingDelete.id) }}
+      />
     </>
   )
 }

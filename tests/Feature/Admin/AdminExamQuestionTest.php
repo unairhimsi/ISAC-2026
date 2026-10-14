@@ -3,8 +3,12 @@
 use App\Models\Admin;
 use App\Models\Competition;
 use App\Models\Exam;
+use App\Models\ExamQuestion;
 use App\Models\Stage;
+use App\Models\Team;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 uses(LazilyRefreshDatabase::class);
 
@@ -147,4 +151,116 @@ test('exam update accepts a valid window and a partial update that stays consist
         ->assertOk();
 
     expect($exam->fresh()->end_date->format('Y-m-d H:i'))->toBe('2026-10-20 12:00');
+});
+
+function createDeletableQuestion(Exam $exam, int $order = 1): ExamQuestion
+{
+    return $exam->questions()->create([
+        'question' => "<p>Soal nomor {$order}</p>",
+        'type' => 'multiple_choice',
+        'options' => [['id' => 'a', 'content' => '<p>A</p>'], ['id' => 'b', 'content' => '<p>B</p>']],
+        'correct_answer' => 'a',
+        'order' => $order,
+        'correct_score' => 5,
+        'wrong_score' => -1,
+        'empty_score' => 0,
+        'difficulty' => 'easy',
+        'is_active' => true,
+    ]);
+}
+
+test('admin can delete a question from an exam nobody has taken yet', function (): void {
+    [$admin, $token, $exam] = createQuestionExamContext();
+    $keep = createDeletableQuestion($exam, 1);
+    $remove = createDeletableQuestion($exam, 2);
+
+    $this->withToken($token)
+        ->deleteJson("/api/admin/exams/{$exam->id}/questions/{$remove->id}")
+        ->assertOk()
+        ->assertJsonPath('message', 'Soal berhasil dihapus.');
+
+    $listed = collect($this->withToken($token)->getJson("/api/admin/exams/{$exam->id}")->json('data.questions'))->pluck('id');
+    $log = DB::table('admin_audit_logs')->where('subject_id', $remove->id)->where('action', 'exam.question_deleted')->first();
+
+    expect($listed->all())->toBe([$keep->id])
+        ->and(ExamQuestion::query()->whereKey($remove->id)->exists())->toBeFalse()
+        ->and($log)->not->toBeNull()
+        ->and($log->admin_id)->toBe($admin->id)
+        ->and(json_decode($log->before_data, true)['preview'])->toBe('Soal nomor 2');
+});
+
+test('a question cannot be deleted once the exam has attempts', function (): void {
+    [, $token, $exam] = createQuestionExamContext();
+    $question = createDeletableQuestion($exam);
+    $team = Team::factory()->create();
+    DB::table('exam_attempts')->insert([
+        'id' => (string) Str::uuid(), 'team_id' => $team->id, 'exam_id' => $exam->id, 'total_score' => 0, 'max_possible_score' => 5,
+        'start_time' => now(), 'end_time' => now()->addHour(), 'finished' => false, 'flagged' => false,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    $this->withToken($token)
+        ->deleteJson("/api/admin/exams/{$exam->id}/questions/{$question->id}")
+        ->assertUnprocessable()
+        ->assertJsonStructure(['error' => ['details' => ['question']]]);
+
+    expect(ExamQuestion::query()->whereKey($question->id)->exists())->toBeTrue()
+        ->and(DB::table('admin_audit_logs')->where('action', 'exam.question_deleted')->count())->toBe(0);
+});
+
+test('a question cannot be deleted through another exam', function (): void {
+    [, $token, $exam] = createQuestionExamContext();
+    [, , $otherExam] = createQuestionExamContext();
+    $question = createDeletableQuestion($otherExam);
+
+    $this->withToken($token)
+        ->deleteJson("/api/admin/exams/{$exam->id}/questions/{$question->id}")
+        ->assertNotFound();
+
+    expect(ExamQuestion::query()->whereKey($question->id)->exists())->toBeTrue();
+});
+
+test('deleting a question requires authentication', function (): void {
+    [, , $exam] = createQuestionExamContext();
+    $question = createDeletableQuestion($exam);
+
+    $this->deleteJson("/api/admin/exams/{$exam->id}/questions/{$question->id}")->assertUnauthorized();
+
+    expect(ExamQuestion::query()->whereKey($question->id)->exists())->toBeTrue();
+});
+
+test('a team token cannot delete questions', function (): void {
+    [, , $exam] = createQuestionExamContext();
+    $question = createDeletableQuestion($exam);
+    $team = Team::factory()->create(['email_verified_at' => now()]);
+
+    $this->withToken($team->createToken('t')->plainTextToken)
+        ->deleteJson("/api/admin/exams/{$exam->id}/questions/{$question->id}")
+        ->assertUnauthorized();
+
+    expect(ExamQuestion::query()->whereKey($question->id)->exists())->toBeTrue();
+});
+
+test('admins without exam authoring rights cannot delete questions', function (string $role): void {
+    [, , $exam] = createQuestionExamContext();
+    $question = createDeletableQuestion($exam);
+    $other = Admin::factory()->create(['role' => $role, 'is_active' => true]);
+
+    $this->withToken($other->createToken('t')->plainTextToken)
+        ->deleteJson("/api/admin/exams/{$exam->id}/questions/{$question->id}")
+        ->assertForbidden();
+
+    expect(ExamQuestion::query()->whereKey($question->id)->exists())->toBeTrue();
+})->with(['admin_registration', 'admin_payment']);
+
+test('a judge can delete questions', function (): void {
+    [, , $exam] = createQuestionExamContext();
+    $question = createDeletableQuestion($exam);
+    $judge = Admin::factory()->create(['role' => 'judge', 'is_active' => true]);
+
+    $this->withToken($judge->createToken('t')->plainTextToken)
+        ->deleteJson("/api/admin/exams/{$exam->id}/questions/{$question->id}")
+        ->assertOk();
+
+    expect(ExamQuestion::query()->whereKey($question->id)->exists())->toBeFalse();
 });
