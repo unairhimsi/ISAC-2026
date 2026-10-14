@@ -93,7 +93,7 @@ class AuthService
                 throw new InvalidCredentialException('Akun admin tidak aktif.', 403);
             }
 
-            $admin->tokens()->delete();
+            $this->pruneIdleTokens($admin);
             $token = $admin->createToken('auth-token');
             $admin->update(['last_login_at' => now()]);
             $this->audit->record('auth.login_succeeded', $admin);
@@ -116,7 +116,7 @@ class AuthService
             if (! $team->isEmailVerified()) {
                 $this->sendVerificationCode($team);
 
-                $team->tokens()->delete();
+                $this->pruneIdleTokens($team);
                 $token = $team->createToken('auth-token');
                 $this->audit->record('auth.login_verification_required', $team);
 
@@ -130,7 +130,7 @@ class AuthService
                 ];
             }
 
-            $team->tokens()->delete();
+            $this->pruneIdleTokens($team);
             $token = $team->createToken('auth-token');
             $this->audit->record('auth.login_succeeded', $team);
 
@@ -152,6 +152,26 @@ class AuthService
     {
         $this->audit->record('auth.logout', $user);
         $user->currentAccessToken()?->delete();
+    }
+
+    /**
+     * Satu akun (Team/Admin) boleh login di banyak perangkat sekaligus: login baru
+     * tidak boleh memutus sesi yang sedang dipakai. Yang dibersihkan hanya token
+     * yang sudah lama tidak dipakai, agar token terbengkalai tidak menumpuk.
+     */
+    private function pruneIdleTokens(Team|Admin $user): void
+    {
+        $idleDays = (int) config('sanctum.idle_days', 30);
+        if ($idleDays <= 0) {
+            return;
+        }
+
+        $cutoff = now()->subDays($idleDays);
+        $user->tokens()
+            ->where(fn ($query) => $query
+                ->where('last_used_at', '<', $cutoff)
+                ->orWhere(fn ($unused) => $unused->whereNull('last_used_at')->where('created_at', '<', $cutoff)))
+            ->delete();
     }
 
     public function forgotPassword(array $data): void

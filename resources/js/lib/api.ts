@@ -1,5 +1,5 @@
 import type { ApiFieldErrors } from '@/types/api'
-import { clearAuthToken, getAuthToken } from '@/features/auth/authStorage'
+import { expireAuthSession, getAuthToken } from '@/features/auth/authStorage'
 
 type ApiErrorBody = {
   message?: string
@@ -50,7 +50,15 @@ export async function requestJson<T>(url: string, options: RequestInit = {}): Pr
     const retryAfterValue = response.headers.get('Retry-After')
     const retryAfter = retryAfterValue ? Number(retryAfterValue) : undefined
 
-    if (response.status === 401 && token) clearAuthToken()
+    // Hanya akhiri sesi bila token yang dipakai request ini masih token aktif di browser
+    // (login baru di tab lain tidak boleh terhapus oleh 401 terlambat dari token lama),
+    // dan 401 itu bukan salah kredensial (mis. password salah / "email sudah diverifikasi").
+    if (
+      response.status === 401
+      && token
+      && getAuthToken() === token
+      && errorBody?.error?.code !== 'INVALID_CREDENTIALS'
+    ) expireAuthSession()
 
     const fallbackMessage = response.status === 429 && retryAfter
       ? `Terlalu banyak percobaan. Coba lagi dalam ${retryAfter} detik.`

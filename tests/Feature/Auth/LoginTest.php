@@ -168,7 +168,7 @@ test('login rejects missing email and password', function (): void {
         ->assertJsonStructure(['error' => ['details' => ['email', 'password']]]);
 });
 
-test('login deletes prior sanctum tokens before issuing a new one', function (): void {
+test('login keeps prior sanctum tokens so the account can be used on many devices', function (): void {
     $team = Team::factory()->create([
         'email' => 'team.alpha@gmail.com',
         'password' => 'Password123!',
@@ -185,6 +185,6 @@ test('login deletes prior sanctum tokens before issuing a new one', function ():
     ])->assertOk();
 
     $fresh = $team->fresh();
-    expect($fresh->tokens()->count())->toBe(1);
-    expect($fresh->tokens()->first()->name)->toBe('auth-token');
+    expect($fresh->tokens()->count())->toBe(3);
+    expect($fresh->tokens()->pluck('name')->all())->toContain('auth-token', 'legacy-token');
 });

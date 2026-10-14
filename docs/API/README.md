@@ -102,10 +102,19 @@ rate limit, dan `503 EMAIL_DELIVERY_FAILED` ketika provider email gagal.
 | POST | `/api/auth/forgot-password` | Public | Kirim OTP reset password |
 | POST | `/api/auth/reset-password/verify` | Public | Verifikasi OTP dan terbitkan reset token |
 | POST | `/api/auth/reset-password` | Public | Ganti password dengan reset token |
-| POST | `/api/auth/logout` | Team/Admin | Revoke current token |
+| POST | `/api/auth/logout` | Team/Admin | Revoke current token (sesi di perangkat lain tetap hidup) |
 | GET | `/api/auth/me` | Team/Admin | Pulihkan principal session |
 | POST | `/api/auth/verify-email/resend` | Team | Kirim ulang OTP verifikasi |
 | POST | `/api/auth/verify-email` | Team | Verifikasi email dengan OTP |
+
+**Sesi multi-perangkat.** Satu akun (Team/Admin) boleh login di banyak perangkat sekaligus. Login baru
+tidak mencabut token yang sudah ada; logout hanya mencabut token yang dipakai. Token yang tidak dipakai
+lebih dari `SANCTUM_TOKEN_IDLE_DAYS` hari (default 30, `0` = nonaktif) dibersihkan saat login berikutnya
+akun yang sama. Ganti password lewat reset tetap mencabut seluruh token Team.
+
+Respons `401` dengan `error.code = UNAUTHENTICATED` berarti token tidak lagi valid. Klien menghapus token,
+mengarahkan ke `/auth/login`, dan menampilkan penjelasan. `401` dengan `INVALID_CREDENTIALS` (salah
+kredensial) tidak mengakhiri sesi.
 
 ### Competition dan Batch publik
 

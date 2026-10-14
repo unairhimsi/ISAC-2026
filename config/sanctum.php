@@ -54,6 +54,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Idle Token Pruning (Team & Admin)
+    |--------------------------------------------------------------------------
+    |
+    | Satu akun boleh login di banyak perangkat: login baru tidak mencabut sesi
+    | lain. Token yang tidak dipakai selama N hari dibersihkan saat login
+    | berikutnya milik akun yang sama. Set 0 untuk menonaktifkan.
+    |
+    */
+
+    'idle_days' => (int) env('SANCTUM_TOKEN_IDLE_DAYS', 30),
+
+    /*
+    |--------------------------------------------------------------------------
     | Token Prefix
     |--------------------------------------------------------------------------
     |

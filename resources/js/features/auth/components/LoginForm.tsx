@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, router } from '@inertiajs/react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
@@ -21,6 +21,10 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { loginSchema, type LoginInput } from '../schemas';
 import { useLogin } from '../hooks/useAuth';
+import {
+    clearSessionExpiredNotice,
+    hasSessionExpiredNotice,
+} from '../authStorage';
 
 export function LoginForm() {
     const [successMessage, setSuccessMessage] = useState<string | null>(
@@ -33,6 +37,13 @@ export function LoginForm() {
     ] = useState(false);
 
     const loginMutation = useLogin();
+
+    // Dibaca tanpa menghapus (aman untuk StrictMode); penandanya dibersihkan setelah mount.
+    const [sessionExpired] = useState(hasSessionExpiredNotice);
+
+    useEffect(() => {
+        clearSessionExpiredNotice();
+    }, []);
 
     const isBusy =
         loginMutation.isPending || isVerificationRedirectPending;
@@ -248,6 +259,26 @@ export function LoginForm() {
                                     </Field>
                                 )}
                             />
+
+                            {sessionExpired && (
+                                <div
+                                    className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-3 sm:px-4"
+                                    role="status"
+                                    aria-live="polite"
+                                >
+                                    <p className="break-words text-xs font-semibold text-amber-300 sm:text-sm">
+                                        Sesi login Anda sudah tidak berlaku
+                                    </p>
+
+                                    <p className="mt-0.5 break-words text-xs leading-relaxed text-muted-foreground">
+                                        Server tidak lagi mengenali sesi
+                                        ini, misalnya karena sudah lama
+                                        tidak dipakai atau kata sandi
+                                        akun diubah. Silakan masuk
+                                        kembali.
+                                    </p>
+                                </div>
+                            )}
 
                             {isVerificationRedirectPending && (
                                 <div

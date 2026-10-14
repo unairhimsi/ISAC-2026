@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { authApi } from '../api/authApi'
-import { clearAuthToken, setAuthToken } from '../authStorage'
+import { clearAuthToken, clearSessionExpiredNotice, setAuthToken } from '../authStorage'
 import type {
   ChangePasswordPayload,
   ForgotPasswordPayload,
@@ -66,6 +66,8 @@ export function useLogout() {
     mutationFn: () => authApi.logout(),
     onSettled: () => {
       clearAuthToken()
+      // Logout manual: jangan tampilkan "sesi berakhir" walau request logout sempat 401.
+      clearSessionExpiredNotice()
       queryClient.removeQueries({ queryKey: ['auth'] })
     },
   })

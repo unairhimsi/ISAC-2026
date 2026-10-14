@@ -21,6 +21,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { cn } from '@/lib/utils'
 import { useLogout } from '@/features/auth/hooks/useAuth'
 import { useAuthSession } from '@/features/auth/context/AuthProvider'
+import { AdminRouteMiddleware } from '@/features/auth/components/AdminRouteMiddleware'
 import { adminRoleLabels, navigation } from '@/constants/admin'
 
 
@@ -164,6 +165,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
   )
 }
 
+// Halaman admin memakai layout sendiri sehingga AppLayout tidak terpasang. Guard sesi
+// dipasang di sini agar sesi yang hilang (token ditolak, logout di tab lain, atau
+// pengunjung non-admin) diarahkan ke login, bukan meninggalkan halaman kosong.
 export const adminPageLayout = (page: ReactNode) => (
-  <AdminShell>{page}</AdminShell>
+  <AdminRouteMiddleware>
+    <AdminShell>{page}</AdminShell>
+  </AdminRouteMiddleware>
 )
