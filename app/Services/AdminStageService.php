@@ -13,6 +13,8 @@ use Illuminate\Validation\ValidationException;
 
 class AdminStageService
 {
+    public function __construct(private readonly ExamAttemptService $attempts) {}
+
     /** @return Collection<int, Stage> */
     public function list(?string $competitionId = null): Collection
     {
@@ -94,6 +96,8 @@ class AdminStageService
     /** @return list<array<string, mixed>> */
     private function examScores(Stage $stage): array
     {
+        $this->attempts->autoSubmitExpired();
+
         return ExamAttempt::query()
             ->select(['team_id', 'total_score', 'max_possible_score', 'finished', 'flagged'])
             ->whereHas('exam', fn ($query) => $query->where('stage_id', $stage->id))

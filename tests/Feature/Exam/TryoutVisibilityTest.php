@@ -80,3 +80,15 @@ test('tryout finished exposes explanation', function () {
     $q = $res->json('data.questions.0');
     expect($q['explanation'])->not->toBeNull();
 });
+
+test('exam shell exposes tryout type so the client can review answers', function () {
+    [$team, $exam] = createTryoutContext('tryout');
+    $token = $team->createToken('t')->plainTextToken;
+    $this->withToken($token)->getJson("/api/dashboard/exams/{$exam->id}")->assertOk()->assertJsonPath('data.exam.type', 'tryout');
+});
+
+test('exam shell exposes olimpiade type so the client hides answers', function () {
+    [$team, $exam] = createTryoutContext('OLIMPIADE');
+    $token = $team->createToken('t')->plainTextToken;
+    $this->withToken($token)->getJson("/api/dashboard/exams/{$exam->id}")->assertOk()->assertJsonPath('data.exam.type', 'OLIMPIADE');
+});

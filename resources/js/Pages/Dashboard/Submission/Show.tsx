@@ -33,7 +33,9 @@ import {
 import { useSubmissionShell } from '@/features/dashboard/hooks/useDashboard'
 import { FileUpload, type UploadedFile } from '@/components/shared/FileUpload'
 import { formatDate } from '@/lib/formatters'
+import { postJson } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 function formatRemaining(ms: number | null): string {
   if (ms === null || ms <= 0) return '—'
@@ -107,6 +109,8 @@ export default function SubmissionShell({
   const [description, setDescription] = useState('')
   const [file, setFile] = useState<UploadedFile>(null)
   const [tick, setTick] = useState(0)
+  const [busy, setBusy] = useState<'draft' | 'submit' | 'unsubmit' | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
 
   useEffect(() => {
     if (data?.submission) {
@@ -164,6 +168,40 @@ export default function SubmissionShell({
 
   const submission = data.submission
   const canSubmit = data.canSubmit && data.window.isOpen
+  const editable = canSubmit && (!submission || ['draft', 'revision_requested', 'rejected'].includes(submission.status))
+  const titleValid = title.trim().length >= 3
+  const canWithdraw = canSubmit && submission?.status === 'submitted' && !submission.reviewedAt
+  const stageUrl = `/api/dashboard/stages/${stageId}/submission`
+
+  const saveDraft = () => postJson(stageUrl, { title: title.trim(), description, ...(file ? { file_id: file.id } : {}) })
+
+  async function run(kind: 'draft' | 'submit' | 'unsubmit', action: () => Promise<unknown>, success: string) {
+    setBusy(kind)
+    setFormError(null)
+    try {
+      await action()
+      await query.refetch()
+      toast.success(success)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Permintaan gagal diproses.'
+      setFormError(message)
+      toast.error(message)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const handleSaveDraft = () => run('draft', saveDraft, 'Draft berhasil disimpan.')
+  const handleSubmit = () =>
+    run(
+      'submit',
+      async () => {
+        await saveDraft()
+        await postJson(`${stageUrl}/submit`, {}, { headers: { 'Idempotency-Key': globalThis.crypto?.randomUUID?.() ?? `${Date.now()}` } })
+      },
+      'Karya berhasil dikumpulkan.',
+    )
+  const handleWithdraw = () => run('unsubmit', () => postJson(`${stageUrl}/unsubmit`, {}), 'Pengumpulan ditarik, kamu bisa mengubahnya lagi.')
 
   const statusBadge = submission
     ? submission.status === 'approved'
@@ -354,7 +392,7 @@ export default function SubmissionShell({
                   placeholder="Contoh: Prototype Smart City"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  disabled={!canSubmit}
+                  disabled={!editable}
                 />
               </div>
               <div className="grid gap-2">
@@ -364,7 +402,7 @@ export default function SubmissionShell({
                   placeholder="Jelaskan karya secara singkat..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  disabled={!canSubmit}
+                  disabled={!editable}
                   rows={4}
                 />
               </div>
@@ -373,7 +411,7 @@ export default function SubmissionShell({
                 <FileUpload
                   value={file}
                   onChange={setFile}
-                  disabled={!canSubmit}
+                  disabled={!editable}
                   accept="application/pdf,image/png,image/jpeg,image/webp"
                   maxSizeMB={20}
                   label="Upload File Karya"
@@ -385,18 +423,29 @@ export default function SubmissionShell({
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Button type="button" disabled={!canSubmit || !title.trim()} className="min-w-32">
-                Simpan Draft
+              <Button type="button" onClick={handleSaveDraft} disabled={!editable || !titleValid || busy !== null} className="min-w-32">
+                {busy === 'draft' ? 'Menyimpan...' : 'Simpan Draft'}
               </Button>
-              <Button type="button" variant="secondary" disabled={!canSubmit || !title.trim() || !file} className="min-w-32">
-                Kumpulkan Sekarang
+              <Button type="button" variant="secondary" onClick={handleSubmit} disabled={!editable || !titleValid || !file || busy !== null} className="min-w-32">
+                {busy === 'submit' ? 'Mengumpulkan...' : 'Kumpulkan Sekarang'}
               </Button>
+              {canWithdraw && (
+                <Button type="button" variant="outline" onClick={handleWithdraw} disabled={busy !== null} className="min-w-32">
+                  {busy === 'unsubmit' ? 'Menarik...' : 'Tarik Pengumpulan'}
+                </Button>
+              )}
               {!canSubmit && (
                 <span className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Clock3 className="size-4" /> Menunggu periode dibuka / team tidak eligible
                 </span>
               )}
+              {canSubmit && !editable && (
+                <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Info className="size-4" /> Karya sudah terkumpul. Tarik pengumpulan jika ingin mengubahnya.
+                </span>
+              )}
             </div>
+            {formError && <p role="alert" className="text-sm text-destructive">{formError}</p>}
           </CardContent>
         </Card>
       </div>

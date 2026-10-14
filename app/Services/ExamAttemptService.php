@@ -105,6 +105,8 @@ class ExamAttemptService
             abort(404);
         }
 
+        $attempt = $this->finalizeIfExpired($attempt);
+
         $questions = $exam->questions()->where('is_active', true)->get();
         $order = $attempt->metadata['questionOrder'] ?? $attempt->metadata['question_order'] ?? null;
 
@@ -234,6 +236,11 @@ class ExamAttemptService
 
     public function heartbeat(ExamAttempt $attempt): void
     {
+        $attempt = $this->finalizeIfExpired($attempt);
+        if ($attempt->finished) {
+            return;
+        }
+
         $metadata = $attempt->metadata ?? [];
         $metadata['heartbeatAt'] = now()->toISOString();
         $metadata['heartbeat_at'] = now()->toISOString();
@@ -242,11 +249,41 @@ class ExamAttemptService
 
     public function autoSubmitExpired(): int
     {
-        $now = now();
-        $expired = ExamAttempt::where('finished', false)->where('end_time', '<', $now)->get();
-        $count = 0;
+        $ids = ExamAttempt::query()
+            ->where('finished', false)
+            ->whereNotNull('end_time')
+            ->where('end_time', '<', now())
+            ->pluck('id');
 
-        foreach ($expired as $attempt) {
+        $count = 0;
+        foreach ($ids as $id) {
+            if ($this->finalizeExpired((string) $id) !== null) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    public function finalizeIfExpired(ExamAttempt $attempt): ExamAttempt
+    {
+        if ($attempt->finished || $attempt->end_time === null || $attempt->end_time->gte(now())) {
+            return $attempt;
+        }
+
+        return $this->finalizeExpired($attempt->id) ?? ($attempt->fresh() ?? $attempt);
+    }
+
+    private function finalizeExpired(string $attemptId): ?ExamAttempt
+    {
+        return DB::transaction(function () use ($attemptId): ?ExamAttempt {
+            $now = now();
+            $attempt = ExamAttempt::query()->lockForUpdate()->find($attemptId);
+
+            if ($attempt === null || $attempt->finished || $attempt->end_time === null || $attempt->end_time->gte($now)) {
+                return null;
+            }
+
             $total = (int) $attempt->answers()->whereNotNull('score_obtained')->sum('score_obtained');
             $attempt->update(['total_score' => $total, 'finished' => true]);
             DB::table('exam_event_logs')->insert([
@@ -257,9 +294,8 @@ class ExamAttemptService
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
-            $count++;
-        }
 
-        return $count;
+            return $attempt->fresh();
+        });
     }
 }

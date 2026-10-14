@@ -156,6 +156,7 @@ class DashboardService
             'id' => $exam->id,
             'title' => $exam->title,
             'description' => $exam->description,
+            'type' => $exam->type,
             'startDate' => $exam->start_date?->toISOString(),
             'endDate' => $exam->end_date?->toISOString(),
             'duration' => $exam->duration,
