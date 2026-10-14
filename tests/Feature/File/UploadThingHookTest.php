@@ -183,6 +183,26 @@ test('rich text keeps images served by this UploadThing app and drops everything
         ->not->toContain('drop1')->not->toContain('drop2')->not->toContain('drop3')->not->toContain('drop4');
 });
 
+test('rich text keeps the editor image width as a clamped percentage and ignores raw styles', function (): void {
+    $clean = app(RichTextSanitizer::class)->clean(implode('', [
+        '<img src="https://utfs.io/f/a" alt="a" data-width="50" style="width: 50%">',
+        '<img src="https://utfs.io/f/b" alt="b" data-width="400" style="position:fixed;width:9999px">',
+        '<img src="https://utfs.io/f/c" alt="c" data-width="3" style="width: 70%">',
+        '<img src="https://utfs.io/f/d" alt="d" style="width: 70%">',
+        '<img src="https://utfs.io/f/e" alt="e" data-width="abc">',
+    ]));
+
+    expect($clean)
+        ->toContain('<img src="https://utfs.io/f/a" alt="a" data-width="50" style="width: 50%">')
+        ->toContain('<img src="https://utfs.io/f/b" alt="b" data-width="100" style="width: 100%">')
+        ->toContain('<img src="https://utfs.io/f/c" alt="c" data-width="15" style="width: 15%">')
+        ->toContain('<img src="https://utfs.io/f/d" alt="d">')
+        ->toContain('<img src="https://utfs.io/f/e" alt="e">')
+        ->not->toContain('position')
+        ->not->toContain('9999')
+        ->not->toContain('70%');
+});
+
 test('the production webhook url that UploadThing builds with a doubled slug query still registers the file', function (): void {
     $payload = callbackPayload($this->team);
     $body = json_encode($payload);

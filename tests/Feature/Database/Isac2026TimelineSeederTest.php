@@ -36,6 +36,17 @@ test('official timeline seeder is idempotent and stores the exact batch price ma
     }
 });
 
+test('official timeline seeds every competition with the upfront payment flow', function (): void {
+    $this->seed(Isac2026TimelineSeeder::class);
+
+    expect(Competition::query()->pluck('payment_flow')->unique()->all())->toBe([Competition::PAYMENT_UPFRONT]);
+
+    Competition::query()->update(['payment_flow' => Competition::PAYMENT_SEMIFINAL]);
+    $this->seed(Isac2026TimelineSeeder::class);
+
+    expect(Competition::query()->where('payment_flow', '!=', Competition::PAYMENT_UPFRONT)->count())->toBe(0);
+});
+
 test('official timeline keeps date-only source dates in Asia Jakarta boundaries and seeds no transaction artifacts', function (): void {
     $this->seed(Isac2026TimelineSeeder::class);
 

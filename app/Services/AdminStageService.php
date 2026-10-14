@@ -99,7 +99,7 @@ class AdminStageService
         $this->attempts->autoSubmitExpired();
 
         return ExamAttempt::query()
-            ->select(['team_id', 'total_score', 'max_possible_score', 'finished', 'flagged'])
+            ->select(['team_id', 'exam_id', 'total_score', 'max_possible_score', 'finished', 'flagged'])
             ->whereHas('exam', fn ($query) => $query->where('stage_id', $stage->id))
             ->get()
             ->groupBy('team_id')
@@ -115,11 +115,12 @@ class AdminStageService
     private function examScoreEntry(string $teamId, Collection $attempts): array
     {
         $finished = $attempts->where('finished', true)->values();
+        $bestPerExam = $finished->groupBy('exam_id')->map(fn ($group) => $group->sortByDesc('total_score')->first());
 
         return [
             'teamId' => $teamId,
-            'score' => $finished->isNotEmpty() ? (int) $finished->sum('total_score') : null,
-            'maxScore' => $finished->isNotEmpty() ? (int) $finished->sum('max_possible_score') : null,
+            'score' => $bestPerExam->isNotEmpty() ? (int) $bestPerExam->sum('total_score') : null,
+            'maxScore' => $bestPerExam->isNotEmpty() ? (int) $bestPerExam->sum('max_possible_score') : null,
             'finishedAttempts' => $finished->count(),
             'attemptCount' => $attempts->count(),
             'flagged' => $attempts->contains(fn (ExamAttempt $attempt): bool => (bool) $attempt->flagged),

@@ -32,14 +32,14 @@ class Isac2026TimelineSeeder extends Seeder
                     'slug' => 'business-plan-competition',
                     'description' => 'Business Plan Competition (BPC) ISAC 2026 adalah wadah strategis bagi siswa/i SMA/SMK/sederajat untuk mengasah insting kewirausahaan, inovasi, dan kemampuan perancangan bisnis sejak dini. Berkompetisi dalam tim beranggotakan 3 orang, peserta ditantang merumuskan ide bisnis di bidang IT yang realistis, komprehensif, berkelanjutan, serta punya nilai ekonomi dan dampak sosial positif — mulai dari identifikasi peluang dan analisis pasar, hingga penyusunan strategi pemasaran dan keuangan. Melalui tahapan Preliminary, Semifinal, hingga Final & Awarding, tim terbaik akan memperebutkan total hadiah hingga Rp4.500.000, sekaligus membangun portofolio kewirausahaan kompetitif sebagai bekal menuju pendidikan tinggi dan kompetisi tingkat lanjut.',
                     'type' => Competition::TYPE_BUSINESS_PLAN,
-                    'payment_flow' => Competition::PAYMENT_SEMIFINAL,
+                    'payment_flow' => Competition::PAYMENT_UPFRONT,
                 ]),
                 'bic' => $this->upsertCompetition([
                     'name' => 'Business IT Case Competition',
                     'slug' => 'business-it-case-competition',
                     'description' => 'Business IT Case Competition (BIC) ISAC 2026 hadir di tengah dinamika ekosistem bisnis yang makin kompleks, menguji ketajaman analitis mahasiswa aktif dalam membedah business case nyata dari sebuah perusahaan. Berkompetisi dalam tim beranggotakan 3 orang, peserta merumuskan solusi strategis yang mengintegrasikan teknologi, pemrosesan data, dan inovasi bisnis untuk permasalahan industri yang sesungguhnya. Melalui rangkaian Preliminary, Semifinal, hingga Final Presentation, BIC mempersiapkan calon pemimpin masa depan untuk beradaptasi, mengambil keputusan presisi, dan menciptakan nilai tambah bagi industri — memperebutkan total hadiah tertinggi di ISAC 2026, mencapai Rp6.000.000.',
                     'type' => Competition::TYPE_BUSINESS_IT_CASE,
-                    'payment_flow' => Competition::PAYMENT_SEMIFINAL,
+                    'payment_flow' => Competition::PAYMENT_UPFRONT,
                 ]),
             ];
 

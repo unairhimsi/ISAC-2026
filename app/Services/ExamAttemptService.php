@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Exam;
 use App\Models\ExamAnswer;
 use App\Models\ExamAttempt;
+use App\Models\ExamQuestion;
 use App\Models\Team;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -216,7 +217,7 @@ class ExamAttemptService
             return $attempt->fresh();
         }
 
-        $total = (int) $attempt->answers()->whereNotNull('score_obtained')->sum('score_obtained');
+        $total = $this->totalScore($attempt);
         $attempt->update([
             'total_score' => $total,
             'finished' => true,
@@ -274,6 +275,20 @@ class ExamAttemptService
         return $this->finalizeExpired($attempt->id) ?? ($attempt->fresh() ?? $attempt);
     }
 
+    private function totalScore(ExamAttempt $attempt): int
+    {
+        $answered = (int) $attempt->answers()->whereNotNull('score_obtained')->sum('score_obtained');
+
+        $blank = (int) ExamQuestion::query()
+            ->where('exam_id', $attempt->exam_id)
+            ->where('is_active', true)
+            ->where('type', '!=', 'essay')
+            ->whereNotIn('id', $attempt->answers()->select('question_id'))
+            ->sum('empty_score');
+
+        return $answered + $blank;
+    }
+
     private function finalizeExpired(string $attemptId): ?ExamAttempt
     {
         return DB::transaction(function () use ($attemptId): ?ExamAttempt {
@@ -284,7 +299,7 @@ class ExamAttemptService
                 return null;
             }
 
-            $total = (int) $attempt->answers()->whereNotNull('score_obtained')->sum('score_obtained');
+            $total = $this->totalScore($attempt);
             $attempt->update(['total_score' => $total, 'finished' => true]);
             DB::table('exam_event_logs')->insert([
                 'id' => (string) Str::uuid(),

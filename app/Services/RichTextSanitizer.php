@@ -8,6 +8,10 @@ use Illuminate\Support\Str;
 
 class RichTextSanitizer
 {
+    private const MIN_IMAGE_WIDTH = 15;
+
+    private const MAX_IMAGE_WIDTH = 100;
+
     public function clean(?string $html): ?string
     {
         if ($html === null) {
@@ -29,12 +33,20 @@ class RichTextSanitizer
 
             preg_match('/src\\s*=\\s*(["\\\'])(.*?)\\1/i', $attributes, $src);
             preg_match('/alt\\s*=\\s*(["\\\'])(.*?)\\1/i', $attributes, $alt);
+            preg_match('/data-width\\s*=\\s*(["\\\'])(\\d{1,3})\\1/i', $attributes, $width);
 
             if (! isset($src[2]) || ! $this->isUploadedImageUrl($src[2])) {
                 return '';
             }
 
-            return '<img src="'.e($src[2]).'" alt="'.e($alt[2] ?? '').'">';
+            $image = '<img src="'.e($src[2]).'" alt="'.e($alt[2] ?? '').'"';
+
+            if (isset($width[2])) {
+                $percent = min(self::MAX_IMAGE_WIDTH, max(self::MIN_IMAGE_WIDTH, (int) $width[2]));
+                $image .= ' data-width="'.$percent.'" style="width: '.$percent.'%"';
+            }
+
+            return $image.'>';
         }, $html) ?? '';
 
         return trim($html);

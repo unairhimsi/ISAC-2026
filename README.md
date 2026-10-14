@@ -29,13 +29,13 @@ Laravel 13 + React/Inertia + TanStack Query + Vite + MySQL + Nginx + Docker Comp
 
 ## Overview
 
-ISAC-2026 is a competition registration platform that supports three competition types with different payment flows:
+ISAC-2026 is a competition registration platform that supports three competition types. All of them use the same **UPFRONT** payment flow:
 
 | Competition Type | Label | Payment Flow | Description |
 |---|---|---|---|
 | `OLIMPIADE` | Olimpiade Sains | **UPFRONT** | Bayar saat pendaftaran |
-| `BUSINESS_PLAN` | Business Plan | **SEMIFINAL** | Bayar saat masuk semifinal |
-| `BUSINESS_IT_CASE` | Business IT Case | **SEMIFINAL** | Bayar saat masuk semifinal |
+| `BUSINESS_PLAN` | Business Plan | **UPFRONT** | Bayar saat pendaftaran |
+| `BUSINESS_IT_CASE` | Business IT Case | **UPFRONT** | Bayar saat pendaftaran |
 
 Each competition has multiple **batches** (Early Bird, Reguler, Late) with different prices and quotas. A team can only register when a batch is `OPEN`.
 
@@ -75,17 +75,14 @@ Each competition has multiple **batches** (Early Bird, Reguler, Late) with diffe
 │                                    │  links + twibbon)        │    │
 │                                    └──────────┬───────────────┘    │
 │                                                  │                  │
-│                                    ┌─────────────┴─────────────┐   │
-│                                    │                           │   │
-│                                    ▼                           ▼   │
-│                       ┌────────────────────┐  ┌─────────────────┐ │
-│                       │ UPFRONT Payment    │  │ SEMIFINAL       │ │
-│                       │ (OLIMPIADE)        │  │ (no payment     │ │
-│                       │ Pay now + upload   │  │  yet — goes to  │ │
-│                       │ proof              │  │  dashboard)     │ │
-│                       └────────┬───────────┘  └────────┬────────┘ │
-│                                │                       │           │
-│                                ▼                       ▼           │
+│                                                  ▼                  │
+│                                    ┌──────────────────────────┐    │
+│                                    │ UPFRONT Payment          │    │
+│                                    │ (all competitions)       │    │
+│                                    │ Pay now + upload proof   │    │
+│                                    └──────────┬───────────────┘    │
+│                                                  │                  │
+│                                                  ▼                  │
 │                       ┌──────────────────────────────────────┐    │
 │                       │      WAITING_VERIFICATION            │    │
 │                       │      (admin reviews team data)       │    │
@@ -221,7 +218,7 @@ User provides:
 
 ## Stage 6: Payment
 
-### UPFRONT Payment (OLIMPIADE)
+### UPFRONT Payment (all competitions)
 
 **Page:** `/registration/payment` → `Registration/Payment.tsx`
 
@@ -236,22 +233,15 @@ User provides:
 - Sets `payment_submitted_at`, `status` → `WAITING_VERIFICATION`
 - Sets `submitted_at` (final submission timestamp)
 
-### SEMIFINAL Payment (BUSINESS_PLAN / BUSINESS_IT_CASE)
-
-- **No payment during registration** — registration completes without payment
-- `status` stays at `WAITING_VERIFICATION` after team submission
-- Payment is triggered later when the team advances to the **Semifinal stage**
-- Admin advances team to semifinal stage → `payment_for_stage_id` is set → user sees payment page
-- Same payment flow as UPFRONT from that point
+`SEMIFINAL` remains in the code only as a deprecated legacy value. New and seeded competitions must use `UPFRONT`, and `CompetitionService` rejects any other payment flow.
 
 ### Promo Code System
 
 Config-based single promo code via environment variables:
 
 ```env
-PROMO_CODE=ISAXOP
-PROMO_DISCOUNT_PERCENT=15
-PROMO_DISCOUNT_AMOUNT=0
+REGISTRATION_PROMO_CODE=ISAXOP
+REGISTRATION_PROMO_DISCOUNT_PERCENT=15
 ```
 
 - Applied at quote time (preview) and submission time (locked in)
@@ -299,15 +289,15 @@ Admin sees:
 - Proof of payment image (preview + link to original)
 - Timeline (required → submitted → reviewed → paid)
 
-### Stage Advancement (Semifinal)
+### Stage Advancement
 
-For SEMIFINAL competitions, admin can advance a team to the next stage:
+Admin can advance a verified team to the next stage:
 
 ```
 POST /admin/teams/{teamId}/stages/{stageId}/advance
 ```
 
-This triggers payment requirement for that stage.
+Payment is already settled at registration, so advancing a stage does not trigger a new payment.
 
 ---
 
@@ -375,8 +365,8 @@ WAITING_PAYMENT ──────▶ WAITING_VERIFICATION ──────▶
 
 | Status | Meaning |
 |---|---|
-| `WAITING_PAYMENT` | Awaiting payment (UPFRONT) or initial state |
-| `WAITING_VERIFICATION` | Payment submitted or team submitted (SEMIFINAL) |
+| `WAITING_PAYMENT` | Awaiting payment or initial state |
+| `WAITING_VERIFICATION` | Payment submitted, awaiting admin review |
 | `VERIFIED` | Payment approved |
 | `REVISION_REQUIRED` | Admin requested payment revision |
 | `REJECTED` | Payment rejected |
@@ -390,9 +380,10 @@ WAITING_PAYMENT ──────▶ WAITING_VERIFICATION ──────▶
 - Default code: `ISAXOP`, 15% discount
 - Config in `config/registration.php`:
   ```php
-  'promo_code' => env('PROMO_CODE', 'ISAXOP'),
-  'promo_discount_percent' => (int) env('PROMO_DISCOUNT_PERCENT', 15),
-  'promo_discount_amount' => (int) env('PROMO_DISCOUNT_AMOUNT', 0),
+  'promo' => [
+      'code' => env('REGISTRATION_PROMO_CODE', 'ISAXOP'),
+      'discount_percent' => (int) env('REGISTRATION_PROMO_DISCOUNT_PERCENT', 15),
+  ],
   ```
 - User enters promo code on payment page
 - `POST /registrations/me/payment/quote` → returns discounted price breakdown

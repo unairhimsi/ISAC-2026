@@ -93,6 +93,31 @@ test('admin stage scores aggregate finished exam attempts per team for olympiad 
         ->and($scores[$teamB->id]['attemptCount'])->toBe(1);
 });
 
+test('admin stage scores count only the best finished attempt of each exam', function (): void {
+    $admin = Admin::factory()->create(['role' => 'admin_registration', 'is_active' => true]);
+    $competition = Competition::factory()->create(['type' => Competition::TYPE_OLIMPIADE]);
+    $stage = createScoreStage($competition, 'Penyisihan', 'exam', 1);
+    $team = Team::factory()->create();
+    $examOne = createScoreExam($stage, 'Ujian 1');
+    $examTwo = createScoreExam($stage, 'Ujian 2');
+
+    createScoreAttempt($team, $examOne, 40, 100);
+    createScoreAttempt($team, $examOne, 70, 100);
+    createScoreAttempt($team, $examOne, 55, 100);
+    createScoreAttempt($team, $examTwo, 20, 50);
+
+    $response = $this->withToken($admin->createToken('scores')->plainTextToken)
+        ->getJson("/api/admin/stages/{$stage->id}/scores")
+        ->assertOk();
+
+    $entry = collect($response->json('data.scores'))->firstWhere('teamId', $team->id);
+
+    expect($entry['score'])->toBe(90)
+        ->and($entry['maxScore'])->toBe(150)
+        ->and($entry['finishedAttempts'])->toBe(4)
+        ->and($entry['attemptCount'])->toBe(4);
+});
+
 test('admin stage scores flag teams with flagged attempts', function (): void {
     $admin = Admin::factory()->create(['role' => 'admin_registration', 'is_active' => true]);
     $competition = Competition::factory()->create(['type' => Competition::TYPE_OLIMPIADE]);

@@ -128,6 +128,62 @@ test('auto submit command finalizes an expired attempt with its saved score', fu
         ->and(DB::table('exam_event_logs')->where('attempt_id', $attempt->id)->where('type', 'auto_submitted')->count())->toBe(1);
 });
 
+test('questions left blank count their empty score when the attempt is auto submitted', function (): void {
+    [$team, , $exam, $questions] = createAutoSubmitContext();
+    $questions[1]->update(['empty_score' => -3]);
+    $essay = $exam->questions()->create([
+        'id' => (string) Str::uuid(),
+        'question' => '<p>Esai</p>',
+        'type' => 'essay',
+        'correct_answer' => '<p>rubrik</p>',
+        'order' => 3,
+        'correct_score' => 10,
+        'wrong_score' => 0,
+        'empty_score' => -5,
+        'difficulty' => 'easy',
+        'is_active' => true,
+    ]);
+    $attempt = createAutoSubmitAttempt($team, $exam);
+    createAutoSubmitAnswer($attempt, $questions[0], 10);
+
+    $this->artisan('exam:auto-submit-expired')->assertSuccessful();
+
+    expect($attempt->fresh()->total_score)->toBe(7)
+        ->and($essay->empty_score)->toBe(-5);
+});
+
+test('questions left blank count their empty score when the participant submits', function (): void {
+    [$team, , $exam, $questions] = createAutoSubmitContext();
+    $questions[0]->update(['empty_score' => -2]);
+    $questions[1]->update(['empty_score' => -1]);
+    $attempt = createAutoSubmitAttempt($team, $exam, ['end_time' => now()->addMinutes(10)]);
+    $token = $team->createToken('exam')->plainTextToken;
+
+    $this->withToken($token)
+        ->postJson("/api/dashboard/exams/{$exam->id}/attempts/{$attempt->id}/submit")
+        ->assertOk()
+        ->assertJsonPath('data.attempt.totalScore', -3);
+});
+
+test('a question cleared by the participant is not penalised twice', function (): void {
+    [$team, , $exam, $questions] = createAutoSubmitContext();
+    $questions[0]->update(['empty_score' => -2]);
+    $questions[1]->update(['empty_score' => -1]);
+    $attempt = createAutoSubmitAttempt($team, $exam, ['end_time' => now()->addMinutes(10)]);
+    $token = $team->createToken('exam')->plainTextToken;
+
+    $this->withToken($token)
+        ->putJson("/api/dashboard/exams/{$exam->id}/attempts/{$attempt->id}/answers", [
+            'answers' => [['question_id' => $questions[0]->id]],
+        ])
+        ->assertOk();
+
+    $this->withToken($token)
+        ->postJson("/api/dashboard/exams/{$exam->id}/attempts/{$attempt->id}/submit")
+        ->assertOk()
+        ->assertJsonPath('data.attempt.totalScore', -3);
+});
+
 test('auto submit command leaves a running attempt untouched', function (): void {
     [$team, , $exam, $questions] = createAutoSubmitContext();
     $attempt = createAutoSubmitAttempt($team, $exam, ['end_time' => now()->addMinutes(10)]);
