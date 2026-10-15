@@ -3,7 +3,7 @@ import type { CompetitionType } from '@/features/registrations/types/registratio
 export const WA_GROUPS: Record<CompetitionType, string> = {
   OLIMPIADE: 'https://chat.whatsapp.com/JCbDTzi7i7NIAo8Ox6rS5j?s=sw&p=a&mlu=4',
   BUSINESS_PLAN: 'https://chat.whatsapp.com/KgLRrBbkpFnIVVYgELrFO1?s=sw&p=a&mlu=4',
-  BUSINESS_IT_CASE: 'https://chat.whatsapp.com/BgosLzwfNjEBj8avuvzmhr?s=sw&p=a&mlu=4',
+  BUSINESS_IT_CASE: 'https://chat.whatsapp.com/GktG1dfo4nO5GVbSdOCvb5?s=cl&p=a&mlu=4&ilr=4',
 }
 
 export const WA_GROUP_LABELS: Record<CompetitionType, string> = {
