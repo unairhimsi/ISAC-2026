@@ -102,3 +102,13 @@ test('admin list flagged attempts filter', function (): void {
     expect($nonIds)->not->toContain($flaggedId);
     expect($nonIds)->toContain($attemptId);
 });
+
+test('attempt list clamps per_page to a sane range', function (): void {
+    [$admin, , $exam] = createScoreUpdateContext();
+    $token = $admin->createToken('admin')->plainTextToken;
+
+    $this->withToken($token)->getJson("/api/admin/exams/{$exam->id}/attempts?per_page=100000")
+        ->assertOk()->assertJsonPath('data.per_page', 100);
+    $this->withToken($token)->getJson("/api/admin/exams/{$exam->id}/attempts?per_page=0")
+        ->assertOk()->assertJsonPath('data.per_page', 1);
+});

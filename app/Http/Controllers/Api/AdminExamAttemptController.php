@@ -26,7 +26,7 @@ class AdminExamAttemptController extends Controller
 
         $flagged = $request->query('flagged');
         $search = $request->query('search');
-        $perPage = (int) ($request->query('per_page', 15));
+        $perPage = min(max((int) $request->query('per_page', 15), 1), 100);
 
         $query = ExamAttempt::where('exam_id', $exam->id)->with(['team', 'exam']);
 

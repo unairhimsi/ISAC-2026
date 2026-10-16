@@ -1,6 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '../api/adminApi'
-import type { AdminOperationFilters, AdminPaymentFilters, AdminTeamFilters, AdminTeamUpdatePayload, BatchPayload, CompetitionFilters, CompetitionPayload, CreateAdminOperationPayload, StagePayload, TeamRevisionPayload, UpdateStagePayload } from '../types/adminTypes'
+import type { AdminExamAttemptFilters, AdminOperationFilters, AdminPaymentFilters, AdminTeamFilters, AdminTeamUpdatePayload, BatchPayload, CompetitionFilters, CompetitionPayload, CreateAdminOperationPayload, StagePayload, TeamRevisionPayload, UpdateStagePayload } from '../types/adminTypes'
 
 export const adminKeys = {
   all: ['admin'] as const,
@@ -13,10 +13,14 @@ export const adminKeys = {
   payment: (registrationId: string) => [...adminKeys.all, 'payment', registrationId] as const,
   operations: (filters?: AdminOperationFilters) => [...adminKeys.all, 'operations', filters] as const,
   operation: (operationId: string) => [...adminKeys.all, 'operation', operationId] as const,
+  examStages: () => [...adminKeys.all, 'exam-stages'] as const,
+  exams: (stageId?: string) => [...adminKeys.all, 'exams', stageId] as const,
+  examAttempts: (examId?: string, filters?: AdminExamAttemptFilters) => [...adminKeys.all, 'exam-attempts', examId, filters] as const,
+  examAttempt: (examId: string, attemptId: string) => [...adminKeys.all, 'exam-attempt', examId, attemptId] as const,
 }
 
 export function useAdminTeams(filters: AdminTeamFilters) {
-  return useQuery({ queryKey: adminKeys.teams(filters), queryFn: () => adminApi.teams(filters) })
+  return useQuery({ queryKey: adminKeys.teams(filters), queryFn: () => adminApi.teams(filters), placeholderData: keepPreviousData })
 }
 
 export function useAdminTeam(teamId: string) {
@@ -216,5 +220,41 @@ export function useRetryAdminOperationSpreadsheet(operationId: string) {
   return useMutation({
     mutationFn: () => adminApi.retryOperationSpreadsheet(operationId),
     onSuccess: () => client.invalidateQueries({ queryKey: adminKeys.operation(operationId) }),
+  })
+}
+
+export function useAdminExamStages() {
+  return useQuery({ queryKey: adminKeys.examStages(), queryFn: () => adminApi.examStages() })
+}
+
+export function useAdminExams(stageId?: string) {
+  return useQuery({ queryKey: adminKeys.exams(stageId), queryFn: () => adminApi.exams(stageId as string), enabled: Boolean(stageId) })
+}
+
+export function useAdminExamAttempts(examId: string | undefined, filters: AdminExamAttemptFilters) {
+  return useQuery({
+    queryKey: adminKeys.examAttempts(examId, filters),
+    queryFn: () => adminApi.examAttempts(examId as string, filters),
+    enabled: Boolean(examId),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useAdminExamAttempt(examId: string, attemptId: string) {
+  return useQuery({
+    queryKey: adminKeys.examAttempt(examId, attemptId),
+    queryFn: () => adminApi.examAttempt(examId, attemptId),
+    enabled: Boolean(examId && attemptId),
+  })
+}
+
+export function useUpdateAdminExamAttemptScore(examId: string, attemptId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: { total_score: number; reason: string }) => adminApi.updateExamAttemptScore(examId, attemptId, payload),
+    onSuccess: () => Promise.all([
+      client.invalidateQueries({ queryKey: [...adminKeys.all, 'exam-attempts', examId] }),
+      client.invalidateQueries({ queryKey: adminKeys.examAttempt(examId, attemptId) }),
+    ]),
   })
 }

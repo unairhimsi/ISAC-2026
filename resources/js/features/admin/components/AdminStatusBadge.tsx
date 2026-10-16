@@ -47,6 +47,10 @@ const labels: Record<string, string> = {
   SKIPPED: 'Dilewati',
 }
 
+export function adminStatusLabel(status: string) {
+  return labels[status] ?? status.replace(/_/g, ' ')
+}
+
 export function AdminStatusBadge({ status }: { status: string }) {
-  return <Badge variant="outline" className={cn('font-medium', tones[status])}>{labels[status] ?? status.replace(/_/g, ' ')}</Badge>
+  return <Badge variant="outline" className={cn('font-medium', tones[status])}>{adminStatusLabel(status)}</Badge>
 }

@@ -114,6 +114,11 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/operations/{operation}', fn (string $operation) => Inertia::render('Admin/Operations/Show', ['title' => 'Detail Operasi', 'operationId' => $operation]))->whereUuid('operation')->name('operations.show');
     Route::get('/questions', fn () => Inertia::render('Admin/Questions', ['title' => 'Buat Soal']))->name('questions');
     Route::get('/judging', fn () => Inertia::render('Admin/Judging', ['title' => 'Penilaian']))->name('judging');
+    Route::get('/judging/{exam}/attempts/{attempt}', fn (string $exam, string $attempt) => Inertia::render('Admin/Judging/Show', [
+        'title' => 'Detail Pengerjaan',
+        'examId' => $exam,
+        'attemptId' => $attempt,
+    ]))->whereUuid(['exam', 'attempt'])->name('judging.attempt');
 });
 
 Route::get('/dashboard', function () {

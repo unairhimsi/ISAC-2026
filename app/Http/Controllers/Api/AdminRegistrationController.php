@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ListPaymentsRequest;
+use App\Http\Requests\Admin\ListTeamsRequest;
 use App\Http\Requests\Admin\ReviewReasonRequest;
 use App\Http\Requests\Admin\TeamRevisionRequest;
 use App\Http\Requests\Admin\UpdateTeamRegistrationRequest;
@@ -22,10 +23,10 @@ class AdminRegistrationController extends Controller
 {
     public function __construct(private readonly AdminRegistrationService $service) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(ListTeamsRequest $request): JsonResponse
     {
         $this->authorize($request, 'viewAny', Team::class);
-        $teams = $this->service->teams($request->only(['status', 'competition_id', 'batch_id']), $request->integer('per_page', 15));
+        $teams = $this->service->teams($request->validated(), $request->integer('per_page', 15));
 
         return $this->success('Daftar team berhasil diambil.', RegistrationSummaryResource::collection($teams)->response()->getData(true));
     }

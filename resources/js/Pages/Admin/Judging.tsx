@@ -1,189 +1,253 @@
-import { useEffect, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Award, Flag, Search, ShieldAlert } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Textarea } from '@/components/ui/textarea'
+import { Link } from '@inertiajs/react'
+import { Award, ChevronLeft, ChevronRight, Clock, Eye, FilterX, Flag, ListChecks, Loader2, Search, Timer, X } from 'lucide-react'
+import { useEffect } from 'react'
 import { Seo } from '@/components/seo/Seo'
+import { Badge } from '@/components/ui/badge'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { AdminPageHeader } from '@/features/admin/components/AdminPageHeader'
 import { adminPageLayout } from '@/features/admin/components/AdminShell'
-import { useAdminCompetitions } from '@/features/admin/hooks/useAdmin'
-import { getJson, patchJson } from '@/lib/api'
+import { AdminEmptyState, AdminErrorState, AdminLoadingState } from '@/features/admin/components/AdminStates'
+import { useAdminCompetitions, useAdminExamAttempts, useAdminExamStages, useAdminExams } from '@/features/admin/hooks/useAdmin'
+import { useDebouncedSearch, useUrlFilters } from '@/features/admin/hooks/useUrlFilters'
+import type { AdminExamAttempt, AdminExamAttemptFilters } from '@/features/admin/types/adminTypes'
+import { formatDateTime, scorePercent } from '@/features/admin/utils/judging'
+import { cn } from '@/lib/utils'
 
-type Stage = { id: string; competition_id: string; name: string; order: number }
-type Exam = { id: string; title: string; duration: number; maxAttempts: number; questionCount: number }
-type Attempt = { id: string; teamId: string; totalScore: number; maxPossibleScore: number; finished: boolean; flagged: boolean; suspiciousScore: number; cheatCount: number; startTime: string; endTime: string; team?: { id: string; name: string; code: string; email: string } }
-type Paginated<T> = { data: T[]; current_page: number; per_page: number; total: number; last_page: number }
-type Response<T> = { data: T }
+const PER_PAGE = 20
+const defaults = { competition: '', stage: '', exam: '', flagged: '', q: '', page: '' }
+const selectClass = 'h-10 w-full rounded-3xl border border-input bg-background/60 px-3 text-sm text-foreground outline-none focus:border-primary disabled:cursor-not-allowed disabled:opacity-60'
+const flaggedOptions = [
+  { value: '', label: 'Semua' },
+  { value: '1', label: 'Flagged' },
+  { value: '0', label: 'Tidak flagged' },
+] as const
+
+function ScoreCell({ attempt }: { attempt: AdminExamAttempt }) {
+  const percent = scorePercent(attempt.totalScore, attempt.maxPossibleScore)
+  return (
+    <div className="min-w-28">
+      <p className="font-medium tabular-nums">{attempt.totalScore ?? '—'}<span className="text-muted-foreground">/{attempt.maxPossibleScore}</span></p>
+      {percent !== null && (
+        <div className="mt-1.5 flex items-center gap-2">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label="Persentase nilai"><div className="h-full rounded-full bg-primary" style={{ width: `${percent}%` }} /></div>
+          <span className="text-[11px] tabular-nums text-muted-foreground">{percent}%</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function StatusBadges({ attempt }: { attempt: AdminExamAttempt }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {attempt.finished ? <Badge variant="secondary">Selesai</Badge> : <Badge variant="outline">Berjalan</Badge>}
+      {attempt.flagged && <Badge variant="destructive" className="gap-1"><Flag />Flagged</Badge>}
+    </div>
+  )
+}
 
 export default function AdminJudging() {
-  const queryClient = useQueryClient()
-  const competitions = useAdminCompetitions({ perPage: 100 })
-  const [competitionId, setCompetitionId] = useState('')
-  const [stageId, setStageId] = useState('')
-  const [examId, setExamId] = useState('')
-  const [flagged, setFlagged] = useState('all')
-  const [search, setSearch] = useState('')
-  const [searchInput, setSearchInput] = useState('')
-  const [page, setPage] = useState(1)
-  const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(null)
-  const [detailOpen, setDetailOpen] = useState(false)
-  const [scoreInput, setScoreInput] = useState('')
-  const [reasonInput, setReasonInput] = useState('')
+  const { filters, setFilters, queryString } = useUrlFilters(defaults)
+  const [searchInput, setSearchInput] = useDebouncedSearch(filters.q, (value) => setFilters({ q: value, page: '' }))
+  const page = Math.max(1, Number(filters.page) || 1)
 
-  const stages = useQuery({
-    queryKey: ['admin', 'exam-stages', competitionId],
-    queryFn: () => getJson<Response<Stage[]>>('/api/admin/exam-stages'),
-    enabled: Boolean(competitionId),
-  })
+  const competitionsQuery = useAdminCompetitions({ perPage: 100 })
+  const stagesQuery = useAdminExamStages()
+  const examsQuery = useAdminExams(filters.stage || undefined)
 
-  const exams = useQuery({
-    queryKey: ['admin', 'exams', stageId],
-    queryFn: () => getJson<Response<Exam[]>>('/api/admin/exams?stage_id=' + stageId),
-    enabled: Boolean(stageId),
-  })
+  const query: AdminExamAttemptFilters = {
+    page,
+    per_page: PER_PAGE,
+    search: filters.q || undefined,
+    flagged: filters.flagged as AdminExamAttemptFilters['flagged'],
+  }
+  const attemptsQuery = useAdminExamAttempts(filters.exam || undefined, query)
 
-  const attempts = useQuery({
-    queryKey: ['admin', 'exam-attempts', examId, flagged, search, page],
-    queryFn: () => {
-      const params = new URLSearchParams()
-      if (flagged !== 'all') params.set('flagged', flagged === 'flagged' ? '1' : '0')
-      if (search) params.set('search', search)
-      params.set('page', String(page))
-      params.set('per_page', '1000')
-      return getJson<Response<Paginated<Attempt>>>('/api/admin/exams/' + examId + '/attempts?' + params.toString())
-    },
-    enabled: Boolean(examId),
-  })
+  const competitions = (competitionsQuery.data?.data ?? []).filter((competition) => competition.type === 'OLIMPIADE')
+  const stages = (stagesQuery.data?.data ?? [])
+    .filter((stage) => stage.competitionId === filters.competition)
+    .sort((a, b) => a.order - b.order)
+  const exams = examsQuery.data?.data ?? []
+  const activeExam = exams.find((exam) => exam.id === filters.exam)
+  const paginated = attemptsQuery.data?.data
+  const attempts = paginated?.data ?? []
+  const refreshing = attemptsQuery.isFetching && !attemptsQuery.isLoading
+  const attemptFilterCount = [filters.q, filters.flagged].filter(Boolean).length
 
-  const detail = useQuery({
-    queryKey: ['admin', 'exam-attempt-detail', examId, selectedAttemptId],
-    queryFn: () => getJson<Response<{ attempt: Attempt; answers: any[]; timeline: any[] }>>('/api/admin/exams/' + examId + '/attempts/' + selectedAttemptId),
-    enabled: Boolean(examId && selectedAttemptId && detailOpen),
-  })
-
-  const updateScore = useMutation({
-    mutationFn: () => patchJson('/api/admin/exams/' + examId + '/attempts/' + selectedAttemptId + '/score', {
-      total_score: Number(scoreInput),
-      reason: reasonInput,
-    }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'exam-attempts', examId] })
-      queryClient.invalidateQueries({ queryKey: ['admin', 'exam-attempt-detail', examId, selectedAttemptId] })
-    },
-  })
-
+  // Halaman yang tersimpan di URL bisa melebihi jumlah halaman setelah data berubah.
+  const lastPage = paginated?.last_page
   useEffect(() => {
-    if (detail.data?.data.attempt) {
-      setScoreInput(String(detail.data.data.attempt.totalScore ?? 0))
-    }
-  }, [detail.data?.data.attempt?.id])
+    if (lastPage && page > lastPage) setFilters({ page: lastPage > 1 ? String(lastPage) : '' })
+  }, [lastPage, page, setFilters])
 
-  const competitionRows = (competitions.data?.data ?? []).filter((c: any) => c.type === 'OLIMPIADE')
-  const stageRows = stages.data?.data ?? []
-  const examRows = exams.data?.data ?? []
-  const paginated = attempts.data?.data
-  const attemptRows = paginated?.data ?? []
-  const activeDetail = detail.data?.data
-
-  function openDetail(id: string) {
-    setSelectedAttemptId(id)
-    setDetailOpen(true)
-    setReasonInput('')
+  function clearAttemptFilters() {
+    setSearchInput('')
+    setFilters({ q: '', flagged: '', page: '' })
   }
 
   return (
     <>
       <Seo title="Penilaian Olimpiade" description="Pantau pengerjaan Olimpiade, filter flagged, dan perbarui nilai manual." canonical="/admin/judging" noindex />
-      <AdminPageHeader title="Pengerjaan Olimpiade" description="Pantau attempt Olimpiade per ujian — filter flagged, cari tim, lihat timeline cheat, dan perbarui nilai." />
+      <AdminPageHeader title="Pengerjaan Olimpiade" description="Pilih ujian Olimpiade, cari tim, tandai pengerjaan mencurigakan, lalu buka detail untuk meninjau jawaban dan memperbarui nilai." />
+
       <div className="space-y-6">
-        <Card className="border-border/60 bg-card/70">
-          <CardHeader><CardTitle className="flex items-center gap-2"><Award className="size-4" />Konteks Ujian</CardTitle><CardDescription>Hanya Olimpiade yang memiliki pengerjaan. Business Plan / IT Case tidak perlu.</CardDescription></CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2"><Label>Kompetisi</Label><Select value={competitionId} onValueChange={(v) => { setCompetitionId(v ?? ''); setStageId(''); setExamId('') }}><SelectTrigger><span data-slot="select-value" className="flex flex-1 truncate text-left">{competitionRows.find(c => c.id === competitionId)?.name ?? 'Pilih Olimpiade'}</span></SelectTrigger><SelectContent>{competitionRows.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent></Select></div>
-            <div className="space-y-2"><Label>Tahap</Label><Select value={stageId} onValueChange={(v) => { setStageId(v ?? ''); setExamId('') }} disabled={!competitionId || stages.isLoading}><SelectTrigger><span data-slot="select-value" className="flex flex-1 truncate text-left">{stageRows.find(s => s.id === stageId) ? `Tahap ${stageRows.find(s => s.id === stageId)?.order} · ${stageRows.find(s => s.id === stageId)?.name}` : stages.isLoading ? 'Memuat...' : 'Pilih tahap'}</span></SelectTrigger><SelectContent>{stageRows.map(s => <SelectItem key={s.id} value={s.id}>Tahap {s.order} · {s.name}</SelectItem>)}</SelectContent></Select></div>
-            <div className="space-y-2"><Label>Ujian</Label><Select value={examId} onValueChange={(v) => { setExamId(v ?? ''); setPage(1) }} disabled={!stageId || exams.isLoading}><SelectTrigger><span data-slot="select-value" className="flex flex-1 truncate text-left">{examRows.find(e => e.id === examId)?.title ?? (exams.isLoading ? 'Memuat...' : 'Pilih ujian')}</span></SelectTrigger><SelectContent>{examRows.map(e => <SelectItem key={e.id} value={e.id}>{e.title} · {e.duration}m · {e.maxAttempts}x</SelectItem>)}</SelectContent></Select></div>
+        <Card className="border-border/60 bg-card/70 backdrop-blur-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Award className="size-4 text-primary" />Konteks Ujian</CardTitle>
+            <CardDescription>Pilih kompetisi, tahap, lalu ujian. Hanya Olimpiade yang memiliki pengerjaan.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <label className="space-y-1.5 text-xs text-muted-foreground"><span className="flex items-center gap-1.5"><span className="flex size-4 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">1</span>Kompetisi</span>
+                <select value={filters.competition} onChange={(event) => { setSearchInput(''); setFilters({ competition: event.target.value, stage: '', exam: '', q: '', flagged: '', page: '' }) }} className={selectClass} disabled={competitionsQuery.isLoading}>
+                  <option value="">{competitionsQuery.isLoading ? 'Memuat...' : 'Pilih Olimpiade'}</option>
+                  {competitions.map((competition) => <option key={competition.id} value={competition.id}>{competition.name}</option>)}
+                </select>
+              </label>
+              <label className="space-y-1.5 text-xs text-muted-foreground"><span className="flex items-center gap-1.5"><span className="flex size-4 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">2</span>Tahap</span>
+                <select value={filters.stage} onChange={(event) => { setSearchInput(''); setFilters({ stage: event.target.value, exam: '', q: '', flagged: '', page: '' }) }} className={selectClass} disabled={!filters.competition || stagesQuery.isLoading}>
+                  <option value="">{!filters.competition ? 'Pilih kompetisi dulu' : stagesQuery.isLoading ? 'Memuat...' : stages.length === 0 ? 'Belum ada tahap dengan ujian' : 'Pilih tahap'}</option>
+                  {stages.map((stage) => <option key={stage.id} value={stage.id}>Tahap {stage.order} · {stage.name}</option>)}
+                </select>
+              </label>
+              <label className="space-y-1.5 text-xs text-muted-foreground"><span className="flex items-center gap-1.5"><span className="flex size-4 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">3</span>Ujian</span>
+                <select value={filters.exam} onChange={(event) => { setSearchInput(''); setFilters({ exam: event.target.value, q: '', flagged: '', page: '' }) }} className={selectClass} disabled={!filters.stage || examsQuery.isLoading}>
+                  <option value="">{!filters.stage ? 'Pilih tahap dulu' : examsQuery.isLoading ? 'Memuat...' : exams.length === 0 ? 'Belum ada ujian' : 'Pilih ujian'}</option>
+                  {exams.map((exam) => <option key={exam.id} value={exam.id}>{exam.title}</option>)}
+                </select>
+              </label>
+            </div>
+            {stagesQuery.error && <p className="rounded-2xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive">{stagesQuery.error.message}</p>}
+            {examsQuery.error && <p className="rounded-2xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive">{examsQuery.error.message}</p>}
+            {activeExam && (
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/40 px-3 py-1"><ListChecks className="size-3.5 text-secondary" />{activeExam.questionCount} soal</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/40 px-3 py-1"><Timer className="size-3.5 text-secondary" />{activeExam.duration} menit</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/40 px-3 py-1"><Clock className="size-3.5 text-secondary" />Maks {activeExam.maxAttempts}x percobaan</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {!examId ? (
-          <Card className="border-dashed"><CardContent className="p-8 text-center text-sm text-muted-foreground">Pilih ujian Olimpiade untuk melihat pengerjaan.</CardContent></Card>
+        {!filters.exam ? (
+          <AdminEmptyState title="Pilih ujian terlebih dahulu" description="Daftar pengerjaan akan tampil setelah kompetisi, tahap, dan ujian Olimpiade dipilih." />
         ) : (
-          <Card className="border-border/60 bg-card/70">
+          <Card className="border-border/60 bg-card/70 backdrop-blur-md">
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">Daftar Pengerjaan <Badge variant="outline">{paginated?.total ?? 0} attempt</Badge></CardTitle>
-              <CardDescription>Flagged = alert-only (suspicious ≥50 atau cheat ≥5). Tidak memblokir submit.</CardDescription>
+              <CardTitle className="flex flex-wrap items-center justify-between gap-2">Daftar Pengerjaan <Badge variant="outline">{paginated?.total ?? 0} pengerjaan</Badge></CardTitle>
+              <CardDescription>Flagged adalah penanda peringatan (skor curiga ≥ 50 atau pelanggaran ≥ 5) dan tidak memblokir pengumpulan.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-col gap-3 md:flex-row md:items-end">
-                <div className="space-y-2 md:w-48"><Label>Filter Flagged</Label><Select value={flagged} onValueChange={(v) => { setFlagged(v ?? 'all'); setPage(1) }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Semua</SelectItem><SelectItem value="flagged">Flagged saja</SelectItem><SelectItem value="clean">Tidak flagged</SelectItem></SelectContent></Select></div>
-                <div className="flex-1 space-y-2"><Label>Cari Tim (kode/nama/email)</Label><div className="flex gap-2"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input value={searchInput} onChange={(e) => setSearchInput(e.target.value)} placeholder="ISAC-... / nama / email" className="pl-9" onKeyDown={(e) => { if (e.key === 'Enter') { setSearch(searchInput); setPage(1) } }} /></div><Button variant="outline" onClick={() => { setSearch(searchInput); setPage(1) }}>Cari</Button><Button variant="ghost" onClick={() => { setSearch(''); setSearchInput(''); setFlagged('all'); setPage(1) }}>Reset</Button></div></div>
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+                <label className="flex-1 space-y-1.5 text-xs text-muted-foreground">Cari tim
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Input type="search" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="Kode, nama, atau email tim..." maxLength={100} className="h-10 rounded-3xl bg-background/60 pl-8 pr-9 [&::-webkit-search-cancel-button]:hidden" />
+                    {searchInput && <button type="button" onClick={() => { setSearchInput(''); setFilters({ q: '', page: '' }) }} aria-label="Hapus pencarian" className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><X className="size-3.5" /></button>}
+                  </div>
+                </label>
+                <div className="space-y-1.5 text-xs text-muted-foreground">
+                  <span id="flagged-filter-label">Status flagged</span>
+                  <div role="group" aria-labelledby="flagged-filter-label" className="flex rounded-3xl border border-input bg-background/60 p-0.5">
+                    {flaggedOptions.map((option) => (
+                      <button key={option.value} type="button" aria-pressed={filters.flagged === option.value} onClick={() => setFilters({ flagged: option.value, page: '' })} className={cn('h-9 flex-1 whitespace-nowrap rounded-3xl px-3 text-sm transition-colors lg:flex-none', filters.flagged === option.value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}>{option.label}</button>
+                    ))}
+                  </div>
+                </div>
+                <Button variant="outline" onClick={clearAttemptFilters} disabled={attemptFilterCount === 0 && !searchInput}><FilterX />Reset</Button>
               </div>
 
-              {attempts.isLoading ? (
-                <div className="p-8 text-center text-sm text-muted-foreground">Memuat...</div>
-              ) : attemptRows.length === 0 ? (
-                <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">Belum ada pengerjaan pada filter ini.</div>
+              {attemptsQuery.isLoading ? (
+                <AdminLoadingState label="Memuat daftar pengerjaan..." />
+              ) : attemptsQuery.error && !paginated ? (
+                <AdminErrorState message={attemptsQuery.error.message} retry={() => attemptsQuery.refetch()} />
+              ) : attempts.length === 0 ? (
+                <AdminEmptyState
+                  title={attemptFilterCount > 0 ? 'Pengerjaan tidak ditemukan' : 'Belum ada pengerjaan'}
+                  description={attemptFilterCount > 0 ? 'Tidak ada pengerjaan yang cocok dengan pencarian dan filter aktif.' : 'Belum ada tim yang mengerjakan ujian ini.'}
+                  action={attemptFilterCount > 0 ? <Button variant="outline" onClick={clearAttemptFilters}><FilterX />Reset pencarian & filter</Button> : undefined}
+                />
               ) : (
-                <>
-                  <div className="hidden overflow-hidden rounded-2xl border md:block">
+                <div className={cn('space-y-4 transition-opacity', refreshing && 'opacity-60')} aria-busy={refreshing}>
+                  {refreshing && <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin" />Memperbarui...</p>}
+                  <div className="hidden overflow-hidden rounded-2xl border border-border/60 md:block">
                     <Table>
-                      <TableHeader><TableRow><TableHead>Tim</TableHead><TableHead>Nilai</TableHead><TableHead>Status</TableHead><TableHead>Cheat</TableHead><TableHead>Aksi</TableHead></TableRow></TableHeader>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tim</TableHead>
+                          <TableHead>Nilai</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Risiko</TableHead>
+                          <TableHead className="whitespace-nowrap">Mulai</TableHead>
+                          <TableHead className="text-right">Aksi</TableHead>
+                        </TableRow>
+                      </TableHeader>
                       <TableBody>
-                        {attemptRows.map(a => (
-                          <TableRow key={a.id} className={a.flagged ? 'bg-destructive/5' : ''}>
-                            <TableCell><div><p className="font-medium">{a.team?.code ?? a.teamId}</p><p className="text-xs text-muted-foreground">{a.team?.name ?? '-'} · {a.team?.email ?? ''}</p></div></TableCell>
-                            <TableCell><span className="font-medium">{a.totalScore}/{a.maxPossibleScore}</span></TableCell>
-                            <TableCell><div className="flex gap-1">{a.finished ? <Badge variant="secondary">Selesai</Badge> : <Badge variant="outline">Berjalan</Badge>}{a.flagged && <Badge variant="destructive" className="gap-1"><Flag className="size-3" />Flagged</Badge>}</div></TableCell>
-                            <TableCell><div className="flex flex-col text-xs"><span className={a.suspiciousScore >= 50 ? 'text-destructive font-medium' : ''}>score {a.suspiciousScore}</span><span className="text-muted-foreground">cheat {a.cheatCount}</span></div></TableCell>
-                            <TableCell><Button size="sm" variant="outline" onClick={() => openDetail(a.id)}>Detail</Button></TableCell>
+                        {attempts.map((attempt) => (
+                          <TableRow key={attempt.id} className={cn(attempt.flagged && 'bg-destructive/5 hover:bg-destructive/10')}>
+                            <TableCell className="max-w-64 whitespace-normal">
+                              <p className="break-all font-medium">{attempt.team?.code ?? attempt.teamId}</p>
+                              <p className="break-words text-xs text-muted-foreground">{attempt.team?.name ?? 'Tanpa nama'}</p>
+                              {attempt.team?.email && <p className="break-all text-xs text-muted-foreground">{attempt.team.email}</p>}
+                            </TableCell>
+                            <TableCell><ScoreCell attempt={attempt} /></TableCell>
+                            <TableCell><StatusBadges attempt={attempt} /></TableCell>
+                            <TableCell>
+                              <div className="text-xs">
+                                <p className={cn('tabular-nums', attempt.suspiciousScore >= 50 && 'font-medium text-destructive')}>Skor curiga {attempt.suspiciousScore}</p>
+                                <p className={cn('tabular-nums text-muted-foreground', attempt.cheatCount >= 5 && 'font-medium text-destructive')}>{attempt.cheatCount} pelanggaran</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDateTime(attempt.startTime)}</TableCell>
+                            <TableCell className="text-right"><Link href={`/admin/judging/${filters.exam}/attempts/${attempt.id}${queryString}`} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}><Eye />Detail</Link></TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   </div>
+
                   <div className="grid gap-3 md:hidden">
-                    {attemptRows.map(a => (
-                      <Card key={a.id} className={a.flagged ? 'border-destructive/40 bg-destructive/5' : ''}><CardContent className="p-4 space-y-2"><div className="flex justify-between"><p className="font-medium">{a.team?.code}</p>{a.flagged && <Badge variant="destructive"><ShieldAlert className="mr-1 size-3" />Flagged</Badge>}</div><p className="text-xs text-muted-foreground">{a.team?.name} · {a.totalScore}/{a.maxPossibleScore}</p><div className="flex justify-between text-xs"><span>{a.finished ? 'Selesai' : 'Berjalan'}</span><span>cheat {a.cheatCount} · susp {a.suspiciousScore}</span></div><Button size="sm" className="w-full" variant="outline" onClick={() => openDetail(a.id)}>Lihat Detail</Button></CardContent></Card>
+                    {attempts.map((attempt) => (
+                      <Card key={attempt.id} className={cn('border-border/60 bg-card/70', attempt.flagged && 'border-destructive/40 bg-destructive/5')}>
+                        <CardContent className="space-y-3 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="break-all font-medium">{attempt.team?.code ?? attempt.teamId}</p>
+                              <p className="break-words text-xs text-muted-foreground">{attempt.team?.name ?? 'Tanpa nama'}</p>
+                            </div>
+                            <div className="shrink-0"><StatusBadges attempt={attempt} /></div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 text-xs">
+                            <div><p className="mb-1 text-muted-foreground">Nilai</p><ScoreCell attempt={attempt} /></div>
+                            <div><p className="mb-1 text-muted-foreground">Risiko</p><p className={cn('tabular-nums', attempt.suspiciousScore >= 50 && 'font-medium text-destructive')}>Skor curiga {attempt.suspiciousScore}</p><p className="tabular-nums text-muted-foreground">{attempt.cheatCount} pelanggaran</p></div>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Mulai {formatDateTime(attempt.startTime)}</p>
+                          <Link href={`/admin/judging/${filters.exam}/attempts/${attempt.id}${queryString}`} className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}><Eye />Lihat Detail</Link>
+                        </CardContent>
+                      </Card>
                     ))}
                   </div>
-                  {paginated && paginated.last_page > 1 && (
-                    <div className="flex items-center justify-between text-sm"><Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Sebelumnya</Button><span>{page} / {paginated.last_page} · {paginated.total} data</span><Button variant="outline" size="sm" disabled={page >= paginated.last_page} onClick={() => setPage(p => p + 1)}>Berikutnya</Button></div>
+
+                  {paginated && (
+                    <div className="flex flex-col items-center justify-between gap-3 text-sm text-muted-foreground sm:flex-row">
+                      <p>Menampilkan {(paginated.current_page - 1) * paginated.per_page + 1}–{Math.min(paginated.current_page * paginated.per_page, paginated.total)} dari {paginated.total} pengerjaan</p>
+                      {paginated.last_page > 1 && (
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" disabled={paginated.current_page <= 1} onClick={() => setFilters({ page: paginated.current_page - 1 > 1 ? String(paginated.current_page - 1) : '' })}><ChevronLeft />Sebelumnya</Button>
+                          <span className="px-2">{paginated.current_page} / {paginated.last_page}</span>
+                          <Button variant="outline" size="sm" disabled={paginated.current_page >= paginated.last_page} onClick={() => setFilters({ page: String(paginated.current_page + 1) })}>Berikutnya<ChevronRight /></Button>
+                        </div>
+                      )}
+                    </div>
                   )}
-                </>
+                </div>
               )}
             </CardContent>
           </Card>
         )}
-
-        <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-            <DialogHeader><DialogTitle>Detail Pengerjaan</DialogTitle><DialogDescription>Timeline cheat + jawaban + perbarui nilai manual (audit).</DialogDescription></DialogHeader>
-            {!activeDetail ? (
-              <div className="p-6 text-center text-sm text-muted-foreground">Memuat...</div>
-            ) : (
-              <div className="space-y-4">
-                <div className="rounded-xl border p-3 text-sm">
-                  <p className="font-medium">{activeDetail.attempt.team?.code} · {activeDetail.attempt.team?.name}</p>
-                  <p className="text-xs text-muted-foreground">Nilai: {activeDetail.attempt.totalScore}/{activeDetail.attempt.maxPossibleScore} · Flagged: {activeDetail.attempt.flagged ? 'Ya' : 'Tidak'} · Susp: {activeDetail.attempt.suspiciousScore}</p>
-                  <p className="text-xs text-muted-foreground">Mulai: {activeDetail.attempt.startTime} · Selesai: {activeDetail.attempt.endTime ?? '-'} · {activeDetail.attempt.finished ? 'Finished' : 'Belum'}</p>
-                </div>
-
-                <div className="space-y-2"><Label>Perbarui Nilai Manual (audit)</Label><div className="grid grid-cols-2 gap-2"><Input type="number" value={scoreInput} onChange={(e) => setScoreInput(e.target.value)} placeholder="0 - max" /><Button onClick={() => updateScore.mutate()} disabled={updateScore.isPending || !reasonInput.trim()}>{updateScore.isPending ? 'Menyimpan...' : 'Simpan Nilai'}</Button></div><Textarea value={reasonInput} onChange={(e) => setReasonInput(e.target.value)} placeholder="Alasan 1-2000 karakter (wajib audit)" rows={2} /><p className="text-xs text-muted-foreground">Max {activeDetail.attempt.maxPossibleScore}. Butuh alasan.</p>{updateScore.isSuccess && <p className="text-xs text-green-600">Nilai diperbarui & tercatat di admin_audit_logs.</p>}{updateScore.isError && <p className="text-xs text-destructive">Gagal. Cek max & alasan.</p>}</div>
-
-                <div><p className="mb-2 text-sm font-medium">Timeline</p>{activeDetail.timeline.length === 0 ? <p className="text-xs text-muted-foreground">Belum ada event.</p> : <div className="space-y-1 rounded-xl border bg-muted/20 p-3 text-xs">{activeDetail.timeline.slice(0, 30).map((t: any) => <div key={t.id} className="flex justify-between gap-2"><span className="font-mono">{t.type}</span><span className="truncate text-muted-foreground">{t.createdAt}</span></div>)}</div>}</div>
-
-                <div><p className="mb-2 text-sm font-medium">Jawaban ({activeDetail.answers.length})</p><div className="space-y-2">{activeDetail.answers.map((ans: any) => <div key={ans.id} className="rounded-xl border p-3 text-xs"><p className="font-medium">Soal: {ans.questionId}{ans.questionDeleted && <Badge variant="outline" className="ml-2 text-destructive">Soal dihapus · tidak dihitung</Badge>}</p><p>Jawab: {ans.answer ?? JSON.stringify(ans.selectedOptions) ?? '-'}</p><p>Benar: {String(ans.isCorrect)} · Skor: {String(ans.scoreObtained)} · Waktu: {ans.timeSpent ?? 0}s</p>{ans.correctAnswer && <p className="text-muted-foreground">Kunci: {ans.correctAnswer}</p>}</div>)}</div></div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
       </div>
     </>
   )

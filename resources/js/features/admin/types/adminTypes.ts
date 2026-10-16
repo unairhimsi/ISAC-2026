@@ -133,6 +133,7 @@ export type LaravelPagination<T> = {
 export type AdminTeamFilters = {
   page?: number
   per_page?: number
+  search?: string
   status?: TeamStatus | ''
   competition_id?: string
   batch_id?: string
@@ -367,3 +368,101 @@ export type CreateAdminOperationPayload = {
   }
 }
 
+
+export type AdminExamStage = {
+  id: string
+  competitionId: string
+  name: string
+  description: string | null
+  order: number
+  startDate: string | null
+  endDate: string | null
+}
+
+export type AdminExamSummary = {
+  id: string
+  stageId: string
+  title: string
+  startDate: string | null
+  endDate: string | null
+  questionCount: number
+  attemptCount: number | null
+  duration: number
+  maxAttempts: number
+}
+
+export type AdminExamAttempt = {
+  id: string
+  examId: string
+  teamId: string
+  totalScore: number | null
+  maxPossibleScore: number
+  startTime: string | null
+  endTime: string | null
+  finished: boolean
+  flagged: boolean
+  cheatCount: number
+  suspiciousScore: number
+  deviceId: string | null
+  team?: { id: string; name: string | null; code: string; email: string } | null
+  exam?: { id: string; title: string } | null
+}
+
+export type AdminExamAttemptFilters = {
+  page?: number
+  per_page?: number
+  search?: string
+  flagged?: '0' | '1' | ''
+}
+
+export type AdminExamAttemptsPage = {
+  data: AdminExamAttempt[]
+  current_page: number
+  per_page: number
+  total: number
+  last_page: number
+}
+
+export type AdminAttemptQuestion = {
+  id: string
+  question: string
+  type: string
+  options: { id: string; content: string }[] | null
+  correctAnswer?: string | string[] | null
+  correctScore?: number
+  wrongScore?: number
+  emptyScore?: number
+}
+
+export type AdminAttemptAnswer = {
+  id: string
+  questionId: string
+  question: AdminAttemptQuestion | null
+  questionDeleted: boolean
+  selectedOptions: string[] | null
+  answer: string | null
+  isCorrect: boolean | null
+  scoreObtained: number | null
+  timeSpent: number | null
+  answeredAt: string | null
+  correctAnswer: string | string[] | null
+}
+
+export type AdminAttemptTimelineEvent = {
+  id: string
+  type: string
+  metadata: { weight?: number; raw_type?: string } & Record<string, unknown> | null
+  createdAt: string | null
+}
+
+export type AdminExamAttemptDetail = {
+  attempt: AdminExamAttempt
+  answers: AdminAttemptAnswer[]
+  timeline: AdminAttemptTimelineEvent[]
+}
+
+export type AdminExamStagesResponse = ApiResponse<AdminExamStage[]>
+export type AdminExamsResponse = ApiResponse<AdminExamSummary[]>
+export type AdminExamAttemptsResponse = ApiResponse<AdminExamAttemptsPage>
+export type AdminExamAttemptDetailResponse = ApiResponse<AdminExamAttemptDetail>
+export type AdminExamAttemptScoreResponse = ApiResponse<AdminExamAttempt>

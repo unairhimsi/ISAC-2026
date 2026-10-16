@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react'
+import { Link, usePage } from '@inertiajs/react'
 import { ArrowLeft, Banknote, CheckCircle2, Clock, ExternalLink, FileText, History, Mail, MapPin, Pencil, Phone, RotateCcw, ShieldX, StickyNote, User, UserRound } from 'lucide-react'
 import { useState } from 'react'
 import { Seo } from '@/components/seo/Seo'
@@ -27,7 +27,10 @@ function formatDate(value: string | null | undefined) {
 
 export default function AdminTeamShow({ teamId }: { teamId: string }) {
   const { principal } = useAuthSession()
+  const { url } = usePage()
   const query = useAdminTeam(teamId)
+  // Filter daftar tim ikut terbawa di URL agar tombol Kembali memulihkan pencarian dan halaman sebelumnya.
+  const listQuery = url.includes('?') ? `?${url.split('?')[1]}` : ''
   const [reviewAction, setReviewAction] = useState<'verify' | 'revise' | 'reject' | null>(null)
   const [unverifyOpen, setUnverifyOpen] = useState(false)
   const data = query.data?.data
@@ -50,7 +53,7 @@ export default function AdminTeamShow({ teamId }: { teamId: string }) {
       <AdminPageHeader
         title={data.team.name ?? data.team.code}
         description={`${data.team.code} · ${data.registration?.competition.name ?? 'Belum memilih kompetisi'}`}
-        action={<div className="flex flex-wrap gap-2"><Link href="/admin/teams" className={cn(buttonVariants({ variant: 'outline' }))}><ArrowLeft />Kembali</Link>{canEdit && data.registration && <Button variant="outline" onClick={() => setEditOpen(true)}><Pencil />Edit Data</Button>}</div>}
+        action={<div className="flex flex-wrap gap-2"><Link href={`/admin/teams${listQuery}`} className={cn(buttonVariants({ variant: 'outline' }))}><ArrowLeft />Kembali</Link>{canEdit && data.registration && <Button variant="outline" onClick={() => setEditOpen(true)}><Pencil />Edit Data</Button>}</div>}
       />
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_.7fr]">

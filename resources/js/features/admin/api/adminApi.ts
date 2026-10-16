@@ -4,6 +4,12 @@ import type {
   AdminBatchesResponse,
   AdminCompetitionResponse,
   AdminCompetitionsResponse,
+  AdminExamAttemptDetailResponse,
+  AdminExamAttemptFilters,
+  AdminExamAttemptScoreResponse,
+  AdminExamAttemptsResponse,
+  AdminExamsResponse,
+  AdminExamStagesResponse,
   AdminOperationFilters,
   AdminOperationResponse,
   AdminOperationsResponse,
@@ -63,5 +69,10 @@ export const adminApi = {
   operation: (operationId: string) => getJson<AdminOperationResponse>(`/api/admin/operations/${operationId}`),
   createOperation: (payload: CreateAdminOperationPayload) => postJson<AdminOperationResponse>('/api/admin/operations', payload, { headers: requestHeaders() }),
   retryOperationSpreadsheet: (operationId: string) => postJson<{ queued: number }>(`/api/admin/operations/${operationId}/retry-spreadsheet`, undefined, { headers: requestHeaders() }),
-}
 
+  examStages: () => getJson<AdminExamStagesResponse>('/api/admin/exam-stages'),
+  exams: (stageId: string) => getJson<AdminExamsResponse>(`/api/admin/exams${toSearchParams({ stage_id: stageId })}`),
+  examAttempts: (examId: string, filters: AdminExamAttemptFilters) => getJson<AdminExamAttemptsResponse>(`/api/admin/exams/${examId}/attempts${toSearchParams(filters)}`),
+  examAttempt: (examId: string, attemptId: string) => getJson<AdminExamAttemptDetailResponse>(`/api/admin/exams/${examId}/attempts/${attemptId}`),
+  updateExamAttemptScore: (examId: string, attemptId: string, payload: { total_score: number; reason: string }) => patchJson<AdminExamAttemptScoreResponse>(`/api/admin/exams/${examId}/attempts/${attemptId}/score`, payload, { headers: requestHeaders() }),
+}

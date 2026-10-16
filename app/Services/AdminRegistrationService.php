@@ -52,11 +52,26 @@ class AdminRegistrationService
     public function teams(array $filters, int $perPage = 15): LengthAwarePaginator
     {
         return Team::query()
-            ->with('registration.competition', 'registration.batch', 'currentStage')
+            ->with('members.photoFile', 'registration.competition', 'registration.batch', 'currentStage')
+            ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
+                $like = "%{$search}%";
+                $query->where(function (Builder $values) use ($like): void {
+                    $values->where('code', 'like', $like)
+                        ->orWhere('name', 'like', $like)
+                        ->orWhere('email', 'like', $like)
+                        ->orWhere('institution_name', 'like', $like)
+                        ->orWhereHas('members', fn (Builder $member) => $member->where(function (Builder $fields) use ($like): void {
+                            $fields->where('name', 'like', $like)
+                                ->orWhere('email', 'like', $like)
+                                ->orWhere('student_id', 'like', $like);
+                        }));
+                });
+            })
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filters['competition_id'] ?? null, fn ($query, $id) => $query->whereHas('registration', fn ($registration) => $registration->where('competition_id', $id)))
             ->when($filters['batch_id'] ?? null, fn ($query, $id) => $query->whereHas('registration', fn ($registration) => $registration->where('batch_id', $id)))
             ->latest()
+            ->orderBy('id')
             ->paginate(min(max($perPage, 1), 100));
     }
 
