@@ -2,7 +2,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { FileUpload, type UploadedFile } from '@/components/shared/FileUpload'
 import { Input } from '@/components/ui/input'
@@ -215,9 +215,10 @@ export function AdminTeamEditDialog({
           </Card>
 
           <Card className="border-border/60 bg-background/30">
-            <CardHeader className="flex-row items-start justify-between gap-3 pb-3">
-              <div><CardTitle className="text-sm">Member Team ({form.members.length})</CardTitle><CardDescription>{isUniversity ? 'Kompetisi mahasiswa menggunakan NIM, jurusan, dan fakultas.' : 'Kompetisi siswa menggunakan NISN.'}</CardDescription></div>
-              {!isOlympiad && <Button type="button" variant="outline" size="sm" onClick={addMember} disabled={form.members.length >= maxMembers}><Plus />Tambah Member</Button>}
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Member Team ({form.members.length})</CardTitle>
+              <CardDescription>{isUniversity ? 'Kompetisi mahasiswa menggunakan NIM, jurusan, dan fakultas.' : 'Kompetisi siswa menggunakan NISN.'}</CardDescription>
+              {!isOlympiad && <CardAction><Button type="button" variant="outline" size="sm" onClick={addMember} disabled={form.members.length >= maxMembers}><Plus />Tambah Member</Button></CardAction>}
             </CardHeader>
             <CardContent className="space-y-4">
               {form.members.map((member, index) => (

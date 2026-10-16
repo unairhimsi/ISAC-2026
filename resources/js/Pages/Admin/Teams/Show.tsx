@@ -3,7 +3,7 @@ import { ArrowLeft, Banknote, CheckCircle2, Clock, ExternalLink, FileText, Histo
 import { useState } from 'react'
 import { Seo } from '@/components/seo/Seo'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AdminPageHeader } from '@/features/admin/components/AdminPageHeader'
 import { adminPageLayout } from '@/features/admin/components/AdminShell'
 import { AdminStatusBadge } from '@/features/admin/components/AdminStatusBadge'
@@ -20,10 +20,33 @@ function display(value: string | null | undefined) {
   return value || '—'
 }
 
-function formatDate(value: string | null | undefined) {
+function formatDate(value: string | null | undefined, dateStyle: 'long' | 'medium' = 'long') {
   if (!value) return '—'
-  return new Intl.DateTimeFormat('id-ID', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(value))
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  return new Intl.DateTimeFormat('id-ID', { dateStyle, timeStyle: 'short' }).format(date)
 }
+
+const revisionStepLabels: Record<string, string> = { TEAM: 'Profil Tim', MEMBERS: 'Biodata Peserta', DOCUMENTS: 'Dokumen' }
+
+const auditActionLabels: Record<string, string> = {
+  'team.registration_updated': 'Edit Data',
+  'team.verify': 'Verifikasi',
+  'team.unverified': 'Batalkan Verifikasi',
+  'team.revision_requested': 'Minta Revisi',
+  'team.rejected': 'Tolak',
+  'payment.verify': 'Verifikasi Pembayaran',
+  'payment.unverified': 'Batalkan Pembayaran',
+  'payment.revision_requested': 'Revisi Pembayaran',
+  'payment.rejected': 'Tolak Pembayaran',
+}
+
+// Catatan pada tim punya arti berbeda menurut status, jadi label dan warnanya mengikuti status.
+const noteStyles: Record<string, { label: string; box: string; title: string }> = {
+  REVISION_REQUIRED: { label: 'Catatan permintaan revisi', box: 'border-amber-400/25 bg-amber-400/10 text-amber-100', title: 'text-amber-200' },
+  REJECTED: { label: 'Alasan penolakan', box: 'border-destructive/25 bg-destructive/10 text-foreground', title: 'text-destructive' },
+}
+const defaultNoteStyle = { label: 'Catatan verifikasi', box: 'border-border bg-muted/40 text-foreground', title: 'text-muted-foreground' }
 
 export default function AdminTeamShow({ teamId }: { teamId: string }) {
   const { principal } = useAuthSession()
@@ -41,6 +64,9 @@ export default function AdminTeamShow({ teamId }: { teamId: string }) {
   const waitingReview = data?.team.status === 'WAITING_VERIFICATION'
   const isVerified = data?.team.status === 'VERIFIED'
 
+  const note = data?.verificationNote ?? data?.team.verificationNote ?? null
+  const revisionStep = data?.revisionStep ?? data?.team.revisionStep ?? null
+  const noteStyle = noteStyles[data?.team.status ?? ''] ?? defaultNoteStyle
   const paymentAvailable = data?.registration?.paymentAvailable === true
   const competitionType = data?.registration?.competition.type
   const identityLabel = competitionType === 'BUSINESS_IT_CASE' ? 'NIM' : 'NISN'
@@ -59,7 +85,7 @@ export default function AdminTeamShow({ teamId }: { teamId: string }) {
       <div className="grid gap-6 xl:grid-cols-[1.3fr_.7fr]">
         <div className="space-y-6">
           <Card className="border-border/60 bg-card/70 backdrop-blur-md">
-            <CardHeader className="flex-row items-center justify-between gap-3"><CardTitle>Profil Tim</CardTitle><AdminStatusBadge status={data.team.status} /></CardHeader>
+            <CardHeader><CardTitle>Profil Tim</CardTitle><CardAction><AdminStatusBadge status={data.team.status} /></CardAction></CardHeader>
             <CardContent className="grid gap-4 text-sm sm:grid-cols-2">
               <div className="flex gap-3"><Mail className="mt-0.5 size-4 shrink-0 text-secondary" /><div><p className="text-xs text-muted-foreground">Email</p><p>{display(data.team.email)}</p></div></div>
               <div className="flex gap-3"><Phone className="mt-0.5 size-4 shrink-0 text-secondary" /><div><p className="text-xs text-muted-foreground">Nomor telepon</p><p>{display(data.team.phone)}</p></div></div>
@@ -119,7 +145,7 @@ export default function AdminTeamShow({ teamId }: { teamId: string }) {
                       <dl className="space-y-2.5 text-xs">
                         <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/40 px-3 py-2">
                           <dt className="text-muted-foreground">{identityLabel}</dt>
-                          <dd className="font-medium text-foreground">{member.studentId}</dd>
+                          <dd className="font-medium text-foreground">{display(member.studentId)}</dd>
                         </div>
                         {member.major && (
                           <div>
@@ -178,11 +204,11 @@ export default function AdminTeamShow({ teamId }: { teamId: string }) {
               <div><p className="text-xs text-muted-foreground">Kompetisi</p><p>{display(data.registration?.competition.name)}</p></div>
               <div><p className="text-xs text-muted-foreground">Batch</p><p>{display(data.registration?.batch?.name)}</p></div>
               <div><p className="text-xs text-muted-foreground">Dikirim</p><p>{formatDate(data.registration?.submittedAt)}</p></div>
-              {(data.verificationNote ?? data.team.verificationNote) && (
-                <div className="rounded-2xl border border-amber-400/25 bg-amber-400/10 p-3 text-amber-100">
-                  <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-200"><StickyNote className="size-3.5" />Catatan minta revisi aktif</p>
-                  <p className="mt-1 text-sm leading-5">{data.verificationNote ?? data.team.verificationNote}</p>
-                  {data.revisionStep ?? data.team.revisionStep ? <p className="mt-2 text-xs text-amber-200/80">Target revisi: <span className="font-medium text-amber-100">{String(data.revisionStep ?? data.team.revisionStep)}</span></p> : null}
+              {note && (
+                <div className={cn('rounded-2xl border p-3', noteStyle.box)}>
+                  <p className={cn('flex items-center gap-1.5 text-xs font-semibold', noteStyle.title)}><StickyNote className="size-3.5" />{noteStyle.label}</p>
+                  <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-5">{note}</p>
+                  {data.team.status === 'REVISION_REQUIRED' && revisionStep && <p className="mt-2 text-xs opacity-80">Bagian yang direvisi: <span className="font-medium">{revisionStepLabels[revisionStep] ?? revisionStep}</span></p>}
                 </div>
               )}
             </CardContent>
@@ -203,25 +229,16 @@ export default function AdminTeamShow({ teamId }: { teamId: string }) {
               ) : (
                 <div className="space-y-3">
                   {data.auditLogs.map((log) => {
-                    const label: Record<string, string> = {
-                      'team.registration_updated': 'Edit Data',
-                      'team.verify': 'Verifikasi',
-                      'team.revision_requested': 'Minta Revisi',
-                      'team.rejected': 'Tolak',
-                      'payment.verify': 'Verifikasi Pembayaran',
-                      'payment.revision_requested': 'Revisi Pembayaran',
-                      'payment.rejected': 'Tolak Pembayaran',
-                    }
                     return (
                       <div key={log.id} className="rounded-2xl border border-border/60 bg-background/30 p-3 transition-colors hover:border-primary/20">
                         <div className="flex items-start justify-between gap-2">
                           <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1 text-[11px] font-medium">
                             <Clock className="size-3 text-muted-foreground" />
-                            {label[log.action] ?? log.action}
+                            {auditActionLabels[log.action] ?? log.action}
                           </span>
                           <span className="shrink-0 text-xs text-muted-foreground">{formatDate(log.createdAt)}</span>
                         </div>
-                        <p className="mt-2 text-sm leading-5 text-foreground">“{log.reason}”</p>
+                        <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-5 text-foreground">“{log.reason}”</p>
                         <p className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
                           <User className="size-3" />
                           {log.adminName} {log.requestId ? <span className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">{log.requestId.slice(0, 8)}</span> : null}
@@ -246,7 +263,7 @@ export default function AdminTeamShow({ teamId }: { teamId: string }) {
               <CardHeader><CardTitle>Pembayaran</CardTitle></CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div><p className="text-xs text-muted-foreground">Status registrasi</p><div className="mt-1"><AdminStatusBadge status={data.registration.status} /></div></div>
-                {data.registration.paymentRequiredAt && <div><p className="text-xs text-muted-foreground">Pembayaran diwajibkan</p><p className="mt-1">{new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(data.registration.paymentRequiredAt))}</p></div>}
+                {data.registration.paymentRequiredAt && <div><p className="text-xs text-muted-foreground">Pembayaran diwajibkan</p><p className="mt-1">{formatDate(data.registration.paymentRequiredAt, 'medium')}</p></div>}
                 <Link href={`/admin/payments/${data.registration.id}`} className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}><Banknote />Detail Pembayaran</Link>
               </CardContent>
             </Card>

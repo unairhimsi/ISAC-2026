@@ -27,6 +27,17 @@ function formatDate(value: string | null | undefined) {
   return new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(date)
 }
 
+function SubmitCell({ value }: { value: string | null | undefined }) {
+  const date = value ? new Date(value) : null
+  if (!date || Number.isNaN(date.getTime())) return <span className="text-xs text-muted-foreground">{value ? '—' : 'Belum submit'}</span>
+  return (
+    <div className="text-xs">
+      <p>{new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(date)}</p>
+      <p className="text-muted-foreground">{new Intl.DateTimeFormat('id-ID', { timeStyle: 'short' }).format(date)}</p>
+    </div>
+  )
+}
+
 export default function AdminTeamsIndex() {
   const { filters, setFilters, resetFilters, queryString } = useUrlFilters(defaults)
   const [searchInput, setSearchInput] = useDebouncedSearch(filters.q, (value) => setFilters({ q: value, page: '' }))
@@ -75,7 +86,7 @@ export default function AdminTeamsIndex() {
                 type="search"
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
-                placeholder="Kode, nama tim, email, institusi, peserta..."
+                placeholder="Kode, tim, email, peserta..."
                 maxLength={100}
                 className="h-10 rounded-3xl bg-background/60 pl-8 pr-9 [&::-webkit-search-cancel-button]:hidden"
               />
@@ -107,7 +118,7 @@ export default function AdminTeamsIndex() {
             </select>
           </label>
           <Button variant="outline" className="self-end" onClick={handleReset} disabled={activeFilterCount === 0 && !searchInput}>
-            <FilterX />Reset{activeFilterCount > 0 && <span className="ml-1 rounded-full bg-primary/15 px-1.5 text-[11px] text-primary">{activeFilterCount}</span>}
+            <FilterX />Reset{activeFilterCount > 0 && <span className="ml-1 rounded-full bg-primary px-1.5 text-[11px] text-primary-foreground">{activeFilterCount}</span>}
           </Button>
         </CardContent>
       </Card>
@@ -129,45 +140,50 @@ export default function AdminTeamsIndex() {
             {refreshing && <span className="flex items-center gap-1.5"><Loader2 className="size-3.5 animate-spin" />Memperbarui...</span>}
           </div>
 
-          <Card className="hidden overflow-hidden border-border/60 bg-card/70 backdrop-blur-md md:block">
+          <Card className="hidden overflow-hidden border-border/60 bg-card/70 backdrop-blur-md xl:block">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Tim</TableHead>
                   <TableHead>Institusi</TableHead>
                   <TableHead>Kompetisi</TableHead>
-                  <TableHead>Status Tim</TableHead>
-                  <TableHead>Status Registrasi</TableHead>
-                  <TableHead className="whitespace-nowrap">Submit</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Submit</TableHead>
                   <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {teams.map((item) => (
                   <TableRow key={item.team.id}>
-                    <TableCell className="max-w-64 whitespace-normal">
+                    {/* `cn()` tidak menggabungkan class bentrok, jadi override whitespace-nowrap bawaan TableCell memakai `!`. */}
+                    <TableCell className="max-w-60 whitespace-normal! align-top">
                       <p className="break-words font-medium text-foreground">{item.team.name ?? 'Belum dilengkapi'}</p>
-                      <p className="break-all text-xs text-muted-foreground">{item.team.code} · {item.team.email}</p>
+                      <p className="break-all text-xs text-muted-foreground">{item.team.code}</p>
+                      <p className="break-all text-xs text-muted-foreground">{item.team.email}</p>
                     </TableCell>
-                    <TableCell className="max-w-52 whitespace-normal break-words text-muted-foreground">{item.team.institutionName ?? '—'}</TableCell>
-                    <TableCell className="max-w-48 whitespace-normal">
+                    <TableCell className="max-w-44 whitespace-normal! break-words align-top text-muted-foreground">{item.team.institutionName ?? '—'}</TableCell>
+                    <TableCell className="max-w-44 whitespace-normal! align-top">
                       <p className="break-words">{item.registration?.competition.name ?? '—'}</p>
                       <p className="text-xs text-muted-foreground">{item.registration ? item.registration.batch?.name ?? 'Belum ditentukan' : '—'}</p>
                     </TableCell>
-                    <TableCell><AdminStatusBadge status={item.team.status} /></TableCell>
-                    <TableCell>{item.registration ? <AdminStatusBadge status={item.registration.status} /> : '—'}</TableCell>
-                    <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDate(item.registration?.submittedAt)}</TableCell>
-                    <TableCell className="text-right"><Link href={`/admin/teams/${item.team.id}${queryString}`} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}><Eye />Detail</Link></TableCell>
+                    <TableCell className="align-top">
+                      <div className="flex flex-col items-start gap-1.5">
+                        <div className="flex items-center gap-2"><span className="w-14 text-[11px] text-muted-foreground">Tim</span><AdminStatusBadge status={item.team.status} /></div>
+                        <div className="flex items-center gap-2"><span className="w-14 text-[11px] text-muted-foreground">Registrasi</span>{item.registration ? <AdminStatusBadge status={item.registration.status} /> : <span className="text-xs text-muted-foreground">—</span>}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="align-top"><SubmitCell value={item.registration?.submittedAt} /></TableCell>
+                    <TableCell className="text-right align-top"><Link href={`/admin/teams/${item.team.id}${queryString}`} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}><Eye />Detail</Link></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </Card>
 
-          <div className="space-y-3 md:hidden">
+          <div className="grid gap-3 md:grid-cols-2 xl:hidden">
             {teams.map((item) => (
               <Card key={item.team.id} className="border-border/60 bg-card/70">
-                <CardContent className="space-y-4 p-4">
+                <CardContent className="flex h-full flex-col gap-4 p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="break-words font-medium">{item.team.name ?? 'Belum dilengkapi'}</p>
@@ -182,7 +198,7 @@ export default function AdminTeamsIndex() {
                     <div className="min-w-0"><p className="text-muted-foreground">Batch</p><p className="mt-1 break-words">{item.registration ? item.registration.batch?.name ?? 'Belum ditentukan' : '—'}</p></div>
                     <div><p className="text-muted-foreground">Submit</p><p className="mt-1">{formatDate(item.registration?.submittedAt)}</p></div>
                   </div>
-                  <Link href={`/admin/teams/${item.team.id}${queryString}`} className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}><Eye />Lihat Detail</Link>
+                  <Link href={`/admin/teams/${item.team.id}${queryString}`} className={cn(buttonVariants({ variant: 'outline' }), 'mt-auto w-full')}><Eye />Lihat Detail</Link>
                 </CardContent>
               </Card>
             ))}

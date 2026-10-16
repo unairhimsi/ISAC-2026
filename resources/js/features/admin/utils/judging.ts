@@ -13,9 +13,8 @@ export function formatDuration(seconds: number | null | undefined) {
   const hours = Math.floor(total / 3600)
   const minutes = Math.floor((total % 3600) / 60)
   const rest = total % 60
-  if (hours > 0) return `${hours}j ${minutes}m`
-  if (minutes > 0) return `${minutes}m ${rest}d`
-  return `${rest}d`
+  const parts = [hours > 0 && `${hours} j`, minutes > 0 && `${minutes} mnt`, (rest > 0 || total === 0) && hours === 0 && `${rest} dtk`].filter(Boolean)
+  return parts.join(' ')
 }
 
 export function attemptDurationSeconds(attempt: Pick<AdminExamAttempt, 'startTime' | 'endTime'>) {

@@ -173,7 +173,7 @@ export default function AdminJudging() {
               ) : (
                 <div className={cn('space-y-4 transition-opacity', refreshing && 'opacity-60')} aria-busy={refreshing}>
                   {refreshing && <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin" />Memperbarui...</p>}
-                  <div className="hidden overflow-hidden rounded-2xl border border-border/60 md:block">
+                  <div className="hidden overflow-hidden rounded-2xl border border-border/60 xl:block">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -188,7 +188,7 @@ export default function AdminJudging() {
                       <TableBody>
                         {attempts.map((attempt) => (
                           <TableRow key={attempt.id} className={cn(attempt.flagged && 'bg-destructive/5 hover:bg-destructive/10')}>
-                            <TableCell className="max-w-64 whitespace-normal">
+                            <TableCell className="max-w-64 whitespace-normal! align-top">
                               <p className="break-all font-medium">{attempt.team?.code ?? attempt.teamId}</p>
                               <p className="break-words text-xs text-muted-foreground">{attempt.team?.name ?? 'Tanpa nama'}</p>
                               {attempt.team?.email && <p className="break-all text-xs text-muted-foreground">{attempt.team.email}</p>}
@@ -209,10 +209,10 @@ export default function AdminJudging() {
                     </Table>
                   </div>
 
-                  <div className="grid gap-3 md:hidden">
+                  <div className="grid gap-3 md:grid-cols-2 xl:hidden">
                     {attempts.map((attempt) => (
                       <Card key={attempt.id} className={cn('border-border/60 bg-card/70', attempt.flagged && 'border-destructive/40 bg-destructive/5')}>
-                        <CardContent className="space-y-3 p-4">
+                        <CardContent className="flex h-full flex-col gap-3 p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <p className="break-all font-medium">{attempt.team?.code ?? attempt.teamId}</p>
@@ -225,7 +225,7 @@ export default function AdminJudging() {
                             <div><p className="mb-1 text-muted-foreground">Risiko</p><p className={cn('tabular-nums', attempt.suspiciousScore >= 50 && 'font-medium text-destructive')}>Skor curiga {attempt.suspiciousScore}</p><p className="tabular-nums text-muted-foreground">{attempt.cheatCount} pelanggaran</p></div>
                           </div>
                           <p className="text-xs text-muted-foreground">Mulai {formatDateTime(attempt.startTime)}</p>
-                          <Link href={`/admin/judging/${filters.exam}/attempts/${attempt.id}${queryString}`} className={cn(buttonVariants({ variant: 'outline' }), 'w-full')}><Eye />Lihat Detail</Link>
+                          <Link href={`/admin/judging/${filters.exam}/attempts/${attempt.id}${queryString}`} className={cn(buttonVariants({ variant: 'outline' }), 'mt-auto w-full')}><Eye />Lihat Detail</Link>
                         </CardContent>
                       </Card>
                     ))}
