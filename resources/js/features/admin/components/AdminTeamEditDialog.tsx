@@ -192,7 +192,7 @@ export function AdminTeamEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-5xl">
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-5xl!">
         <DialogHeader>
           <DialogTitle>Edit Data Pendaftaran</DialogTitle>
           <DialogDescription>Perubahan Admin langsung disimpan ke data team, member, dan dokumen. Semua perubahan tercatat pada audit log.</DialogDescription>
@@ -250,7 +250,7 @@ export function AdminTeamEditDialog({
         </div>
 
         {(localError || update.error) && <p className="rounded-2xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-sm text-destructive">{localError || apiError?.message || 'Data tidak dapat disimpan.'}</p>}
-        <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Batal</Button><Button onClick={submit} disabled={update.isPending}>{update.isPending ? 'Menyimpan...' : 'Simpan Perubahan'}</Button></DialogFooter>
+        <DialogFooter className="sticky -bottom-6 z-10 -mx-6 -mb-6 border-t border-border/60 bg-popover px-6 py-4"><Button variant="outline" onClick={() => onOpenChange(false)}>Batal</Button><Button onClick={submit} disabled={update.isPending}>{update.isPending ? 'Menyimpan...' : 'Simpan Perubahan'}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   )
