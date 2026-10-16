@@ -3,9 +3,11 @@
 use App\Models\Admin;
 use App\Models\Competition;
 use App\Models\Exam;
+use App\Models\ExamAttempt;
 use App\Models\ExamQuestion;
 use App\Models\Stage;
 use App\Models\Team;
+use App\Services\ExamAttemptService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -189,23 +191,172 @@ test('admin can delete a question from an exam nobody has taken yet', function (
         ->and(json_decode($log->before_data, true)['preview'])->toBe('Soal nomor 2');
 });
 
-test('a question cannot be deleted once the exam has attempts', function (): void {
-    [, $token, $exam] = createQuestionExamContext();
-    $question = createDeletableQuestion($exam);
+/**
+ * Insert an attempt on $exam for a fresh team. $answers maps question id => score_obtained (null = essay).
+ *
+ * @param  list<ExamQuestion>  $questions  the questions the attempt started with
+ * @param  array<string, int|null>  $answers
+ */
+function createAttemptWithAnswers(Exam $exam, array $questions, array $answers, array $attempt = []): string
+{
+    $id = (string) Str::uuid();
     $team = Team::factory()->create();
     DB::table('exam_attempts')->insert([
-        'id' => (string) Str::uuid(), 'team_id' => $team->id, 'exam_id' => $exam->id, 'total_score' => 0, 'max_possible_score' => 5,
-        'start_time' => now(), 'end_time' => now()->addHour(), 'finished' => false, 'flagged' => false,
+        'id' => $id, 'team_id' => $team->id, 'exam_id' => $exam->id, 'total_score' => 0,
+        'max_possible_score' => array_sum(array_map(fn (ExamQuestion $q) => $q->correct_score, $questions)),
+        'start_time' => now()->subMinutes(30), 'end_time' => now()->addMinutes(30), 'finished' => false, 'flagged' => false,
+        'metadata' => json_encode(['questionOrder' => array_map(fn (ExamQuestion $q) => $q->id, $questions)]),
         'created_at' => now(), 'updated_at' => now(),
+        ...$attempt,
     ]);
 
-    $this->withToken($token)
-        ->deleteJson("/api/admin/exams/{$exam->id}/questions/{$question->id}")
-        ->assertUnprocessable()
-        ->assertJsonStructure(['error' => ['details' => ['question']]]);
+    foreach ($answers as $questionId => $score) {
+        DB::table('exam_answers')->insert([
+            'id' => (string) Str::uuid(), 'attempt_id' => $id, 'question_id' => $questionId,
+            'selected_options' => json_encode(['a']), 'is_correct' => $score !== null && $score > 0, 'score_obtained' => $score,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+    }
 
-    expect(ExamQuestion::query()->whereKey($question->id)->exists())->toBeTrue()
-        ->and(DB::table('admin_audit_logs')->where('action', 'exam.question_deleted')->count())->toBe(0);
+    return $id;
+}
+
+function createScoredQuestion(Exam $exam, int $order, int $correct, int $wrong, int $empty): ExamQuestion
+{
+    return $exam->questions()->create([
+        'question' => "<p>Soal nomor {$order}</p>",
+        'type' => 'multiple_choice',
+        'options' => [['id' => 'a', 'content' => '<p>A</p>'], ['id' => 'b', 'content' => '<p>B</p>']],
+        'correct_answer' => 'a',
+        'order' => $order,
+        'correct_score' => $correct,
+        'wrong_score' => $wrong,
+        'empty_score' => $empty,
+        'difficulty' => 'easy',
+        'is_active' => true,
+    ]);
+}
+
+test('a question can be deleted after participants finished the exam and their scores are recalculated', function (): void {
+    [$admin, $token, $exam] = createQuestionExamContext();
+    $keep = createScoredQuestion($exam, 1, 5, -1, 0);
+    $remove = createScoredQuestion($exam, 2, 5, -1, -2);
+    $questions = [$keep, $remove];
+    $answeredBoth = createAttemptWithAnswers($exam, $questions, [$keep->id => 5, $remove->id => 5], ['finished' => true, 'total_score' => 10]);
+    $leftBlank = createAttemptWithAnswers($exam, $questions, [$keep->id => 5], ['finished' => true, 'total_score' => 3]);
+    $wrong = createAttemptWithAnswers($exam, $questions, [$keep->id => 5, $remove->id => -1], ['finished' => true, 'total_score' => 4]);
+
+    $this->withToken($token)->getJson("/api/admin/exams/{$exam->id}")->assertJsonPath('data.attemptCount', 3);
+
+    $this->withToken($token)
+        ->deleteJson("/api/admin/exams/{$exam->id}/questions/{$remove->id}")
+        ->assertOk()
+        ->assertJsonPath('message', 'Soal berhasil dihapus.')
+        ->assertJsonPath('data.attemptsRecalculated', 3)
+        ->assertJsonPath('data.answersVoided', 2);
+
+    $row = fn (string $id) => DB::table('exam_attempts')->where('id', $id)->first();
+    $log = DB::table('admin_audit_logs')->where('subject_id', $remove->id)->where('action', 'exam.question_deleted')->first();
+    $after = json_decode($log->after_data, true);
+
+    expect(ExamQuestion::query()->whereKey($remove->id)->exists())->toBeFalse()
+        ->and(ExamQuestion::withTrashed()->whereKey($remove->id)->exists())->toBeTrue()
+        ->and([$row($answeredBoth)->total_score, $row($answeredBoth)->max_possible_score])->toBe([5, 5])
+        ->and([$row($leftBlank)->total_score, $row($leftBlank)->max_possible_score])->toBe([5, 5])
+        ->and([$row($wrong)->total_score, $row($wrong)->max_possible_score])->toBe([5, 5])
+        ->and(DB::table('exam_answers')->where('question_id', $remove->id)->count())->toBe(2)
+        ->and($log->admin_id)->toBe($admin->id)
+        ->and($after['attempts_recalculated'])->toBe(3)
+        ->and(collect($after['attempts'])->firstWhere('attempt_id', $leftBlank))->toMatchArray(['total_before' => 3, 'total_after' => 5, 'max_after' => 5]);
+});
+
+test('deleting a question keeps a score an admin corrected by hand and only removes the question share', function (): void {
+    [$admin, $token, $exam] = createQuestionExamContext();
+    $keep = createScoredQuestion($exam, 1, 5, -1, 0);
+    $remove = createScoredQuestion($exam, 2, 5, -1, 0);
+    $attemptId = createAttemptWithAnswers($exam, [$keep, $remove], [$keep->id => 5, $remove->id => 5], [
+        'finished' => true, 'total_score' => 8, 'reviewed_by' => $admin->id,
+    ]);
+
+    $this->withToken($token)->deleteJson("/api/admin/exams/{$exam->id}/questions/{$remove->id}")->assertOk();
+
+    $attempt = DB::table('exam_attempts')->where('id', $attemptId)->first();
+    expect([$attempt->total_score, $attempt->max_possible_score, $attempt->reviewed_by])->toBe([3, 5, $admin->id]);
+});
+
+test('a running attempt loses the deleted question from its maximum and is not scored with it on submit', function (): void {
+    [, $token, $exam] = createQuestionExamContext();
+    $keep = createScoredQuestion($exam, 1, 5, -1, 0);
+    $remove = createScoredQuestion($exam, 2, 5, -1, 0);
+    $attemptId = createAttemptWithAnswers($exam, [$keep, $remove], [$keep->id => 5, $remove->id => 5]);
+
+    $this->withToken($token)->deleteJson("/api/admin/exams/{$exam->id}/questions/{$remove->id}")->assertOk();
+
+    $running = ExamAttempt::query()->findOrFail($attemptId);
+    expect([$running->total_score, $running->max_possible_score, $running->finished])->toBe([0, 5, false]);
+
+    $submitted = app(ExamAttemptService::class)->submit($running->team, $exam, $running);
+
+    expect([$submitted->total_score, $submitted->max_possible_score, $submitted->finished])->toBe([5, 5, true]);
+});
+
+test('a participant resuming an attempt no longer receives the deleted question or its saved answer', function (): void {
+    [, $token, $exam] = createQuestionExamContext();
+    $keep = createScoredQuestion($exam, 1, 5, -1, 0);
+    $remove = createScoredQuestion($exam, 2, 5, -1, 0);
+    $attemptId = createAttemptWithAnswers($exam, [$keep, $remove], [$keep->id => 5, $remove->id => 5]);
+
+    $this->withToken($token)->deleteJson("/api/admin/exams/{$exam->id}/questions/{$remove->id}")->assertOk();
+
+    $attempt = ExamAttempt::query()->findOrFail($attemptId);
+    $resumed = app(ExamAttemptService::class)->resume($attempt->team, $exam, $attempt);
+
+    expect($resumed['questions']->pluck('id')->all())->toBe([$keep->id])
+        ->and($resumed['savedAnswers']->pluck('questionId')->all())->toBe([$keep->id]);
+});
+
+test('an admin still sees the participant answer to a deleted question, marked as deleted', function (): void {
+    [, $token, $exam] = createQuestionExamContext();
+    $keep = createScoredQuestion($exam, 1, 5, -1, 0);
+    $remove = createScoredQuestion($exam, 2, 5, -1, 0);
+    $attemptId = createAttemptWithAnswers($exam, [$keep, $remove], [$keep->id => 5, $remove->id => 5], ['finished' => true, 'total_score' => 10]);
+
+    $this->withToken($token)->deleteJson("/api/admin/exams/{$exam->id}/questions/{$remove->id}")->assertOk();
+
+    $answers = collect($this->withToken($token)->getJson("/api/admin/exams/{$exam->id}/attempts/{$attemptId}")->assertOk()->json('data.answers'))
+        ->keyBy('questionId');
+
+    expect($answers[$remove->id]['questionDeleted'])->toBeTrue()
+        ->and($answers[$remove->id]['question']['id'])->toBe($remove->id)
+        ->and($answers[$remove->id]['correctAnswer'])->toBe('a')
+        ->and($answers[$keep->id]['questionDeleted'])->toBeFalse();
+});
+
+test('deleting the same question twice does not recalculate the scores twice', function (): void {
+    [, $token, $exam] = createQuestionExamContext();
+    $keep = createScoredQuestion($exam, 1, 5, -1, 0);
+    $remove = createScoredQuestion($exam, 2, 5, -1, 0);
+    $attemptId = createAttemptWithAnswers($exam, [$keep, $remove], [$keep->id => 5, $remove->id => 5], ['finished' => true, 'total_score' => 10]);
+
+    $this->withToken($token)->deleteJson("/api/admin/exams/{$exam->id}/questions/{$remove->id}")->assertOk();
+    $this->withToken($token)->deleteJson("/api/admin/exams/{$exam->id}/questions/{$remove->id}")->assertNotFound();
+
+    $attempt = DB::table('exam_attempts')->where('id', $attemptId)->first();
+    expect([$attempt->total_score, $attempt->max_possible_score])->toBe([5, 5])
+        ->and(DB::table('admin_audit_logs')->where('action', 'exam.question_deleted')->count())->toBe(1);
+});
+
+test('deleting a question leaves the attempts of other exams untouched', function (): void {
+    [, $token, $exam] = createQuestionExamContext();
+    [, , $otherExam] = createQuestionExamContext();
+    $remove = createScoredQuestion($exam, 1, 5, -1, 0);
+    $otherQuestion = createScoredQuestion($otherExam, 1, 5, -1, 0);
+    $otherAttempt = createAttemptWithAnswers($otherExam, [$otherQuestion], [$otherQuestion->id => 5], ['finished' => true, 'total_score' => 5]);
+
+    $this->withToken($token)->deleteJson("/api/admin/exams/{$exam->id}/questions/{$remove->id}")->assertOk();
+
+    $attempt = DB::table('exam_attempts')->where('id', $otherAttempt)->first();
+    expect([$attempt->total_score, $attempt->max_possible_score])->toBe([5, 5]);
 });
 
 test('a question cannot be deleted through another exam', function (): void {

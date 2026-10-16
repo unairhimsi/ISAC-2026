@@ -8,9 +8,10 @@ use App\Http\Requests\Admin\UpdateExamRequest;
 use App\Models\Admin;
 use App\Models\Competition;
 use App\Models\Exam;
-use App\Models\ExamAttempt;
+use App\Models\ExamAnswer;
 use App\Models\ExamQuestion;
 use App\Models\Stage;
+use App\Services\ExamAttemptService;
 use App\Services\RichTextSanitizer;
 use App\Services\SecurityAuditService;
 use Illuminate\Http\JsonResponse;
@@ -64,7 +65,7 @@ class AdminExamController extends Controller
     public function show(Request $request, Exam $exam): JsonResponse
     {
         $this->authorize($request);
-        $exam->loadCount('questions');
+        $exam->loadCount(['questions', 'attempts']);
 
         $this->ensureOlympiadExam($exam);
 
@@ -114,48 +115,57 @@ class AdminExamController extends Controller
         return $this->success('Soal berhasil dibuat.', $this->questionData($created));
     }
 
-    public function destroyQuestion(Request $request, Exam $exam, ExamQuestion $question): JsonResponse
+    public function destroyQuestion(Request $request, Exam $exam, ExamQuestion $question, ExamAttemptService $attempts): JsonResponse
     {
         $this->authorize($request);
         $this->ensureOlympiadExam($exam);
         abort_unless($question->exam_id === $exam->id, 404);
 
-        if (ExamAttempt::query()->where('exam_id', $exam->id)->exists()) {
-            throw ValidationException::withMessages([
-                'question' => ['Soal tidak dapat dihapus karena ujian ini sudah pernah dikerjakan peserta.'],
-            ]);
-        }
-
         $admin = $request->user();
 
-        DB::transaction(function () use ($question, $exam, $admin, $request): void {
+        $impact = DB::transaction(function () use ($question, $exam, $admin, $request, $attempts): array {
+            // Re-read under lock: a second delete that raced past route binding must not rescore the attempts twice.
+            $locked = ExamQuestion::query()->lockForUpdate()->find($question->id);
+            abort_if($locked === null, 404);
+
+            // Participants may already have answered it. The question is soft deleted, so their answers stay for
+            // review, but the question leaves every score (see ExamAttemptService::voidQuestion).
+            $impact = $attempts->voidQuestion($locked);
+            $answersVoided = ExamAnswer::query()->where('question_id', $locked->id)->count();
+            $locked->delete();
+
             DB::table('admin_audit_logs')->insert([
                 'id' => (string) Str::uuid(),
                 'admin_id' => $admin->id,
                 'action' => 'exam.question_deleted',
                 'subject_type' => ExamQuestion::class,
-                'subject_id' => $question->id,
+                'subject_id' => $locked->id,
                 'before_data' => json_encode([
                     'exam_id' => $exam->id,
-                    'order' => $question->order,
-                    'type' => $question->type,
-                    'preview' => Str::limit(trim(strip_tags((string) $question->question)), 200),
+                    'order' => $locked->order,
+                    'type' => $locked->type,
+                    'preview' => Str::limit(trim(strip_tags((string) $locked->question)), 200),
                 ]),
-                'after_data' => null,
+                'after_data' => json_encode([
+                    'attempts_recalculated' => count($impact),
+                    'answers_voided' => $answersVoided,
+                    'attempts' => $impact,
+                ]),
                 'reason' => null,
                 'request_id' => $request->header('X-Request-ID'),
                 'created_at' => now(),
             ]);
 
-            $question->delete();
+            return ['attemptsRecalculated' => count($impact), 'answersVoided' => $answersVoided];
         });
 
         app(SecurityAuditService::class)->record('exam.question_deleted', $admin, [
             'exam_id' => $exam->id,
             'question_id' => $question->id,
+            'attempts_recalculated' => $impact['attemptsRecalculated'],
         ]);
 
-        return $this->success('Soal berhasil dihapus.', null);
+        return $this->success('Soal berhasil dihapus.', $impact);
     }
 
     public function update(UpdateExamRequest $request, Exam $exam): JsonResponse
@@ -257,6 +267,7 @@ class AdminExamController extends Controller
             'startDate' => $exam->start_date?->toISOString(),
             'endDate' => $exam->end_date?->toISOString(),
             'questionCount' => $exam->questions_count,
+            'attemptCount' => $exam->attempts_count,
             'duration' => $exam->duration,
             'maxAttempts' => $exam->max_attempts,
             'shuffleQuestions' => $exam->shuffle_questions,

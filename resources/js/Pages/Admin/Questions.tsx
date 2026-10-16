@@ -17,7 +17,7 @@ import { ConfirmActionDialog } from '@/features/admin/components/ConfirmActionDi
 import { RichTextEditor } from '@/features/admin/components/RichTextEditor'
 
 type Stage = { id: string; competition_id: string; name: string; order: number }
-type Exam = { id: string; title: string; description: string | null; questionCount: number; duration: number; maxAttempts: number; shuffleQuestions: boolean; shuffleOptions: boolean; showResultImmediately: boolean; passingScore: number | null; type: string }
+type Exam = { id: string; title: string; description: string | null; questionCount: number; attemptCount?: number | null; duration: number; maxAttempts: number; shuffleQuestions: boolean; shuffleOptions: boolean; showResultImmediately: boolean; passingScore: number | null; type: string }
 type Question = { id: string; question: string; explanation: string | null; type: string; options: { id: string; content: string }[] | null; correctAnswer: string | null; order: number; correctScore: number; wrongScore: number; emptyScore: number; difficulty: string }
 type Response<T> = { data: T }
 
@@ -139,11 +139,16 @@ export default function AdminQuestions() {
   const [pendingDelete, setPendingDelete] = useState<{ id: string; number: number } | null>(null)
 
   const deleteQuestion = useMutation({
-    mutationFn: (questionId: string) => deleteJson('/api/admin/exams/' + examId + '/questions/' + questionId),
-    onSuccess: () => {
+    mutationFn: (questionId: string) => deleteJson<{ data?: { attemptsRecalculated?: number } }>('/api/admin/exams/' + examId + '/questions/' + questionId),
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'exam', examId] })
       queryClient.invalidateQueries({ queryKey: ['admin', 'exams', stageId] })
-      toast.success('Soal berhasil dihapus.')
+      // Scores of finished attempts are recalculated server-side, so anything showing them is stale now.
+      queryClient.invalidateQueries({ queryKey: ['admin', 'exam-attempts', examId] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'exam-attempt-detail', examId] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stage-scores'] })
+      const recalculated = response?.data?.attemptsRecalculated ?? 0
+      toast.success(recalculated > 0 ? `Soal berhasil dihapus. Nilai ${recalculated} percobaan dihitung ulang.` : 'Soal berhasil dihapus.')
       setPendingDelete(null)
     },
     onError: (error) => {
@@ -242,7 +247,11 @@ export default function AdminQuestions() {
         open={pendingDelete !== null}
         onOpenChange={(open) => { if (!open) setPendingDelete(null) }}
         title={`Hapus soal ${pendingDelete?.number ?? ''}?`}
-        description="Soal akan dihapus dari ujian ini dan tidak dapat dikembalikan dari panel admin. Soal pada ujian yang sudah dikerjakan peserta tidak dapat dihapus."
+        description={
+          (activeExam?.attemptCount ?? 0) > 0
+            ? `Soal akan dihapus dari ujian ini dan tidak dapat dikembalikan dari panel admin. Ujian ini sudah memiliki ${activeExam?.attemptCount} percobaan: soal tidak lagi dihitung dan nilai serta nilai maksimal percobaan yang terdampak akan dihitung ulang. Jawaban peserta tetap tersimpan sebagai riwayat.`
+            : 'Soal akan dihapus dari ujian ini dan tidak dapat dikembalikan dari panel admin.'
+        }
         confirmLabel="Hapus soal"
         pending={deleteQuestion.isPending}
         onConfirm={() => { if (pendingDelete) deleteQuestion.mutate(pendingDelete.id) }}

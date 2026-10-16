@@ -68,13 +68,15 @@ class AdminExamAttemptController extends Controller
             abort(404);
         }
 
-        $attempt->load(['team', 'exam', 'answers.question', 'eventLogs']);
+        // Keep answers to deleted questions readable so an admin can see what the participant saw and answered.
+        $attempt->load(['team', 'exam', 'answers.question' => fn ($query) => $query->withTrashed(), 'eventLogs']);
 
         $answers = $attempt->answers->map(function ($a) {
             return [
                 'id' => $a->id,
                 'questionId' => $a->question_id,
                 'question' => $a->question ? new ExamQuestionResource($a->question) : null,
+                'questionDeleted' => (bool) $a->question?->trashed(),
                 'selectedOptions' => $a->selected_options,
                 'answer' => $a->answer,
                 'isCorrect' => $a->is_correct,

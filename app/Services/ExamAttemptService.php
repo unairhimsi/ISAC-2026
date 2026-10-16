@@ -117,7 +117,7 @@ class ExamAttemptService
             $questions = $questions->sortBy('order')->values();
         }
 
-        $answers = $attempt->answers()->with('question')->get();
+        $answers = $attempt->answers()->whereHas('question')->get();
         $savedAnswers = $answers->map(fn ($a) => [
             'id' => $a->id,
             'questionId' => $a->question_id,
@@ -217,22 +217,83 @@ class ExamAttemptService
             return $attempt->fresh();
         }
 
-        $total = $this->totalScore($attempt);
-        $attempt->update([
-            'total_score' => $total,
-            'finished' => true,
-        ]);
+        // Lock the row so a question deleted while the participant submits is scored exactly once.
+        return DB::transaction(function () use ($attempt): ExamAttempt {
+            $locked = ExamAttempt::query()->lockForUpdate()->findOrFail($attempt->id);
+            if ($locked->finished) {
+                return $locked;
+            }
 
-        DB::table('exam_event_logs')->insert([
-            'id' => (string) Str::uuid(),
-            'attempt_id' => $attempt->id,
-            'type' => 'submitted',
-            'metadata' => json_encode(['total_score' => $total, 'by' => 'manual']),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+            $total = $this->totalScore($locked);
+            $locked->update([
+                'total_score' => $total,
+                'finished' => true,
+            ]);
 
-        return $attempt->fresh();
+            DB::table('exam_event_logs')->insert([
+                'id' => (string) Str::uuid(),
+                'attempt_id' => $locked->id,
+                'type' => 'submitted',
+                'metadata' => json_encode(['total_score' => $total, 'by' => 'manual']),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return $locked->fresh();
+        });
+    }
+
+    /**
+     * Take a question that is being deleted out of the scores of every attempt on its exam.
+     *
+     * Finished attempts are adjusted by what the question contributed instead of being re-summed, so a score an
+     * admin corrected by hand keeps its correction. Running attempts only lose the question from their maximum;
+     * their total is summed from the surviving questions when they are submitted. The caller owns the transaction.
+     *
+     * @return list<array{attempt_id: string, finished: bool, total_before: int, total_after: int, max_before: int, max_after: int, answered: bool}>
+     */
+    public function voidQuestion(ExamQuestion $question): array
+    {
+        $attempts = ExamAttempt::query()->where('exam_id', $question->exam_id)->lockForUpdate()->get();
+        $answers = ExamAnswer::query()->where('question_id', $question->id)->get()->keyBy('attempt_id');
+        $impact = [];
+
+        foreach ($attempts as $attempt) {
+            $answer = $answers->get($attempt->id);
+            $totalBefore = (int) $attempt->total_score;
+            $maxBefore = (int) $attempt->max_possible_score;
+
+            $order = $attempt->metadata['questionOrder'] ?? $attempt->metadata['question_order'] ?? null;
+            $wasInMaximum = $question->is_active && (! is_array($order) || in_array($question->id, $order, true));
+            $maxAfter = $wasInMaximum ? max(0, $maxBefore - (int) $question->correct_score) : $maxBefore;
+
+            $totalAfter = $totalBefore;
+            if ($attempt->finished) {
+                $contribution = match (true) {
+                    $answer !== null => (int) $answer->score_obtained,
+                    $question->is_active && $question->type !== 'essay' => (int) $question->empty_score,
+                    default => 0,
+                };
+                $totalAfter = $totalBefore - $contribution;
+            }
+
+            if ($totalAfter === $totalBefore && $maxAfter === $maxBefore) {
+                continue;
+            }
+
+            $attempt->update(['total_score' => $totalAfter, 'max_possible_score' => $maxAfter]);
+            $impact[] = [
+                'attempt_id' => $attempt->id,
+                'finished' => (bool) $attempt->finished,
+                'total_before' => $totalBefore,
+                'total_after' => $totalAfter,
+                'max_before' => $maxBefore,
+                'max_after' => $maxAfter,
+                'answered' => $answer !== null,
+            ];
+        }
+
+        return $impact;
     }
 
     public function heartbeat(ExamAttempt $attempt): void
@@ -277,7 +338,11 @@ class ExamAttemptService
 
     private function totalScore(ExamAttempt $attempt): int
     {
-        $answered = (int) $attempt->answers()->whereNotNull('score_obtained')->sum('score_obtained');
+        // Answers to questions an admin has since deleted no longer count (ExamQuestion is soft deleted).
+        $answered = (int) $attempt->answers()
+            ->whereNotNull('score_obtained')
+            ->whereIn('question_id', ExamQuestion::query()->where('exam_id', $attempt->exam_id)->select('id'))
+            ->sum('score_obtained');
 
         $blank = (int) ExamQuestion::query()
             ->where('exam_id', $attempt->exam_id)
