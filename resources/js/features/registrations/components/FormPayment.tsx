@@ -25,6 +25,8 @@ type Props = {
   discountAmount: number
   promoApplied: boolean
   promoCode: string | null
+  paymentMethod: PaymentMethod | null
+  transactionId: string | null
   instructions: string | null
   existingProof: ExternalFile | null
   isSubmitting: boolean
@@ -45,6 +47,8 @@ const FormPayment = ({
   discountAmount,
   promoApplied,
   promoCode,
+  paymentMethod,
+  transactionId,
   instructions,
   existingProof,
   isSubmitting,
@@ -65,9 +69,11 @@ const FormPayment = ({
     mode: 'onChange',
     resolver: zodResolver(uploadPaymentSchema),
     defaultValues: {
-      payment_method: paymentMethods[0] ?? 'BANK_TRANSFER',
+      payment_method: paymentMethod && (paymentMethod !== 'QRIS' || qrisImageUrl)
+        ? paymentMethod
+        : paymentMethods[0] ?? 'BANK_TRANSFER',
       promo_code: promoCode ?? '',
-      transaction_id: '',
+      transaction_id: transactionId ?? '',
       paymentProof: existingProof,
     },
   })

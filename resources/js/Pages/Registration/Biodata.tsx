@@ -83,6 +83,7 @@ const Biodata = () => {
           student_id: member.studentId,
           photo_file_id: member.photoFileId,
           sort_order: member.sortOrder,
+          photo: member.photo ?? null,
         },
       ]),
     )
@@ -252,14 +253,18 @@ const Biodata = () => {
         const response =
           await finalizeMembers.mutateAsync({
             members: members.map(
-              (member, index) => ({
-                ...savedData[member.key],
-                role:
-                  index === 0
-                    ? 'LEADER'
-                    : 'MEMBER',
-                sort_order: index + 1,
-              }),
+              (member, index) => {
+                const { photo: _photo, ...values } = savedData[member.key]
+
+                return {
+                  ...values,
+                  role:
+                    index === 0
+                      ? 'LEADER'
+                      : 'MEMBER',
+                  sort_order: index + 1,
+                }
+              },
             ),
           })
 

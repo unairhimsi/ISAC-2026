@@ -1,5 +1,8 @@
 import { z } from 'zod'
 
+// Same hosts the API accepts, so a link that is already saved can be saved again.
+const googleDriveHosts = ['drive.google.com', 'docs.google.com']
+
 const googleDriveUrl = z
   .string()
   .trim()
@@ -7,7 +10,7 @@ const googleDriveUrl = z
   .url('URL tidak valid')
   .refine((value) => {
     try {
-      return new URL(value).hostname === 'drive.google.com'
+      return googleDriveHosts.includes(new URL(value).hostname)
     } catch {
       return false
     }

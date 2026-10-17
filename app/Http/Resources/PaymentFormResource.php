@@ -33,6 +33,8 @@ class PaymentFormResource extends JsonResource
             'discountAmount' => $hasSubmittedPayment ? (float) $registration->discount_amount : 0,
             'promoApplied' => $hasSubmittedPayment && $registration->promo_code !== null,
             'promoCode' => $hasSubmittedPayment ? $registration->promo_code : null,
+            'paymentMethod' => $hasSubmittedPayment ? $registration->payment_method?->value : null,
+            'transactionId' => $hasSubmittedPayment ? $registration->transaction_id : null,
             'paymentMethods' => config('registration.payment_methods'),
             'paymentInstructions' => config('registration.payment_instructions'),
             'qrisImageUrl' => config('registration.qris.image_url'),

@@ -70,6 +70,8 @@ const Payment = () => {
             discountAmount={Number(payment.discountAmount)}
             promoApplied={payment.promoApplied}
             promoCode={payment.promoCode}
+            paymentMethod={payment.paymentMethod}
+            transactionId={payment.transactionId}
             bankAccounts={payment.bankAccounts}
             paymentMethods={payment.paymentMethods}
             qrisImageUrl={payment.qrisImageUrl}

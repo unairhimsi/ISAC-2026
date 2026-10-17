@@ -76,6 +76,18 @@ class Registration extends Model
         return $this->belongsTo(Batch::class, 'batch_id', 'id')->withTrashed();
     }
 
+    /**
+     * The competition can be switched until payment is sent: that is when a
+     * Batch is claimed and the registration is submitted for verification.
+     */
+    public function isCompetitionLocked(): bool
+    {
+        return $this->status !== RegistrationStatus::WAITING_PAYMENT
+            || $this->batch_id !== null
+            || $this->payment_submitted_at !== null
+            || $this->submitted_at !== null;
+    }
+
     public function effectiveBatch(): ?Batch
     {
         if ($this->batch_id !== null) {

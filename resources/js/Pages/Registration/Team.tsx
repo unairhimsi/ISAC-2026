@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import RegistrationLayout from '../../features/registrations/components/RegistrationLayout'
 import FormRegistrasiTeam from '../../features/registrations/components/FormRegistrasiTeam'
 import { useRegistrationContext, useTeamProfile } from '@/features/registrations/hooks/useRegistration'
@@ -10,15 +10,20 @@ const Team = () => {
   const context = contextQuery.data?.data
   const team = teamQuery.data?.data
   const competitionType = context?.registration?.competition.type ?? 'OLIMPIADE'
-  const institutionAddress = parseInstitutionAddress(team?.institutionAddress)
-  const defaultValues = team ? {
-    name: team.name ?? '',
-    phone: team.phone ?? '',
-    institution_name: team.institutionName ?? '',
-    province: institutionAddress.province,
-    city: institutionAddress.city,
-    address: institutionAddress.address,
-  } : undefined
+  // Stable identity: FormRegistrasiTeam resets itself whenever this changes.
+  const defaultValues = useMemo(() => {
+    if (!team) return undefined
+    const institutionAddress = parseInstitutionAddress(team.institutionAddress)
+
+    return {
+      name: team.name ?? '',
+      phone: team.phone ?? '',
+      institution_name: team.institutionName ?? '',
+      province: institutionAddress.province,
+      city: institutionAddress.city,
+      address: institutionAddress.address,
+    }
+  }, [team])
 
   if (teamQuery.isLoading || contextQuery.isLoading) {
     return <div className="py-24 text-center text-muted-foreground">Memuat data tim...</div>

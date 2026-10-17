@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react'
+import React, { useCallback, useMemo, useRef } from 'react'
 import { router } from '@inertiajs/react'
 import { toast } from 'sonner'
 import gsap from 'gsap'
@@ -30,6 +30,15 @@ const Documents = () => {
       ease: 'power3.out',
     })
   }, { scope: cardRef })
+
+  // Stable identity: FormDocuments resets itself whenever this changes, which
+  // would otherwise discard typed input each time the mutation state flips.
+  const documentUrl = documentsQuery.data?.data.documentUrl ?? ''
+  const twibbonUrl = documentsQuery.data?.data.twibbonUrl ?? ''
+  const defaultValues = useMemo(
+    () => ({ document_url: documentUrl, twibbon_url: twibbonUrl }),
+    [documentUrl, twibbonUrl],
+  )
 
   const handleSave = useCallback(async (data: DocumentFormData) => {
     try {
@@ -65,7 +74,7 @@ const Documents = () => {
               {data.revisionNote && <p className="mt-3 text-sm text-amber-400">Catatan revisi: {data.revisionNote}</p>}
             </div>
             <FormDocuments
-              defaultValues={{ document_url: data.documentUrl ?? '', twibbon_url: data.twibbonUrl ?? '' }}
+              defaultValues={defaultValues}
               onSave={handleSave}
               isSubmitting={updateDocuments.isPending}
             />

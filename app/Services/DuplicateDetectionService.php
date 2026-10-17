@@ -13,9 +13,10 @@ use Illuminate\Support\Str;
  *
  * Member.email and Member.student_id are unique only inside a single team
  * (via Laravel's `distinct` rule). This service widens the check so the
- * same person cannot be enrolled in two different teams for the same
- * competition batch — which would let one student bypass the per-team
- * limit on submissions and exam attempts.
+ * same person cannot be enrolled in two different teams of the same
+ * competition — which would let one student bypass the per-team limit on
+ * submissions and exam attempts. The same person may still join teams of
+ * different competitions.
  *
  * It also dispatches a notification to the existing team so the admin
  * and the other team leader both become aware of the conflict.
@@ -51,8 +52,19 @@ class DuplicateDetectionService
         $emailDuplicates = [];
         $studentIdDuplicates = [];
 
+        $competitionId = $team->registration()->value('competition_id');
+        if ($competitionId === null) {
+            return ['email' => $emailDuplicates, 'student_id' => $studentIdDuplicates];
+        }
+
+        $sameCompetition = fn ($query) => $query->whereHas(
+            'team.registration',
+            fn ($registration) => $registration->where('competition_id', $competitionId),
+        );
+
         if ($emails !== []) {
             $rows = Member::query()
+                ->where($sameCompetition)
                 ->where('team_id', '!=', $team->id)
                 ->whereIn(DB::raw('LOWER(email)'), array_keys($emails))
                 ->whereNotIn('id', $excludeIds === [] ? [''] : $excludeIds)
@@ -70,6 +82,7 @@ class DuplicateDetectionService
 
         if ($studentIds !== []) {
             $rows = Member::query()
+                ->where($sameCompetition)
                 ->where('team_id', '!=', $team->id)
                 ->whereIn(DB::raw('UPPER(student_id)'), array_keys($studentIds))
                 ->whereNotIn('id', $excludeIds === [] ? [''] : $excludeIds)

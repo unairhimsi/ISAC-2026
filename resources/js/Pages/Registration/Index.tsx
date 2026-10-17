@@ -1,10 +1,18 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { router } from '@inertiajs/react'
 import { ArrowRight, Clock3 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 
 import RegistrationLayout from '@/features/registrations/components/RegistrationLayout'
@@ -25,18 +33,34 @@ export default function RegistrationCompetition() {
 
   const competitions = competitionsQuery.data?.data ?? []
 
-  const selectedCompetitionId =
-    contextQuery.data?.data.registration?.competition?.id
+  const [pendingSwitch, setPendingSwitch] =
+    useState<CompetitionSummary | null>(null)
 
-  const isSelectionLocked = Boolean(selectedCompetitionId)
+  const registration = contextQuery.data?.data.registration
+
+  const selectedCompetitionId = registration?.competition?.id
+
+  const hasSelection = Boolean(selectedCompetitionId)
+
+  // Locked once payment is sent; before that the competition can still be switched.
+  const isSelectionLocked = registration?.competitionLocked ?? false
 
   const handleSelect = async (competition: CompetitionSummary) => {
+    const isSwitching =
+      hasSelection && competition.id !== selectedCompetitionId
+
     try {
       const response = await selectCompetition.mutateAsync({
         competition_id: competition.id,
       })
 
-      toast.success(`${competition.name} berhasil dipilih.`)
+      toast.success(
+        isSwitching
+          ? `Pendaftaran dipindah ke ${competition.name}.`
+          : hasSelection
+            ? 'Melanjutkan pendaftaran.'
+            : `${competition.name} berhasil dipilih.`,
+      )
 
       router.visit(response.data.redirectTo, {
         replace: true,
@@ -48,6 +72,8 @@ export default function RegistrationCompetition() {
           : 'Kompetisi gagal dipilih. Coba lagi saat Batch pendaftaran aktif.'
 
       toast.error(message)
+    } finally {
+      setPendingSwitch(null)
     }
   }
 
@@ -110,9 +136,11 @@ export default function RegistrationCompetition() {
         </h1>
 
         <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">
-          {selectedCompetitionId
-            ? 'Pilihan kompetisi sudah tersimpan dan tidak dapat diubah. Batch ditentukan saat Anda mengirim pembayaran.'
-            : 'Pilih salah satu kompetisi ISAC 2026 untuk melanjutkan pendaftaran.'}
+          {!hasSelection
+            ? 'Pilih salah satu kompetisi ISAC 2026 untuk melanjutkan pendaftaran.'
+            : isSelectionLocked
+              ? 'Pilihan kompetisi sudah dikunci karena pembayaran telah dikirim.'
+              : 'Pilihan kompetisi sudah tersimpan. Anda masih bisa pindah ke kompetisi lain sebelum pembayaran dikirim. Batch ditentukan saat Anda mengirim pembayaran.'}
         </p>
       </header>
 
@@ -152,17 +180,25 @@ export default function RegistrationCompetition() {
                   size="lg"
                   disabled={
                     selectCompetition.isPending ||
-                    isSelectionLocked
+                    (isSelectionLocked && !isSelected)
                   }
-                  onClick={() => handleSelect(competition)}
+                  onClick={() =>
+                    hasSelection && !isSelected
+                      ? setPendingSwitch(competition)
+                      : handleSelect(competition)
+                  }
                 >
                   {isSelected
-                    ? 'Lomba dipilih'
+                    ? selectCompetition.isPending
+                      ? 'Membuka...'
+                      : 'Lanjutkan pendaftaran'
                     : isSelectionLocked
                       ? 'Pilihan dikunci'
-                      : selectCompetition.isPending
-                        ? 'Menyimpan pilihan...'
-                        : 'Pilih lomba'}
+                      : hasSelection
+                        ? 'Pindah ke lomba ini'
+                        : selectCompetition.isPending
+                          ? 'Menyimpan pilihan...'
+                          : 'Pilih lomba'}
 
                   <ArrowRight />
                 </Button>
@@ -171,6 +207,39 @@ export default function RegistrationCompetition() {
           )
         })}
       </section>
+
+      <Dialog
+        open={pendingSwitch !== null}
+        onOpenChange={(open) => {
+          if (!open && !selectCompetition.isPending) setPendingSwitch(null)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Pindah ke {pendingSwitch?.name}?</DialogTitle>
+            <DialogDescription>
+              Data tim, biodata, dan dokumen yang sudah Anda isi tetap
+              tersimpan dan akan terisi otomatis. Karena aturan tiap kompetisi
+              berbeda, Anda perlu mengonfirmasi ulang langkah-langkah tersebut.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={selectCompetition.isPending}
+              onClick={() => setPendingSwitch(null)}
+            >
+              Batal
+            </Button>
+            <Button
+              disabled={selectCompetition.isPending}
+              onClick={() => pendingSwitch && handleSelect(pendingSwitch)}
+            >
+              {selectCompetition.isPending ? 'Memindahkan...' : 'Ya, pindah'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

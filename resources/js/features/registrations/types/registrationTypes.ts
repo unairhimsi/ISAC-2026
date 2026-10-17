@@ -1,4 +1,5 @@
 import type { ApiResponse, RedirectData } from '@/types/api'
+import type { FileReference } from '@/features/files/types/fileTypes'
 
 export type CompetitionType = 'OLIMPIADE' | 'BUSINESS_PLAN' | 'BUSINESS_IT_CASE'
 export type PaymentFlow = 'UPFRONT' | 'SEMIFINAL'
@@ -27,7 +28,7 @@ export type RegistrationContext = {
     verificationNote: string | null
   }
   registration: null | {
-    id: string; status: RegistrationStatus; competition: CompetitionSummary; batch: BatchSummary | null
+    id: string; status: RegistrationStatus; competition: CompetitionSummary; competitionLocked: boolean; batch: BatchSummary | null
     paymentRequiredAt: string | null; paymentSubmittedAt: string | null; paymentRejectionReason: string | null
     paymentForStage: StageSummary | null
   }
@@ -55,12 +56,14 @@ export type TeamProfile = {
 export type MemberRecord = {
   id: string; name: string; role: MemberRole; email: string
   major: string | null; faculty: string | null; studentId: string
-  photoFileId: string | null; photoUrl?: string | null; photo?: { id: string; fileId: string; url: string; purpose?: string } | null; sortOrder: number
+  photoFileId: string | null; photoUrl?: string | null; photo?: FileReference | null; sortOrder: number
 }
 export type MemberFormValues = {
   id?: string; name: string; role: MemberRole; email: string
   major: string | null; faculty: string | null; student_id: string
   photo_file_id: string | null; sort_order: number
+  /** Display only: the stored photo, so a saved form can show it again. Never sent to the API. */
+  photo?: FileReference | null
 }
 export type MembersPageData = {
   competitionType: CompetitionType; minMembers: number; maxMembers: number
@@ -81,6 +84,7 @@ export type PaymentBatch = { id: string; name: string; price: number; endAt: str
 export type PaymentPageData = {
   registrationId: string; batch: PaymentBatch | null; batchLocked: boolean; originalAmount: number; amount: number; discountPercent: number
   discountAmount: number; promoApplied: boolean; promoCode: string | null
+  paymentMethod: PaymentMethod | null; transactionId: string | null
   paymentMethods: PaymentMethod[]; paymentInstructions: string | null
   qrisImageUrl: string | null
   bankAccounts: BankAccount[]; paymentStatus: RegistrationStatus; existingProof: ExternalFile | null

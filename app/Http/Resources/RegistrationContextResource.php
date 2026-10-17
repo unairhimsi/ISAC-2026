@@ -34,6 +34,7 @@ class RegistrationContextResource extends JsonResource
                 'id' => $registration->id,
                 'status' => $registration->status?->value,
                 'competition' => new CompetitionResource($registration->competition),
+                'competitionLocked' => $registration->isCompetitionLocked(),
                 'batch' => $registration->batch === null ? null : new BatchResource($registration->batch),
                 'paymentRequiredAt' => $registration->payment_required_at?->toISOString(),
                 'paymentSubmittedAt' => $registration->payment_submitted_at?->toISOString(),

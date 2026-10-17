@@ -61,7 +61,7 @@ const FormMember = ({
   showSubmit = true,
 }: FormMemberProps) => {
   const [hasSaved, setHasSaved] = useState(Boolean(defaultValues))
-  const [photo, setPhoto] = useState<UploadedFile>(null)
+  const [photo, setPhoto] = useState<UploadedFile>(defaultValues?.photo ?? null)
 
   const form = useForm<MemberFormData>({
     mode: 'onChange',
@@ -83,6 +83,7 @@ const FormMember = ({
         : emptyValues,
     )
 
+    setPhoto(defaultValues?.photo ?? null)
     setHasSaved(Boolean(defaultValues))
   }, [defaultValues, form])
 
@@ -105,6 +106,7 @@ const FormMember = ({
       faculty: data.faculty || null,
       role,
       sort_order: sortOrder,
+      photo,
     })
 
     setHasSaved(true)
@@ -164,10 +166,8 @@ const FormMember = ({
       id={`member-form-${memberId}`}
       onSubmit={form.handleSubmit(onSubmit)}
       className="relative z-10 w-full space-y-4 sm:space-y-5"
-      onFocus={() => {
-        setHasSaved(false)
-        onFocus?.()
-      }}
+      onFocus={onFocus}
+      onChange={() => setHasSaved(false)}
     >
       <FieldGroup className="gap-3.5 sm:gap-4">
         {fields.map(

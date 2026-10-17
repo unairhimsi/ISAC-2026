@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Batch;
 use App\Models\Competition;
 use App\Models\File;
+use App\Models\Member;
 use App\Models\Registration;
 use App\Models\RegistrationStatus;
 use App\Models\Team;
@@ -32,22 +33,10 @@ class RegistrationService
                     return $existing;
                 }
 
-                throw ValidationException::withMessages(['competition_id' => ['Tim sudah terdaftar pada kompetisi lain.']]);
+                return $this->changeCompetition($existing, $data['competition_id']);
             }
 
-            $competition = Competition::query()->lockForUpdate()->findOrFail($data['competition_id']);
-            if ($competition->status !== Competition::STATUS_REGISTRATION_OPEN) {
-                throw ValidationException::withMessages(['competition_id' => ['Pendaftaran kompetisi belum dibuka.']]);
-            }
-
-            $hasPayableBatch = Batch::query()
-                ->where('competition_id', $competition->id)
-                ->payableNow()
-                ->exists();
-
-            if (! $hasPayableBatch) {
-                throw ValidationException::withMessages(['competition_id' => ['Belum ada Batch aktif dengan kuota tersedia untuk kompetisi ini.']]);
-            }
+            $competition = $this->selectableCompetition($data['competition_id']);
 
             return Registration::create([
                 'team_id' => $team->id,
@@ -58,6 +47,49 @@ class RegistrationService
                 'payment_verified_at' => null,
             ]);
         });
+    }
+
+    private function selectableCompetition(string $competitionId): Competition
+    {
+        $competition = Competition::query()->lockForUpdate()->findOrFail($competitionId);
+        if ($competition->status !== Competition::STATUS_REGISTRATION_OPEN) {
+            throw ValidationException::withMessages(['competition_id' => ['Pendaftaran kompetisi belum dibuka.']]);
+        }
+
+        $hasPayableBatch = Batch::query()
+            ->where('competition_id', $competition->id)
+            ->payableNow()
+            ->exists();
+
+        if (! $hasPayableBatch) {
+            throw ValidationException::withMessages(['competition_id' => ['Belum ada Batch aktif dengan kuota tersedia untuk kompetisi ini.']]);
+        }
+
+        return $competition;
+    }
+
+    /**
+     * Move an unpaid registration to another competition. The row, the team
+     * data and the members are kept so every form comes back prefilled; the
+     * completion marks are cleared because institution and participant rules
+     * differ per competition, so each step has to be confirmed again.
+     */
+    private function changeCompetition(Registration $registration, string $competitionId): Registration
+    {
+        if ($registration->isCompetitionLocked()) {
+            throw ValidationException::withMessages(['competition_id' => ['Kompetisi tidak dapat diubah setelah pembayaran dikirim.']]);
+        }
+
+        $competition = $this->selectableCompetition($competitionId);
+
+        $registration->update([
+            'competition_id' => $competition->id,
+            'team_completed_at' => null,
+            'members_completed_at' => null,
+            'documents_completed_at' => null,
+        ]);
+
+        return $registration;
     }
 
     public function updateTeamData(Team $team, array $data): Team
@@ -152,39 +184,7 @@ class RegistrationService
                 'name', 'phone', 'institution_name', 'institution_address',
             ]));
 
-            $keptIds = [];
-            foreach (array_values($members) as $index => $payload) {
-                $member = null;
-                if (! empty($payload['id'])) {
-                    $member = $team->members()->whereKey($payload['id'])->first();
-                    if ($member === null) {
-                        throw ValidationException::withMessages(['members' => ['Anggota tidak dimiliki oleh Team ini.']]);
-                    }
-                }
-
-                $photoFileId = array_key_exists('photo_file_id', $payload)
-                    ? ($payload['photo_file_id'] ?: null)
-                    : $member?->photo_file_id;
-                $attributes = [
-                    'name' => $payload['name'],
-                    'role' => $payload['role'],
-                    'email' => strtolower(trim($payload['email'])),
-                    'major' => $payload['major'] ?? null,
-                    'faculty' => $payload['faculty'] ?? null,
-                    'student_id' => $payload['student_id'],
-                    'photo_file_id' => $photoFileId,
-                    'sort_order' => $index + 1,
-                ];
-
-                if ($member === null) {
-                    $member = $team->members()->create($attributes);
-                } else {
-                    $member->update($attributes);
-                }
-                $keptIds[] = $member->id;
-            }
-
-            $team->members()->whereNotIn('id', $keptIds)->delete();
+            $this->upsertMembers($team, $members, matchByPosition: false);
             $documentUpdates = Arr::only($documentData, ['document_url', 'twibbon_url']);
             if ($documentUpdates !== []) {
                 $team->update($documentUpdates);
@@ -254,6 +254,8 @@ class RegistrationService
             throw ValidationException::withMessages(['members' => ['Harus memiliki tepat satu ketua tim (LEADER).']]);
         }
 
+        $currentPhotoIds = $team->members()->withTrashed()->whereNotNull('photo_file_id')->pluck('photo_file_id')->all();
+
         $memberErrors = [];
         foreach ($members as $index => &$member) {
             $identityLabel = $isUniversity ? 'NIM' : 'NISN';
@@ -272,7 +274,9 @@ class RegistrationService
                 $member['faculty'] = null;
             }
 
-            if (! empty($member['photo_file_id'])) {
+            // A photo this team already stores was vetted when it was attached
+            // (possibly by an Admin), so re-saving the same form must not fail on it.
+            if (! empty($member['photo_file_id']) && ! in_array($member['photo_file_id'], $currentPhotoIds, true)) {
                 $this->assertOwnedFile($team, $member['photo_file_id'], 'MEMBER_PHOTO', 'photo_file_id');
             }
         }
@@ -285,42 +289,7 @@ class RegistrationService
         $this->assertNoCrossTeamDuplicates($team, $members);
 
         DB::transaction(function () use ($team, $members, $registration): void {
-            $keptIds = [];
-            foreach (array_values($members) as $index => $payload) {
-                $member = null;
-                if (! empty($payload['id'])) {
-                    $member = $team->members()->whereKey($payload['id'])->first();
-                    if ($member === null) {
-                        throw ValidationException::withMessages(['members' => ['Anggota tidak dimiliki oleh Team ini.']]);
-                    }
-                } else {
-                    $member = $team->members()->where('sort_order', $index + 1)->first();
-                }
-
-                $photoFileId = array_key_exists('photo_file_id', $payload)
-                    ? ($payload['photo_file_id'] ?: null)
-                    : $member?->photo_file_id;
-
-                $attributes = [
-                    'name' => $payload['name'],
-                    'role' => $payload['role'],
-                    'email' => strtolower(trim($payload['email'])),
-                    'major' => $payload['major'] ?? null,
-                    'faculty' => $payload['faculty'] ?? null,
-                    'student_id' => $payload['student_id'],
-                    'photo_file_id' => $photoFileId,
-                    'sort_order' => $index + 1,
-                ];
-
-                if ($member === null) {
-                    $member = $team->members()->create($attributes);
-                } else {
-                    $member->update($attributes);
-                }
-                $keptIds[] = $member->id;
-            }
-
-            $team->members()->whereNotIn('id', $keptIds)->delete();
+            $this->upsertMembers($team, $members, matchByPosition: true);
 
             $registration->update(['members_completed_at' => $registration->members_completed_at ?? now()]);
             $this->resolveDataRevision($team, 'MEMBERS');
@@ -512,6 +481,12 @@ class RegistrationService
 
         DB::transaction(function () use ($team, $registration): void {
             $registration->update(['submitted_at' => $registration->submitted_at ?? now()]);
+
+            // Submitting again must not undo a decision an Admin already made.
+            if (in_array($team->status, [Team::STATUS_VERIFIED, Team::STATUS_REJECTED], true)) {
+                return;
+            }
+
             $team->update([
                 'status' => Team::STATUS_WAITING_VERIFICATION,
                 'revision_step' => null,
@@ -530,6 +505,81 @@ class RegistrationService
         }
 
         return $registration;
+    }
+
+    /**
+     * Upsert the submitted participants onto the team and soft-delete the rest.
+     *
+     * A payload row resolves to an existing member by id, then by email (also
+     * restoring a soft-deleted row, so re-adding a removed participant reuses
+     * it), then by sort_order when $matchByPosition is set. One existing member
+     * is never claimed by two payload rows.
+     *
+     * @param  array<int, array<string, mixed>>  $members
+     */
+    private function upsertMembers(Team $team, array $members, bool $matchByPosition): void
+    {
+        $taken = array_values(array_filter(array_column($members, 'id')));
+        $keptIds = [];
+
+        foreach (array_values($members) as $index => $payload) {
+            $email = strtolower(trim($payload['email']));
+            $member = $this->findExistingMember($team, $payload, $email, $index + 1, $matchByPosition, $taken);
+
+            $attributes = [
+                'name' => $payload['name'],
+                'role' => $payload['role'],
+                'email' => $email,
+                'major' => $payload['major'] ?? null,
+                'faculty' => $payload['faculty'] ?? null,
+                'student_id' => $payload['student_id'],
+                'photo_file_id' => array_key_exists('photo_file_id', $payload)
+                    ? ($payload['photo_file_id'] ?: null)
+                    : $member?->photo_file_id,
+                'sort_order' => $index + 1,
+            ];
+
+            if ($member === null) {
+                $member = $team->members()->create($attributes);
+            } else {
+                if ($member->trashed()) {
+                    $member->restore();
+                }
+                $member->update($attributes);
+            }
+
+            $keptIds[] = $member->id;
+            $taken[] = $member->id;
+        }
+
+        $team->members()->whereNotIn('id', $keptIds)->delete();
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<int, string>  $taken  member ids already claimed by this payload
+     */
+    private function findExistingMember(Team $team, array $payload, string $email, int $position, bool $matchByPosition, array $taken): ?Member
+    {
+        if (! empty($payload['id'])) {
+            $member = $team->members()->whereKey($payload['id'])->first();
+            if ($member === null) {
+                throw ValidationException::withMessages(['members' => ['Anggota tidak dimiliki oleh Team ini.']]);
+            }
+
+            return $member;
+        }
+
+        $member = $team->members()->withTrashed()
+            ->whereNotIn('id', $taken)
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->first();
+
+        if ($member !== null || ! $matchByPosition) {
+            return $member;
+        }
+
+        return $team->members()->whereNotIn('id', $taken)->where('sort_order', $position)->first();
     }
 
     private function assertInstitutionMatchesCompetition(string $institutionName, Competition $competition): void
