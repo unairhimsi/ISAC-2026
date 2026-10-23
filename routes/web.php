@@ -114,6 +114,13 @@ Route::prefix('admin')->name('admin.')->group(function (): void {
     Route::get('/operations/{operation}', fn (string $operation) => Inertia::render('Admin/Operations/Show', ['title' => 'Detail Operasi', 'operationId' => $operation]))->whereUuid('operation')->name('operations.show');
     Route::get('/questions', fn () => Inertia::render('Admin/Questions', ['title' => 'Buat Soal']))->name('questions');
     Route::get('/judging', fn () => Inertia::render('Admin/Judging', ['title' => 'Penilaian']))->name('judging');
+    Route::get('/submissions', fn () => Inertia::render('Admin/Submissions', ['title' => 'Submission Belum Masuk']))->name('submissions');
+    Route::get('/stage-advancement', fn () => Inertia::render('Admin/StageAdvancement', ['title' => 'Loloskan Tim']))->name('stage-advancement');
+    Route::get('/submission-review', fn () => Inertia::render('Admin/SubmissionReview', ['title' => 'Review Submission']))->name('submission-review');
+    Route::get('/submission-review/{submission}', fn (string $submission) => Inertia::render('Admin/SubmissionReview/Show', [
+        'title' => 'Detail Submission',
+        'submissionId' => $submission,
+    ]))->whereUuid('submission')->name('submission-review.show');
     Route::get('/judging/{exam}/attempts/{attempt}', fn (string $exam, string $attempt) => Inertia::render('Admin/Judging/Show', [
         'title' => 'Detail Pengerjaan',
         'examId' => $exam,

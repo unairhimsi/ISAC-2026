@@ -21,6 +21,8 @@ class DashboardService
             'registration.batch',
             'registration.paymentProofFile',
             'registration.paymentForStage',
+            'registration.competition.stages' => fn ($query) => $query->orderBy('order'),
+            'submissions' => fn ($query) => $query->select(['id', 'team_id', 'stage_id', 'status', 'score']),
             'currentStage.exams' => fn ($query) => $query
                 ->select([
                     'id', 'stage_id', 'title', 'description', 'start_date',
@@ -89,11 +91,16 @@ class DashboardService
                 Competition::TYPE_BUSINESS_IT_CASE,
             ], true);
         $isCurrentStage = $team->current_stage_id === $stage->id;
+        // A stage the team has already moved past stays readable, so the result and the
+        // judges' feedback are not lost the moment the team qualifies for the next stage.
+        $hasReachedStage = $team->currentStage !== null
+            && $team->currentStage->competition_id === $stage->competition_id
+            && (int) $team->currentStage->order >= (int) $stage->order;
 
         // Direktori baru: semua lomba UPFRONT di registrasi awal, submission langsung tanpa payment gate
         $canAccess = $isBusinessCompetition
             && $stage->competition_id === $registration->competition_id
-            && $isCurrentStage;
+            && $hasReachedStage;
 
         if (! $canAccess) {
             throw new AuthorizationException('Tahap pengumpulan tidak tersedia untuk Team ini.');
@@ -121,7 +128,8 @@ class DashboardService
             ->with('file:id,file_id,url')
             ->first();
 
-        $canSubmit = $isOpen;
+        // Only the stage the team is on accepts changes; earlier stages are read-only.
+        $canSubmit = $isOpen && $isCurrentStage;
 
         return [
             'stage' => $this->stageMetadata($stage),
@@ -158,6 +166,7 @@ class DashboardService
                 ],
             ],
             'canSubmit' => $canSubmit,
+            'readOnly' => ! $isCurrentStage,
         ];
     }
 

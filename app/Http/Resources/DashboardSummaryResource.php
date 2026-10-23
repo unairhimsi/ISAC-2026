@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Competition;
+use App\Models\Stage;
 use App\Models\Team;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -50,6 +52,7 @@ class DashboardSummaryResource extends JsonResource
                     'downloadUrl' => route('files.show', ['file' => $registration->paymentProofFile->id]),
                 ],
             ],
+            'stages' => $this->stageProgress($this->resource),
             'activities' => [
                 'exams' => $this->resource->currentStage === null
                     ? []
@@ -67,6 +70,42 @@ class DashboardSummaryResource extends JsonResource
                 ? $this->statusMessage($this->resource)
                 : 'Lanjutkan proses pendaftaran.',
         ];
+    }
+
+    /**
+     * Business competitions only: the stages the team has reached, with the team's own result for
+     * each, so the dashboard can show how far the team got and link back to earlier results.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function stageProgress(Team $team): array
+    {
+        $competition = $team->registration?->competition;
+        $current = $team->currentStage;
+
+        if ($competition === null || $current === null || $competition->type === Competition::TYPE_OLIMPIADE) {
+            return [];
+        }
+
+        $submissions = $team->submissions->keyBy('stage_id');
+
+        return $competition->stages
+            ->filter(fn (Stage $stage): bool => (int) $stage->order <= (int) $current->order)
+            ->map(fn (Stage $stage): array => [
+                'id' => $stage->id,
+                'name' => $stage->name,
+                'type' => $stage->type,
+                'order' => $stage->order,
+                'startDate' => $stage->start_date?->toISOString(),
+                'endDate' => $stage->end_date?->toISOString(),
+                'isCurrent' => $stage->id === $current->id,
+                'submission' => $submissions->has($stage->id) ? [
+                    'status' => $submissions[$stage->id]->status,
+                    'score' => $submissions[$stage->id]->score,
+                ] : null,
+            ])
+            ->values()
+            ->all();
     }
 
     private function statusMessage(Team $team): string

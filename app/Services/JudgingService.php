@@ -49,6 +49,10 @@ class JudgingService
     private function assertTransition(string $current, string $action, Admin $admin): void
     {
         if ($action === 'under_review') {
+            // A draft was never handed in, so there is nothing to put under review.
+            if ($current === 'draft') {
+                throw ValidationException::withMessages(['status' => ['Submission masih draft dan belum dikumpulkan tim.']]);
+            }
             return;
         }
 

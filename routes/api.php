@@ -106,6 +106,7 @@ Route::prefix('admin')->middleware(['auth:admins', 'principal.admin'])->group(fu
         Route::post('/', [AdminStageController::class, 'store']);
         Route::get('/{stage}', [AdminStageController::class, 'show'])->whereUuid('stage');
         Route::get('/{stage}/scores', [AdminStageController::class, 'scores'])->whereUuid('stage');
+        Route::get('/{stage}/advancement', [AdminStageController::class, 'advancement'])->whereUuid('stage');
         Route::patch('/{stage}', [AdminStageController::class, 'update'])->whereUuid('stage');
         Route::delete('/{stage}', [AdminStageController::class, 'destroy'])->whereUuid('stage');
     });
@@ -120,6 +121,7 @@ Route::prefix('admin')->middleware(['auth:admins', 'principal.admin'])->group(fu
     Route::patch('/exams/{exam}/attempts/{attempt}/score', [AdminExamAttemptController::class, 'updateScore'])->whereUuid(['exam', 'attempt']);
 
     Route::get('/stages/{stage}/submissions', [JudgingController::class, 'index'])->whereUuid('stage');
+    Route::get('/stages/{stage}/missing-submissions', [JudgingController::class, 'missing'])->whereUuid('stage');
     Route::get('/submissions/{submission}', [JudgingController::class, 'show'])->whereUuid('submission');
     Route::post('/submissions/{submission}/review', [JudgingController::class, 'review'])->whereUuid('submission');
 });

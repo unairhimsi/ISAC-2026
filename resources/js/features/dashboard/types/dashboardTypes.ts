@@ -17,6 +17,17 @@ export type DashboardExam = {
   type?: string
 }
 
+export type DashboardStageProgress = {
+  id: string
+  name: string
+  type: string
+  order: number
+  startDate: string | null
+  endDate: string | null
+  isCurrent: boolean
+  submission: { status: SubmissionData['status']; score: number | null } | null
+}
+
 export type DashboardSummary = RegistrationContext & {
   total?: number
   active?: number
@@ -38,6 +49,8 @@ export type DashboardSummary = RegistrationContext & {
     rejectionReason: string | null
     proof: null | { id: string; url: string; downloadUrl: string }
   }
+  /** Tahap yang sudah dicapai tim (hanya lomba bisnis), dengan hasil submission tiap tahap. */
+  stages?: DashboardStageProgress[]
   activities: { exams: DashboardExam[] }
   nextAction: string
 }
@@ -97,6 +110,8 @@ export type SubmissionShellData = {
   window: SubmissionWindow
   submission: SubmissionData | null
   canSubmit: boolean
+  /** Tahap yang sudah dilewati tim: hasilnya bisa dilihat tapi tidak bisa diubah. */
+  readOnly?: boolean
 }
 
 export type ExamShellResponse = ApiResponse<ExamShellData>

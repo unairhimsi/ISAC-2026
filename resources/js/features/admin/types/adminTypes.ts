@@ -466,3 +466,112 @@ export type AdminExamsResponse = ApiResponse<AdminExamSummary[]>
 export type AdminExamAttemptsResponse = ApiResponse<AdminExamAttemptsPage>
 export type AdminExamAttemptDetailResponse = ApiResponse<AdminExamAttemptDetail>
 export type AdminExamAttemptScoreResponse = ApiResponse<AdminExamAttempt>
+
+export type AdminMissingSubmissionState = 'not_started' | 'draft'
+
+export type AdminMissingSubmissionFilters = {
+  page?: number
+  per_page?: number
+  search?: string
+  state?: AdminMissingSubmissionState | ''
+}
+
+export type AdminMissingSubmissionTeam = {
+  id: string
+  code: string
+  name: string | null
+  email: string
+  phone: string | null
+  institutionName: string | null
+  currentStage: { id: string; name: string; order: number } | null
+  state: AdminMissingSubmissionState
+  /** Tahap sudah lewat batas waktu atau tim sudah dipindah ke tahap berikutnya. */
+  lapsed: boolean
+  advancedPast: boolean
+  submission: {
+    id: string
+    title: string
+    hasFile: boolean
+    fileUrl: string | null
+    /** Pernah dikumpulkan lalu ditarik kembali menjadi draft. */
+    withdrawn: boolean
+    updatedAt: string | null
+  } | null
+}
+
+export type AdminMissingSubmissions = {
+  competition: { id: string; name: string; type: CompetitionType }
+  stage: { id: string; name: string; type: StageType; order: number; startDate: string | null; endDate: string | null }
+  summary: { expected: number; submitted: number; missing: number; notStarted: number; draft: number }
+  teams: {
+    data: AdminMissingSubmissionTeam[]
+    current_page: number
+    per_page: number
+    total: number
+    last_page: number
+  }
+}
+
+export type AdminMissingSubmissionsResponse = ApiResponse<AdminMissingSubmissions>
+
+export type AdminSubmissionStatus = 'draft' | 'submitted' | 'under_review' | 'approved' | 'rejected' | 'revision_requested'
+export type AdminSubmissionAction = Exclude<AdminSubmissionStatus, 'draft' | 'submitted'>
+
+export type AdminSubmission = {
+  id: string
+  teamId: string
+  stageId: string
+  title: string
+  description: string | null
+  status: AdminSubmissionStatus
+  score: number | null
+  feedback: string | null
+  submittedAt: string | null
+  reviewedAt: string | null
+  reviewedBy: string | null
+  team?: { id: string; code: string; name: string | null } | null
+  stage?: { id: string; name: string; type: StageType; order: number } | null
+  file?: { id: string; fileId: string; url: string } | null
+  reviewedByAdmin?: { id: string; name: string; email: string } | null
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export type AdminSubmissionFilters = {
+  page?: number
+  per_page?: number
+  search?: string
+  status?: AdminSubmissionStatus | ''
+}
+
+export type AdminSubmissionReviewPayload = {
+  action: AdminSubmissionAction
+  score?: number
+  feedback?: string
+}
+
+export type AdminSubmissionsResponse = ApiResponse<LaravelPagination<AdminSubmission>>
+export type AdminSubmissionResponse = ApiResponse<AdminSubmission>
+
+export type AdminAdvancementState = 'eligible' | 'advanced' | 'blocked'
+
+export type AdminAdvancementTeam = {
+  team: { id: string; code: string; name: string | null; email: string }
+  batch: { id: string; name: string } | null
+  currentStage: { id: string; name: string; order: number } | null
+  /** Hasil review tahap asal; hanya informasi, tidak membatasi pilihan admin. */
+  submission: { id: string; status: AdminSubmissionStatus; score: number | null; submittedAt: string | null } | null
+  state: AdminAdvancementState
+  reason: string | null
+}
+
+export type AdminAdvancement = {
+  competition: { id: string; name: string; type: CompetitionType }
+  stage: { id: string; name: string; type: StageType; order: number; startDate: string | null; endDate: string | null }
+  nextStage: { id: string; name: string; type: StageType; order: number; startDate: string | null; endDate: string | null } | null
+  summary: { total: number; eligible: number; advanced: number; blocked: number }
+  truncated: boolean
+  teams: AdminAdvancementTeam[]
+}
+
+export type AdminAdvancementResponse = ApiResponse<AdminAdvancement>

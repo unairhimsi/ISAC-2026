@@ -24,6 +24,7 @@ import { DashboardBackdrop } from '@/features/dashboard/components/DashboardBack
 import { DashboardError, DashboardLoading } from '@/features/dashboard/components/DashboardStates'
 import { useDashboard } from '@/features/dashboard/hooks/useDashboard'
 import type { DashboardExam } from '@/features/dashboard/types/dashboardTypes'
+import { stageWindow, stageWindowCopy, submissionStatusCopy } from '@/features/dashboard/utils/stageProgress'
 import { WA_GROUP_LABELS, WA_GROUPS } from '@/constants/waGroups'
 import { formatDate } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
@@ -232,10 +233,21 @@ export default function DashboardIndex() {
           ? 'PAYMENT_REVIEW'
           : 'PAYMENT_REQUIRED'
 
+    const progress =
+      (summary.stages ?? []).find(
+        (item) => item.id === stage.id,
+      ) ?? null
+
     return {
       stage,
       state,
       isPaymentTarget,
+      progress,
+      isFinal: stage.type === 'final',
+      window: stageWindow(
+        stage.startDate,
+        stage.endDate,
+      ),
     }
   }, [summary])
 
@@ -272,6 +284,10 @@ export default function DashboardIndex() {
 
   const currentStage =
     summary.team.currentStage
+
+  const previousStages = (
+    summary.stages ?? []
+  ).filter((item) => !item.isCurrent)
 
   const isOlympiad =
     competition?.type ===
@@ -508,7 +524,8 @@ export default function DashboardIndex() {
 
                     <div>
                       <CardTitle className="text-xl font-bold">
-                        {businessActivity.isPaymentTarget
+                        {businessActivity.isPaymentTarget ||
+                        businessActivity.isFinal
                           ? businessActivity
                               .stage.name
                           : `Pengumpulan Tahap ${businessActivity.stage.name}`}
@@ -532,12 +549,16 @@ export default function DashboardIndex() {
                     variant={
                       businessActivity.isPaymentTarget
                         ? 'outline'
-                        : 'default'
+                        : stageWindowCopy[
+                            businessActivity.window
+                          ].variant
                     }
                   >
                     {businessActivity.isPaymentTarget
                       ? 'Terkunci'
-                      : 'Tersedia'}
+                      : stageWindowCopy[
+                          businessActivity.window
+                        ].label}
                   </Badge>
                 </CardHeader>
 
@@ -585,7 +606,51 @@ export default function DashboardIndex() {
                     </div>
                   </div>
 
-                  {!businessActivity.isPaymentTarget && (
+                  {!businessActivity.isPaymentTarget &&
+                    (!businessActivity.isFinal ||
+                      businessActivity.progress
+                        ?.submission) && (
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Status pengumpulan
+                        </p>
+
+                        <p className="mt-1">
+                          {businessActivity
+                            .progress
+                            ?.submission ? (
+                            <Badge
+                              variant={
+                                submissionStatusCopy[
+                                  businessActivity
+                                    .progress
+                                    .submission
+                                    .status
+                                ].variant
+                              }
+                            >
+                              {
+                                submissionStatusCopy[
+                                  businessActivity
+                                    .progress
+                                    .submission
+                                    .status
+                                ].label
+                              }
+                            </Badge>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              Belum dikumpulkan
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    )}
+
+                  {!businessActivity.isPaymentTarget &&
+                    (!businessActivity.isFinal ||
+                      businessActivity.progress
+                        ?.submission) && (
                     <Link
                       href={`/dashboard/submission/${businessActivity.stage.id}`}
                       className={cn(
@@ -603,6 +668,72 @@ export default function DashboardIndex() {
                 </CardContent>
               </Card>
             )}
+
+          {!isOlympiad && previousStages.length > 0 && currentStage && (
+            <Card className="border border-accent/25 bg-card/55 shadow-xl shadow-black/20 backdrop-blur-xl">
+              <CardHeader className="gap-4 sm:flex-row sm:items-start">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-accent/25 bg-accent/10 text-accent">
+                  <Trophy className="size-5" />
+                </div>
+
+                <div>
+                  <CardTitle className="text-xl font-bold">
+                    Selamat, tim kamu lolos ke {currentStage.name}
+                  </CardTitle>
+
+                  <CardDescription className="mt-2 leading-6">
+                    Hasil dan catatan juri dari tahap sebelumnya tetap bisa kamu lihat.
+                  </CardDescription>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-3">
+                {previousStages.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-background/30 p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium">
+                        Tahap {item.order} · {item.name}
+                      </p>
+
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        {item.submission ? (
+                          <>
+                            <Badge variant={submissionStatusCopy[item.submission.status].variant}>
+                              {submissionStatusCopy[item.submission.status].label}
+                            </Badge>
+
+                            {item.submission.score !== null && (
+                              <span className="tabular-nums">
+                                Nilai {item.submission.score}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span>Tidak ada pengumpulan</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {item.submission && (
+                      <Link
+                        href={`/dashboard/submission/${item.id}`}
+                        className={cn(
+                          buttonVariants({ variant: 'outline', size: 'sm' }),
+                          'w-full sm:w-auto',
+                        )}
+                      >
+                        Lihat Hasil
+                        <ArrowRight />
+                      </Link>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {((isOlympiad &&
             summary.activities.exams

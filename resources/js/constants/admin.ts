@@ -4,10 +4,13 @@ import {
   Banknote,
   BookOpenCheck,
   Boxes,
+  ClipboardCheck,
   ClipboardList,
   FileSpreadsheet,
+  FileX2,
   Gauge,
   Layers3,
+  Trophy,
   Users,
   type LucideIcon,
 } from 'lucide-react'
@@ -31,6 +34,9 @@ export const navigation: NavigationItem[] = [
   { label: 'Operasi', href: '/admin/operations', icon: FileSpreadsheet, roles: allRoles },
   { label: 'Buat Soal', href: '/admin/questions', icon: BookOpenCheck, roles: ['super_admin', 'judge'] },
   { label: 'Penilaian', href: '/admin/judging', icon: Award, roles: ['super_admin', 'judge'] },
+  { label: 'Submission Belum Masuk', href: '/admin/submissions', icon: FileX2, roles: ['super_admin', 'admin_registration', 'judge'] },
+  { label: 'Review Submission', href: '/admin/submission-review', icon: ClipboardCheck, roles: ['super_admin', 'admin_registration', 'judge'] },
+  { label: 'Loloskan Tim', href: '/admin/stage-advancement', icon: Trophy, roles: ['super_admin', 'admin_registration'] },
 ]
 
 export const adminRoleLabels: Record<AdminRole, string> = {

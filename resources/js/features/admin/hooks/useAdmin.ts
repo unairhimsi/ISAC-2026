@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '../api/adminApi'
-import type { AdminExamAttemptFilters, AdminOperationFilters, AdminPaymentFilters, AdminTeamFilters, AdminTeamUpdatePayload, BatchPayload, CompetitionFilters, CompetitionPayload, CreateAdminOperationPayload, StagePayload, TeamRevisionPayload, UpdateStagePayload } from '../types/adminTypes'
+import type { AdminExamAttemptFilters, AdminMissingSubmissionFilters, AdminSubmissionFilters, AdminSubmissionReviewPayload, AdminOperationFilters, AdminPaymentFilters, AdminTeamFilters, AdminTeamUpdatePayload, BatchPayload, CompetitionFilters, CompetitionPayload, CreateAdminOperationPayload, StagePayload, TeamRevisionPayload, UpdateStagePayload } from '../types/adminTypes'
 
 export const adminKeys = {
   all: ['admin'] as const,
@@ -17,6 +17,10 @@ export const adminKeys = {
   exams: (stageId?: string) => [...adminKeys.all, 'exams', stageId] as const,
   examAttempts: (examId?: string, filters?: AdminExamAttemptFilters) => [...adminKeys.all, 'exam-attempts', examId, filters] as const,
   examAttempt: (examId: string, attemptId: string) => [...adminKeys.all, 'exam-attempt', examId, attemptId] as const,
+  advancement: (stageId?: string, batchId?: string) => [...adminKeys.all, 'advancement', stageId, batchId] as const,
+  submissions: (stageId?: string, filters?: AdminSubmissionFilters) => [...adminKeys.all, 'submissions', stageId, filters] as const,
+  submission: (submissionId: string) => [...adminKeys.all, 'submission', submissionId] as const,
+  missingSubmissions: (stageId?: string, filters?: AdminMissingSubmissionFilters) => [...adminKeys.all, 'missing-submissions', stageId, filters] as const,
 }
 
 export function useAdminTeams(filters: AdminTeamFilters) {
@@ -211,7 +215,12 @@ export function useCreateAdminOperation() {
   const client = useQueryClient()
   return useMutation({
     mutationFn: (payload: CreateAdminOperationPayload) => adminApi.createOperation(payload),
-    onSuccess: () => client.invalidateQueries({ queryKey: [...adminKeys.all, 'operations'] }),
+    // Memindahkan tahap mengubah daftar tim dan kolam kelolosan, bukan hanya daftar operasi.
+    onSuccess: () => Promise.all([
+      client.invalidateQueries({ queryKey: [...adminKeys.all, 'operations'] }),
+      client.invalidateQueries({ queryKey: [...adminKeys.all, 'advancement'] }),
+      client.invalidateQueries({ queryKey: [...adminKeys.all, 'teams'] }),
+    ]),
   })
 }
 
@@ -256,5 +265,47 @@ export function useUpdateAdminExamAttemptScore(examId: string, attemptId: string
       client.invalidateQueries({ queryKey: [...adminKeys.all, 'exam-attempts', examId] }),
       client.invalidateQueries({ queryKey: adminKeys.examAttempt(examId, attemptId) }),
     ]),
+  })
+}
+
+export function useAdminMissingSubmissions(stageId: string | undefined, filters: AdminMissingSubmissionFilters) {
+  return useQuery({
+    queryKey: adminKeys.missingSubmissions(stageId, filters),
+    queryFn: () => adminApi.missingSubmissions(stageId as string, filters),
+    enabled: Boolean(stageId),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useAdminSubmissions(stageId: string | undefined, filters: AdminSubmissionFilters) {
+  return useQuery({
+    queryKey: adminKeys.submissions(stageId, filters),
+    queryFn: () => adminApi.submissions(stageId as string, filters),
+    enabled: Boolean(stageId),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useAdminSubmission(submissionId: string) {
+  return useQuery({ queryKey: adminKeys.submission(submissionId), queryFn: () => adminApi.submission(submissionId), enabled: Boolean(submissionId) })
+}
+
+export function useReviewAdminSubmission(submissionId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: AdminSubmissionReviewPayload) => adminApi.reviewSubmission(submissionId, payload),
+    onSuccess: () => Promise.all([
+      client.invalidateQueries({ queryKey: [...adminKeys.all, 'submissions'] }),
+      client.invalidateQueries({ queryKey: adminKeys.submission(submissionId) }),
+    ]),
+  })
+}
+
+export function useAdminAdvancement(stageId: string | undefined, batchId?: string) {
+  return useQuery({
+    queryKey: adminKeys.advancement(stageId, batchId),
+    queryFn: () => adminApi.advancement(stageId as string, batchId),
+    enabled: Boolean(stageId),
+    placeholderData: keepPreviousData,
   })
 }

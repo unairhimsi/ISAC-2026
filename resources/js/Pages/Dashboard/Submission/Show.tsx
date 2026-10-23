@@ -166,6 +166,7 @@ export default function SubmissionShell({
   })
   const WindowIcon = windowStatus.Icon
 
+  const readOnly = data.readOnly === true
   const submission = data.submission
   const canSubmit = data.canSubmit && data.window.isOpen
   const editable = canSubmit && (!submission || ['draft', 'revision_requested', 'rejected'].includes(submission.status))
@@ -266,7 +267,7 @@ export default function SubmissionShell({
                 {formatDate(data.stage.startDate, { dateStyle: 'medium' })} –{' '}
                 {formatDate(data.stage.endDate, { dateStyle: 'medium' })}
               </span>
-              {data.window.isOpen && (
+              {data.window.isOpen && !readOnly && (
                 <span className="flex items-center gap-2">
                   <Clock3 className="size-4 text-secondary" />
                   Sisa {remainingDisplay}
@@ -276,7 +277,30 @@ export default function SubmissionShell({
           </div>
         </section>
 
+        {/* TAHAP YANG SUDAH DILEWATI — hanya baca */}
+        {readOnly && (
+          <Card className="border border-accent/25 bg-card/50 backdrop-blur-xl">
+            <CardHeader>
+              <div className="flex items-start gap-3">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-accent/10">
+                  <CheckCircle2 className="size-5 text-accent" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CardTitle className="text-xl font-bold">Tahap ini sudah kamu lewati</CardTitle>
+                    <Badge variant="outline">Hanya dilihat</Badge>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    Team kamu sudah lolos ke tahap berikutnya. Di sini kamu masih bisa melihat hasil dan catatan juri, tetapi pengumpulan sudah tidak bisa diubah.
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+        )}
+
         {/* WINDOW STATUS — no payment */}
+        {!readOnly && (
         <Card
           className={cn(
             'border bg-card/50 backdrop-blur-xl',
@@ -320,6 +344,8 @@ export default function SubmissionShell({
             </CardContent>
           )}
         </Card>
+
+        )}
 
         {/* SUBMISSION EXISTING */}
         {submission && (
@@ -368,7 +394,16 @@ export default function SubmissionShell({
           </Card>
         )}
 
+        {readOnly && !submission && (
+          <Card className="border border-dashed border-white/15 bg-card/35 backdrop-blur-xl">
+            <CardContent className="py-10 text-center text-sm text-muted-foreground">
+              Tidak ada pengumpulan yang tercatat pada tahap ini.
+            </CardContent>
+          </Card>
+        )}
+
         {/* DIRECT COLLECTION FORM — no payment */}
+        {!readOnly && (
         <Card className={cn('border bg-card/55 backdrop-blur-xl', canSubmit ? 'border-primary/20' : 'border-white/10 opacity-80')}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl font-bold">
@@ -448,6 +483,7 @@ export default function SubmissionShell({
             {formError && <p role="alert" className="text-sm text-destructive">{formError}</p>}
           </CardContent>
         </Card>
+        )}
       </div>
     </main>
   )

@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Models\Submission;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -11,7 +10,7 @@ class ReviewSubmissionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return Gate::allows('review', Submission::class);
+        return Gate::allows('review', $this->route('submission'));
     }
 
     public function rules(): array
