@@ -22,6 +22,12 @@ class RegistrationPolicy
         return in_array($admin->role, ['super_admin', 'admin_registration', 'admin_payment', 'judge'], true);
     }
 
+    /** Ekspor massal memuat data pembayaran dan kontak peserta, jadi juri (yang boleh melihat) tidak ikut. */
+    public function export(Admin $admin): bool
+    {
+        return in_array($admin->role, ['admin_registration', 'admin_payment'], true);
+    }
+
     public function verifyPayment(Admin $admin, Registration $registration): bool
     {
         return $admin->role === 'admin_payment';

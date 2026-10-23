@@ -21,6 +21,18 @@ class AdminRegistrationService
     /** @param array<string, mixed> $filters */
     public function payments(array $filters, int $perPage = 15): LengthAwarePaginator
     {
+        return $this->paymentsQuery($filters)->paginate(min(max($perPage, 1), 100));
+    }
+
+    /**
+     * Pembayaran terfilter dan terurut, dipakai bersama oleh daftar berpaginasi dan ekspor
+     * agar keduanya selalu memuat himpunan data yang sama.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Builder<Registration>
+     */
+    public function paymentsQuery(array $filters): Builder
+    {
         return $this->paymentQuery()
             ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
                 $query->whereHas('team', function (Builder $team) use ($search): void {
@@ -38,8 +50,7 @@ class AdminRegistrationService
             ->when($filters['batch_id'] ?? null, fn (Builder $query, string $id) => $query->where('batch_id', $id))
             ->when($filters['payment_method'] ?? null, fn (Builder $query, string $method) => $query->where('payment_method', $method))
             ->orderByRaw("CASE status WHEN 'WAITING_VERIFICATION' THEN 1 WHEN 'REVISION_REQUIRED' THEN 2 WHEN 'WAITING_PAYMENT' THEN 3 WHEN 'REJECTED' THEN 4 WHEN 'VERIFIED' THEN 5 WHEN 'CANCELLED' THEN 6 ELSE 7 END")
-            ->orderByRaw('COALESCE(payment_submitted_at, payment_required_at, created_at) DESC')
-            ->paginate(min(max($perPage, 1), 100));
+            ->orderByRaw('COALESCE(payment_submitted_at, payment_required_at, created_at) DESC');
     }
 
     public function paymentDetail(Registration $registration): Registration
@@ -51,8 +62,21 @@ class AdminRegistrationService
 
     public function teams(array $filters, int $perPage = 15): LengthAwarePaginator
     {
-        return Team::query()
+        return $this->teamsQuery($filters)
             ->with('members.photoFile', 'registration.competition', 'registration.batch', 'currentStage')
+            ->paginate(min(max($perPage, 1), 100));
+    }
+
+    /**
+     * Tim terfilter dan terurut tanpa eager load maupun paginasi; dipakai bersama oleh daftar
+     * berpaginasi dan ekspor agar keduanya selalu memuat himpunan data yang sama.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Builder<Team>
+     */
+    public function teamsQuery(array $filters): Builder
+    {
+        return Team::query()
             ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
                 $like = "%{$search}%";
                 $query->where(function (Builder $values) use ($like): void {
@@ -71,8 +95,7 @@ class AdminRegistrationService
             ->when($filters['competition_id'] ?? null, fn ($query, $id) => $query->whereHas('registration', fn ($registration) => $registration->where('competition_id', $id)))
             ->when($filters['batch_id'] ?? null, fn ($query, $id) => $query->whereHas('registration', fn ($registration) => $registration->where('batch_id', $id)))
             ->latest()
-            ->orderBy('id')
-            ->paginate(min(max($perPage, 1), 100));
+            ->orderBy('id');
     }
 
     public function detail(Team $team): Team

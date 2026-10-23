@@ -1,4 +1,4 @@
-import { deleteJson, getJson, patchJson, postJson, toSearchParams } from '@/lib/api'
+import { deleteJson, downloadFile, getJson, patchJson, postJson, toSearchParams } from '@/lib/api'
 import type {
   AdminBatchResponse,
   AdminBatchesResponse,
@@ -37,6 +37,8 @@ import type {
   CompetitionPayload,
   CreateAdminOperationPayload,
   DeleteResponse,
+  ExportPaymentsFilters,
+  ExportTeamsFilters,
   TeamRevisionPayload,
 } from '../types/adminTypes'
 
@@ -44,6 +46,7 @@ const requestHeaders = () => ({ 'X-Request-ID': crypto.randomUUID() })
 
 export const adminApi = {
   teams: (filters: AdminTeamFilters) => getJson<AdminTeamsResponse>(`/api/admin/teams${toSearchParams(filters)}`),
+  exportTeams: (filters: ExportTeamsFilters) => downloadFile(`/api/admin/teams/export${toSearchParams(filters)}`),
   team: (teamId: string) => getJson<AdminTeamResponse>(`/api/admin/teams/${teamId}`),
   verifyTeam: (teamId: string) => postJson<AdminTeamResponse>(`/api/admin/teams/${teamId}/verify`, undefined, { headers: requestHeaders() }),
   reviseTeam: (teamId: string, payload: TeamRevisionPayload) => postJson<AdminTeamResponse>(`/api/admin/teams/${teamId}/revision`, payload, { headers: requestHeaders() }),
@@ -66,6 +69,7 @@ export const adminApi = {
 
   deleteBatch: (id: string) => deleteJson<DeleteResponse>(`/api/admin/batches/${id}`),
   payments: (filters: AdminPaymentFilters) => getJson<AdminPaymentsResponse>(`/api/admin/payments${toSearchParams(filters)}`),
+  exportPayments: (filters: ExportPaymentsFilters) => downloadFile(`/api/admin/payments/export${toSearchParams(filters)}`),
   payment: (registrationId: string) => getJson<AdminPaymentResponse>(`/api/admin/payments/${registrationId}`),
   verifyPayment: (registrationId: string) => postJson<AdminPaymentResponse>(`/api/admin/registrations/${registrationId}/payment/verify`, undefined, { headers: requestHeaders() }),
   revisePayment: (registrationId: string, reason: string) => postJson<AdminPaymentResponse>(`/api/admin/registrations/${registrationId}/payment/revision`, { reason }, { headers: requestHeaders() }),

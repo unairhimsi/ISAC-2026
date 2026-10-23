@@ -6,13 +6,14 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { AdminExportButtons } from '@/features/admin/components/AdminExportButtons'
 import { AdminPageHeader } from '@/features/admin/components/AdminPageHeader'
 import { AdminStatusBadge, adminStatusLabel } from '@/features/admin/components/AdminStatusBadge'
 import { AdminEmptyState, AdminErrorState, AdminLoadingState } from '@/features/admin/components/AdminStates'
 import { adminPageLayout } from '@/features/admin/components/AdminShell'
-import { useAdminBatches, useAdminCompetitions, useAdminTeams } from '@/features/admin/hooks/useAdmin'
+import { useAdminBatches, useAdminCompetitions, useAdminTeams, useExportAdminTeams } from '@/features/admin/hooks/useAdmin'
 import { useDebouncedSearch, useUrlFilters } from '@/features/admin/hooks/useUrlFilters'
-import type { AdminTeamFilters } from '@/features/admin/types/adminTypes'
+import type { AdminTeamFilters, ExportTeamsFilters } from '@/features/admin/types/adminTypes'
 import { cn } from '@/lib/utils'
 
 const teamStatuses = ['INCOMPLETE', 'WAITING_VERIFICATION', 'VERIFIED', 'REVISION_REQUIRED', 'REJECTED'] as const
@@ -52,6 +53,14 @@ export default function AdminTeamsIndex() {
     batch_id: filters.batch || undefined,
   }
   const teamsQuery = useAdminTeams(query)
+  const exportMutation = useExportAdminTeams()
+  // Ekspor memakai filter yang sama dengan daftar, tetapi tanpa halaman: server mengunduh semua baris yang cocok.
+  const exportFilters: ExportTeamsFilters = {
+    search: query.search,
+    status: query.status,
+    competition_id: query.competition_id,
+    batch_id: query.batch_id,
+  }
   const competitionsQuery = useAdminCompetitions({ perPage: 100 })
   const batchesQuery = useAdminBatches(filters.competition || undefined)
   const pagination = teamsQuery.data?.data
@@ -75,7 +84,19 @@ export default function AdminTeamsIndex() {
   return (
     <>
       <Seo title="Verifikasi Tim Admin" description="Daftar dan status pendaftaran tim ISAC 2026." canonical="/admin/teams" noindex />
-      <AdminPageHeader title="Verifikasi Tim" description="Cari tim atau peserta, filter berdasarkan status, kompetisi, dan batch, lalu buka detail untuk melakukan review." />
+      <AdminPageHeader
+        title="Verifikasi Tim"
+        description="Cari tim atau peserta, filter berdasarkan status, kompetisi, dan batch, lalu buka detail untuk melakukan review."
+        action={(
+          <AdminExportButtons
+            noun="tim"
+            fallbackName="data-tim-isac-2026"
+            total={pagination?.meta.total}
+            disabled={teamsQuery.isLoading}
+            onExport={(format) => exportMutation.mutateAsync({ ...exportFilters, format })}
+          />
+        )}
+      />
 
       <Card className="mb-5 border-border/60 bg-card/70 backdrop-blur-md">
         <CardContent className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-[1.4fr_1fr_1fr_1fr_auto]">

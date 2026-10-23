@@ -90,6 +90,9 @@ class AppServiceProvider extends ServiceProvider
         ]);
         RateLimiter::for('auth.logout', fn (Request $request): Limit => Limit::perMinute(10)
             ->by((string) $request->user()?->getAuthIdentifier()));
+        // Ekspor menjalankan query penuh dan membuat berkas, jadi dibatasi per admin.
+        RateLimiter::for('admin.export', fn (Request $request): Limit => Limit::perMinute(6)
+            ->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip())));
     }
 
     private function emailIpKey(Request $request): string

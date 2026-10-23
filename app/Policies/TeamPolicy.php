@@ -46,4 +46,9 @@ class TeamPolicy
     {
         return $admin->role === 'admin_registration';
     }
+
+    public function export(Admin $admin): bool
+    {
+        return $this->viewAny($admin);
+    }
 }

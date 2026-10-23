@@ -139,6 +139,13 @@ export type AdminTeamFilters = {
   batch_id?: string
 }
 
+export type ExportFormat = 'xlsx' | 'pdf'
+
+/** Filter ekspor sama dengan filter daftar tanpa `page`/`per_page`: server selalu mengekspor semua baris yang cocok. */
+export type ExportTeamsFilters = Omit<AdminTeamFilters, 'page' | 'per_page'> & { format?: ExportFormat }
+
+export type ExportPaymentsFilters = Omit<AdminPaymentFilters, 'page' | 'per_page'> & { format?: ExportFormat }
+
 export type CompetitionFilters = {
   page?: number
   perPage?: number

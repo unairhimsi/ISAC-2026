@@ -6,12 +6,13 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { AdminExportButtons } from '@/features/admin/components/AdminExportButtons'
 import { AdminPageHeader } from '@/features/admin/components/AdminPageHeader'
 import { AdminStatusBadge } from '@/features/admin/components/AdminStatusBadge'
 import { AdminEmptyState, AdminErrorState, AdminLoadingState } from '@/features/admin/components/AdminStates'
 import { adminPageLayout } from '@/features/admin/components/AdminShell'
-import { useAdminBatches, useAdminCompetitions, useAdminPayments } from '@/features/admin/hooks/useAdmin'
-import type { AdminPaymentFilters, PaymentMethod } from '@/features/admin/types/adminTypes'
+import { useAdminBatches, useAdminCompetitions, useAdminPayments, useExportAdminPayments } from '@/features/admin/hooks/useAdmin'
+import type { AdminPaymentFilters, ExportPaymentsFilters, PaymentMethod } from '@/features/admin/types/adminTypes'
 import type { RegistrationStatus } from '@/features/registrations/types/registrationTypes'
 import { cn } from '@/lib/utils'
 
@@ -36,6 +37,15 @@ function formatDate(value: string | null | undefined) {
 export default function AdminPayments() {
   const [filters, setFilters] = useState<AdminPaymentFilters>({ page: 1, per_page: 15 })
   const paymentsQuery = useAdminPayments(filters)
+  const exportMutation = useExportAdminPayments()
+  // Ekspor memakai filter yang sama dengan daftar, tetapi tanpa halaman: server mengunduh semua baris yang cocok.
+  const exportFilters: ExportPaymentsFilters = {
+    search: filters.search,
+    status: filters.status,
+    competition_id: filters.competition_id,
+    batch_id: filters.batch_id,
+    payment_method: filters.payment_method,
+  }
   const competitionsQuery = useAdminCompetitions({ perPage: 100 })
   const batchesQuery = useAdminBatches(filters.competition_id)
   const pagination = paymentsQuery.data?.data
@@ -46,13 +56,26 @@ export default function AdminPayments() {
   }
 
   function resetFilters() {
-    setFilters({ page: 1, per_page: 10000 })
+    // Harus sama dengan state awal: server menolak per_page di atas 100 (422) sehingga daftar langsung error.
+    setFilters({ page: 1, per_page: 15 })
   }
 
   return (
     <>
       <Seo title="Verifikasi Pembayaran Admin" description="Antrean dan status pembayaran tim ISAC 2026." canonical="/admin/payments" noindex />
-      <AdminPageHeader title="Verifikasi Pembayaran" description="Filter berdasarkan status, kompetisi, batch, atau metode pembayaran, lalu buka detail untuk melakukan review." />
+      <AdminPageHeader
+        title="Verifikasi Pembayaran"
+        description="Filter berdasarkan status, kompetisi, batch, atau metode pembayaran, lalu buka detail untuk melakukan review."
+        action={(
+          <AdminExportButtons
+            noun="pembayaran"
+            fallbackName="rekap-pembayaran-isac-2026"
+            total={pagination?.meta.total}
+            disabled={paymentsQuery.isLoading}
+            onExport={(format) => exportMutation.mutateAsync({ ...exportFilters, format })}
+          />
+        )}
+      />
 
       <Card className="mb-5 border-border/60 bg-card/70 backdrop-blur-md">
         <CardContent className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_auto]">

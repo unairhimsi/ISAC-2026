@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AdminDashboardController;
 use App\Http\Controllers\Api\AdminExamAttemptController;
 use App\Http\Controllers\Api\AdminExamController;
+use App\Http\Controllers\Api\AdminExportController;
 use App\Http\Controllers\Api\AdminOperationController;
 use App\Http\Controllers\Api\AdminRegistrationController;
 use App\Http\Controllers\Api\AdminStageController;
@@ -71,6 +72,7 @@ Route::get('/competitions/{competition}', [CompetitionController::class, 'show']
 
 Route::prefix('admin')->middleware(['auth:admins', 'principal.admin'])->group(function (): void {
     Route::get('/teams', [AdminRegistrationController::class, 'index']);
+    Route::get('/teams/export', [AdminExportController::class, 'teams'])->middleware('throttle:admin.export');
     Route::get('/teams/{team}', [AdminRegistrationController::class, 'show'])->whereUuid('team');
     Route::patch('/teams/{team}/registration', [AdminRegistrationController::class, 'updateTeamRegistration'])->whereUuid('team');
     Route::post('/teams/{team}/verify', [AdminRegistrationController::class, 'verifyTeam'])->whereUuid('team');
@@ -78,6 +80,7 @@ Route::prefix('admin')->middleware(['auth:admins', 'principal.admin'])->group(fu
     Route::post('/teams/{team}/reject', [AdminRegistrationController::class, 'rejectTeam'])->whereUuid('team');
     Route::post('/teams/{team}/unverify', [AdminRegistrationController::class, 'unverifyTeam'])->whereUuid('team');
     Route::get('/payments', [AdminRegistrationController::class, 'payments']);
+    Route::get('/payments/export', [AdminExportController::class, 'payments'])->middleware('throttle:admin.export');
     Route::get('/payments/{registration}', [AdminRegistrationController::class, 'payment'])->whereUuid('registration');
     Route::post('/registrations/{registration}/payment/verify', [AdminRegistrationController::class, 'verifyPayment'])->whereUuid('registration');
     Route::post('/registrations/{registration}/payment/revision', [AdminRegistrationController::class, 'revisePayment'])->whereUuid('registration');

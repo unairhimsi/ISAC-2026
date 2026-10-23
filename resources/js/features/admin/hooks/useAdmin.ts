@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { adminApi } from '../api/adminApi'
-import type { AdminExamAttemptFilters, AdminMissingSubmissionFilters, AdminSubmissionFilters, AdminSubmissionReviewPayload, AdminOperationFilters, AdminPaymentFilters, AdminTeamFilters, AdminTeamUpdatePayload, BatchPayload, CompetitionFilters, CompetitionPayload, CreateAdminOperationPayload, StagePayload, TeamRevisionPayload, UpdateStagePayload } from '../types/adminTypes'
+import type { AdminExamAttemptFilters, AdminMissingSubmissionFilters, AdminSubmissionFilters, AdminSubmissionReviewPayload, AdminOperationFilters, AdminPaymentFilters, AdminTeamFilters, AdminTeamUpdatePayload, BatchPayload, CompetitionFilters, CompetitionPayload, CreateAdminOperationPayload, ExportPaymentsFilters, ExportTeamsFilters, StagePayload, TeamRevisionPayload, UpdateStagePayload } from '../types/adminTypes'
 
 export const adminKeys = {
   all: ['admin'] as const,
@@ -25,6 +25,14 @@ export const adminKeys = {
 
 export function useAdminTeams(filters: AdminTeamFilters) {
   return useQuery({ queryKey: adminKeys.teams(filters), queryFn: () => adminApi.teams(filters), placeholderData: keepPreviousData })
+}
+
+export function useExportAdminTeams() {
+  return useMutation({ mutationFn: (filters: ExportTeamsFilters) => adminApi.exportTeams(filters) })
+}
+
+export function useExportAdminPayments() {
+  return useMutation({ mutationFn: (filters: ExportPaymentsFilters) => adminApi.exportPayments(filters) })
 }
 
 export function useAdminTeam(teamId: string) {
