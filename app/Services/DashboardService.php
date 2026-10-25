@@ -13,39 +13,90 @@ use Illuminate\Auth\Access\AuthorizationException;
 
 class DashboardService
 {
+    /**
+     * Get the dashboard summary and load all competition stages and exams.
+     */
     public function getSummary(Team $team): Team
     {
         return $team->load([
             'members',
+
             'registration.competition',
             'registration.batch',
             'registration.paymentProofFile',
             'registration.paymentForStage',
-            'registration.competition.stages' => fn ($query) => $query->orderBy('order'),
-            'submissions' => fn ($query) => $query->select(['id', 'team_id', 'stage_id', 'status', 'score']),
+
+            // Load all stages belonging to the registered competition.
+            'registration.competition.stages' => fn ($query) => $query
+                ->orderBy('order'),
+
+            // Load every exam belonging to each competition stage.
+            'registration.competition.stages.exams' => fn ($query) => $query
+                ->select([
+                    'id',
+                    'stage_id',
+                    'title',
+                    'description',
+                    'start_date',
+                    'end_date',
+                    'duration',
+                    'max_attempts',
+                ])
+                ->orderBy('start_date'),
+
+            'submissions' => fn ($query) => $query->select([
+                'id',
+                'team_id',
+                'stage_id',
+                'status',
+                'score',
+            ]),
+
+            // Keep the current-stage relation for existing access rules
+            // and functionality that depends on the participant's stage.
             'currentStage.exams' => fn ($query) => $query
                 ->select([
-                    'id', 'stage_id', 'title', 'description', 'start_date',
-                    'end_date', 'duration', 'max_attempts',
+                    'id',
+                    'stage_id',
+                    'title',
+                    'description',
+                    'start_date',
+                    'end_date',
+                    'duration',
+                    'max_attempts',
                 ])
                 ->orderBy('start_date'),
         ]);
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Build the exam detail payload after validating participant access.
+     *
+     * @return array<string, mixed>
+     */
     public function getExamShell(Team $team, Exam $exam): array
     {
-        $team->loadMissing('registration.competition', 'registration.batch', 'currentStage');
+        $team->loadMissing(
+            'registration.competition',
+            'registration.batch',
+            'currentStage',
+        );
+
         $exam->loadMissing('stage');
 
         $registration = $team->registration;
+
         $canAccess = $registration !== null
+            && $registration->competition !== null
+            && $exam->stage !== null
             && $registration->competition->type === Competition::TYPE_OLIMPIADE
             && $exam->stage->competition_id === $registration->competition_id
             && $team->current_stage_id === $exam->stage_id;
 
         if (! $canAccess) {
-            throw new AuthorizationException('Ujian tidak tersedia untuk tahap Team ini.');
+            throw new AuthorizationException(
+                'Ujian tidak tersedia untuk tahap Team ini.'
+            );
         }
 
         $attempt = ExamAttempt::query()
@@ -57,25 +108,35 @@ class DashboardService
 
         return [
             'exam' => $this->examMetadata($exam),
+
             'stage' => $this->stageMetadata($exam->stage),
+
             'competition' => [
                 'id' => $registration->competition->id,
                 'name' => $registration->competition->name,
                 'type' => $registration->competition->type,
             ],
+
             'batch' => [
                 'id' => $registration->batch->id,
                 'name' => $registration->batch->name,
                 'price' => (float) $registration->batch->price,
             ],
-            'attempt' => $attempt === null ? null : [
-                'id' => $attempt->id,
-                'finished' => (bool) $attempt->finished,
-            ],
+
+            'attempt' => $attempt === null
+                ? null
+                : [
+                    'id' => $attempt->id,
+                    'finished' => (bool) $attempt->finished,
+                ],
         ];
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Build the submission detail payload after validating access.
+     *
+     * @return array<string, mixed>
+     */
     public function getSubmissionShell(Team $team, Stage $stage): array
     {
         $team->loadMissing(
@@ -85,41 +146,61 @@ class DashboardService
         );
 
         $registration = $team->registration;
+
         $isBusinessCompetition = $registration !== null
-            && in_array($registration->competition->type, [
-                Competition::TYPE_BUSINESS_PLAN,
-                Competition::TYPE_BUSINESS_IT_CASE,
-            ], true);
+            && $registration->competition !== null
+            && in_array(
+                $registration->competition->type,
+                [
+                    Competition::TYPE_BUSINESS_PLAN,
+                    Competition::TYPE_BUSINESS_IT_CASE,
+                ],
+                true,
+            );
+
         $isCurrentStage = $team->current_stage_id === $stage->id;
-        // A stage the team has already moved past stays readable, so the result and the
-        // judges' feedback are not lost the moment the team qualifies for the next stage.
+
+        // A stage the team has already reached remains readable.
+        // This preserves access to existing submissions and feedback.
         $hasReachedStage = $team->currentStage !== null
             && $team->currentStage->competition_id === $stage->competition_id
             && (int) $team->currentStage->order >= (int) $stage->order;
 
-        // Direktori baru: semua lomba UPFRONT di registrasi awal, submission langsung tanpa payment gate
+        // Business competitions are registered upfront.
+        // Their submission flow does not require a separate payment gate.
         $canAccess = $isBusinessCompetition
             && $stage->competition_id === $registration->competition_id
             && $hasReachedStage;
 
         if (! $canAccess) {
-            throw new AuthorizationException('Tahap pengumpulan tidak tersedia untuk Team ini.');
+            throw new AuthorizationException(
+                'Tahap pengumpulan tidak tersedia untuk Team ini.'
+            );
         }
 
         $now = now();
         $start = $stage->start_date;
         $end = $stage->end_date;
+
         $isOpen = true;
+
         if ($start !== null && $now->lt($start)) {
             $isOpen = false;
         }
+
         if ($end !== null && $now->gt($end)) {
             $isOpen = false;
         }
+
         $isOverdue = $end !== null && $now->gt($end);
+
         $remainingMs = null;
+
         if ($end !== null && $isOpen) {
-            $remainingMs = (int) max(0, ($end->getTimestamp() - $now->getTimestamp()) * 1000);
+            $remainingMs = (int) max(
+                0,
+                ($end->getTimestamp() - $now->getTimestamp()) * 1000,
+            );
         }
 
         $submission = Submission::query()
@@ -128,21 +209,24 @@ class DashboardService
             ->with('file:id,file_id,url')
             ->first();
 
-        // Only the stage the team is on accepts changes; earlier stages are read-only.
+        // Only the current stage accepts new submissions.
         $canSubmit = $isOpen && $isCurrentStage;
 
         return [
             'stage' => $this->stageMetadata($stage),
+
             'competition' => [
                 'id' => $registration->competition->id,
                 'name' => $registration->competition->name,
                 'type' => $registration->competition->type,
             ],
+
             'batch' => [
                 'id' => $registration->batch->id,
                 'name' => $registration->batch->name,
                 'price' => (float) $registration->batch->price,
             ],
+
             'window' => [
                 'isOpen' => $isOpen,
                 'isOverdue' => $isOverdue,
@@ -150,27 +234,38 @@ class DashboardService
                 'startDate' => $start?->toISOString(),
                 'endDate' => $end?->toISOString(),
             ],
-            'submission' => $submission === null ? null : [
-                'id' => $submission->id,
-                'title' => $submission->title,
-                'description' => $submission->description,
-                'status' => $submission->status,
-                'score' => $submission->score,
-                'feedback' => $submission->feedback,
-                'submittedAt' => $submission->submitted_at?->toISOString(),
-                'reviewedAt' => $submission->reviewed_at?->toISOString(),
-                'file' => $submission->file === null ? null : [
-                    'id' => $submission->file->id,
-                    'fileId' => $submission->file->file_id,
-                    'url' => $submission->file->url,
+
+            'submission' => $submission === null
+                ? null
+                : [
+                    'id' => $submission->id,
+                    'title' => $submission->title,
+                    'description' => $submission->description,
+                    'status' => $submission->status,
+                    'score' => $submission->score,
+                    'feedback' => $submission->feedback,
+                    'submittedAt' => $submission->submitted_at?->toISOString(),
+                    'reviewedAt' => $submission->reviewed_at?->toISOString(),
+
+                    'file' => $submission->file === null
+                        ? null
+                        : [
+                            'id' => $submission->file->id,
+                            'fileId' => $submission->file->file_id,
+                            'url' => $submission->file->url,
+                        ],
                 ],
-            ],
+
             'canSubmit' => $canSubmit,
             'readOnly' => ! $isCurrentStage,
         ];
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Normalize exam fields for the API response.
+     *
+     * @return array<string, mixed>
+     */
     private function examMetadata(Exam $exam): array
     {
         return [
@@ -185,7 +280,11 @@ class DashboardService
         ];
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Normalize stage fields for the API response.
+     *
+     * @return array<string, mixed>
+     */
     private function stageMetadata(Stage $stage): array
     {
         return [
@@ -199,15 +298,23 @@ class DashboardService
         ];
     }
 
-    private function paymentState(?RegistrationStatus $status, bool $isPaymentTarget, bool $hasSubmittedPayment): string
-    {
+    private function paymentState(
+        ?RegistrationStatus $status,
+        bool $isPaymentTarget,
+        bool $hasSubmittedPayment,
+    ): string {
         if (! $isPaymentTarget) {
             return 'NOT_REQUIRED';
         }
 
         return match (true) {
-            $status === RegistrationStatus::REVISION_REQUIRED => 'REVISION_REQUIRED',
-            $status === RegistrationStatus::WAITING_VERIFICATION && $hasSubmittedPayment => 'WAITING_VERIFICATION',
+            $status === RegistrationStatus::REVISION_REQUIRED
+                => 'REVISION_REQUIRED',
+
+            $status === RegistrationStatus::WAITING_VERIFICATION
+                && $hasSubmittedPayment
+                => 'WAITING_VERIFICATION',
+
             default => 'PAYMENT_REQUIRED',
         };
     }

@@ -37,15 +37,24 @@ export function toDateTimeInputValue(value: string | null | undefined): string {
 }
 
 export function formatDate(
-    value: string | null | undefined,
-    options: Intl.DateTimeFormatOptions = { dateStyle: 'long' },
+  value: string | null | undefined,
+  options: Intl.DateTimeFormatOptions = {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  },
 ): string {
-    if (!value) return '—';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '—';
+  if (!value || !value.trim()) {
+    return 'Belum dijadwalkan'
+  }
 
-    return new Intl.DateTimeFormat('id-ID', {
-        timeZone: 'Asia/Jakarta',
-        ...options,
-    }).format(date);
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Belum dijadwalkan'
+  }
+
+  return new Intl.DateTimeFormat('id-ID', {
+    ...options,
+    timeZone: 'Asia/Jakarta',
+  }).format(date)
 }

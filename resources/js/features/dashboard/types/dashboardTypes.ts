@@ -49,7 +49,6 @@ export type DashboardSummary = RegistrationContext & {
     rejectionReason: string | null
     proof: null | { id: string; url: string; downloadUrl: string }
   }
-  /** Tahap yang sudah dicapai tim (hanya lomba bisnis), dengan hasil submission tiap tahap. */
   stages?: DashboardStageProgress[]
   activities: { exams: DashboardExam[] }
   nextAction: string
