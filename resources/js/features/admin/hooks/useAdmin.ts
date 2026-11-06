@@ -116,7 +116,7 @@ export function useCreateStage() {
 
 export function useUpdateStage() {
   const client = useQueryClient()
-  return useMutation({ mutationFn: ({ id, payload }: { id: string; payload: UpdateStagePayload }) => adminApi.updateStage(id, payload), onSuccess: () => client.invalidateQueries({ queryKey: [...adminKeys.all, 'stages'] }) })
+  return useMutation({ mutationFn: ({ id, payload }: { id: string; payload: UpdateStagePayload }) => adminApi.updateStage(id, payload), onSuccess: () => Promise.all([client.invalidateQueries({ queryKey: [...adminKeys.all, 'stages'] }), client.invalidateQueries({ queryKey: ['admin', 'exams'] }), client.invalidateQueries({ queryKey: ['admin', 'exam'] })]) })
 }
 
 export function useDeleteStage() {

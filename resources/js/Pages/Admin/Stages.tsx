@@ -14,13 +14,10 @@ import { AdminEmptyState, AdminErrorState, AdminLoadingState } from '@/features/
 import { useAdminCompetitions, useAdminStages, useDeleteStage } from '@/features/admin/hooks/useAdmin'
 import type { AdminStage } from '@/features/admin/types/adminTypes'
 import { useAuthSession } from '@/features/auth/context/AuthProvider'
+import { formatDate } from '@/lib/formatters'
 
 const stageLabels: Record<AdminStage['type'], string> = {
   registration: 'Registrasi', submission: 'Pengumpulan', selection: 'Seleksi', exam: 'Ujian', interview: 'Wawancara', announcement: 'Pengumuman', final: 'Final',
-}
-
-function formatDate(value: string | null) {
-  return value ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : 'Belum dijadwalkan'
 }
 
 function StageCard({ stage, canManage, onEdit, onDelete }: { stage: AdminStage; canManage: boolean; onEdit: (stage: AdminStage) => void; onDelete: (stage: AdminStage) => void }) {

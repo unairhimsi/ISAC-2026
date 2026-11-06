@@ -4,7 +4,7 @@ export function formatDateTime(value: string | null | undefined, dateStyle: 'med
   if (!value) return '—'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return '—'
-  return new Intl.DateTimeFormat('id-ID', { dateStyle, timeStyle: 'short' }).format(date)
+  return new Intl.DateTimeFormat('id-ID', { dateStyle, timeStyle: 'short', timeZone: 'Asia/Jakarta' }).format(date)
 }
 
 export function formatDuration(seconds: number | null | undefined) {

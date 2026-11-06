@@ -13,11 +13,12 @@ import { AdminPageHeader } from '@/features/admin/components/AdminPageHeader'
 import { adminPageLayout } from '@/features/admin/components/AdminShell'
 import { useAdminCompetitions } from '@/features/admin/hooks/useAdmin'
 import { deleteJson, getJson, patchJson, postJson } from '@/lib/api'
+import { toDateTimeInputValue } from '@/lib/formatters'
 import { ConfirmActionDialog } from '@/features/admin/components/ConfirmActionDialog'
 import { RichTextEditor } from '@/features/admin/components/RichTextEditor'
 
 type Stage = { id: string; competition_id: string; name: string; order: number }
-type Exam = { id: string; title: string; description: string | null; questionCount: number; attemptCount?: number | null; duration: number; maxAttempts: number; shuffleQuestions: boolean; shuffleOptions: boolean; showResultImmediately: boolean; passingScore: number | null; type: string }
+type Exam = { id: string; title: string; description: string | null; questionCount: number; attemptCount?: number | null; duration: number; maxAttempts: number; shuffleQuestions: boolean; shuffleOptions: boolean; showResultImmediately: boolean; passingScore: number | null; type: string; startDate: string | null; endDate: string | null }
 type Question = { id: string; question: string; explanation: string | null; type: string; options: { id: string; content: string }[] | null; correctAnswer: string | null; order: number; correctScore: number; wrongScore: number; emptyScore: number; difficulty: string }
 type Response<T> = { data: T }
 
@@ -101,12 +102,15 @@ export default function AdminQuestions() {
   })
 
   const [examDuration, setExamDuration] = useState(60)
+  const [examStart, setExamStart] = useState('')
+  const [examEnd, setExamEnd] = useState('')
   const [examMaxAttempts, setExamMaxAttempts] = useState(1)
   const [examShuffleQuestions, setExamShuffleQuestions] = useState(false)
   const [examShuffleOptions, setExamShuffleOptions] = useState(false)
 
   const updateExam = useMutation({
     mutationFn: () => patchJson('/api/admin/exams/' + examId, {
+      ...(examStart && examEnd ? { start_date: examStart, end_date: examEnd } : {}),
       duration: examDuration,
       max_attempts: examMaxAttempts,
       shuffle_questions: examShuffleQuestions,
@@ -165,11 +169,13 @@ export default function AdminQuestions() {
   useEffect(() => {
     if (activeExam) {
       setExamDuration(activeExam.duration ?? 60)
+      setExamStart(toDateTimeInputValue(activeExam.startDate))
+      setExamEnd(toDateTimeInputValue(activeExam.endDate))
       setExamMaxAttempts(activeExam.maxAttempts ?? 1)
       setExamShuffleQuestions(Boolean(activeExam.shuffleQuestions))
       setExamShuffleOptions(Boolean(activeExam.shuffleOptions))
     }
-  }, [activeExam?.id])
+  }, [activeExam?.id, activeExam?.startDate, activeExam?.endDate])
   const selectedCompetition = competitionRows.find((item) => item.id === competitionId)
   const selectedStage = stageRows.find((item) => item.id === stageId)
   const selectedExam = examRows.find((item) => item.id === examId)
@@ -200,6 +206,8 @@ export default function AdminQuestions() {
                 <Button type="button" size="sm" onClick={() => updateExam.mutate()} disabled={updateExam.isPending}>{updateExam.isPending ? 'Menyimpan…' : 'Simpan Pengaturan'}</Button>
               </div>
               <div className="grid gap-4 md:grid-cols-4">
+                <div className="space-y-2"><Label>Mulai ujian (WIB)</Label><Input type="datetime-local" step={1} value={examStart} onChange={(e) => setExamStart(e.target.value)} /></div>
+                <div className="space-y-2"><Label>Selesai ujian (WIB)</Label><Input type="datetime-local" step={1} value={examEnd} onChange={(e) => setExamEnd(e.target.value)} /></div>
                 <div className="space-y-2"><Label>Durasi (menit)</Label><Input type="number" min={1} max={480} value={examDuration} onChange={(e) => setExamDuration(toInteger(e.target.value) || 60)} /></div>
                 <div className="space-y-2"><Label>Max Percobaan</Label><Input type="number" min={1} max={5} value={examMaxAttempts} onChange={(e) => setExamMaxAttempts(toInteger(e.target.value) || 1)} /></div>
                 <div className="space-y-2"><Label>Acak Soal</Label><div className="flex h-10 items-center"><input type="checkbox" checked={examShuffleQuestions} onChange={(e) => setExamShuffleQuestions(e.target.checked)} className="size-4" /> <span className="ml-2 text-sm">Aktif</span></div></div>

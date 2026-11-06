@@ -43,9 +43,26 @@ class AdminStageService
     {
         return DB::transaction(function () use ($stage, $data): Stage {
             $stage->update($data);
+            $this->syncExamWindows($stage);
 
             return $this->detail($stage->fresh());
         });
+    }
+
+    /**
+     * Keep the exams of a stage aligned with the stage schedule. Exam windows
+     * are NOT NULL, so an unscheduled stage leaves its exams untouched.
+     */
+    private function syncExamWindows(Stage $stage): void
+    {
+        if (! $stage->wasChanged(['start_date', 'end_date']) || $stage->start_date === null || $stage->end_date === null) {
+            return;
+        }
+
+        $stage->exams()->update([
+            'start_date' => $stage->start_date,
+            'end_date' => $stage->end_date,
+        ]);
     }
 
     public function delete(Stage $stage): void
